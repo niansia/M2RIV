@@ -41,6 +41,11 @@ from m2riv.bisect import (
     load_checkpoint_artifacts,
     load_checkpoint_statuses,
 )
+from m2riv.conformance import (
+    MCRConformanceError,
+    verify_consumer_conformance,
+    verify_producer_conformance,
+)
 from m2riv.core.identity import build_local_snapshot
 from m2riv.core.models import ModelFamily, RuntimeProfile
 from m2riv.core.schema import export_schemas
@@ -67,9 +72,11 @@ app = typer.Typer(
 schema_app = typer.Typer(help="Manage public M2RIV contracts.")
 artifact_app = typer.Typer(help="Inspect and compare deployment artifacts without inference.")
 mcr_app = typer.Typer(help="Validate portable Model Change Report bundles.")
+conformance_app = typer.Typer(help="Test independent MCR producers and consumers.")
 app.add_typer(schema_app, name="schema")
 app.add_typer(artifact_app, name="artifact")
 app.add_typer(mcr_app, name="mcr")
+app.add_typer(conformance_app, name="conformance")
 
 
 class BisectAdapterKind(StrEnum):
@@ -101,6 +108,42 @@ def mcr_verify_command(
         result = verify_report_bundle(source, require_complete=strict)
     except (OSError, MCRVerificationError) as error:
         typer.echo(json.dumps({"valid": False, "error": str(error)}, indent=2))
+        raise typer.Exit(code=3) from error
+    typer.echo(result.model_dump_json(indent=2))
+
+
+@conformance_app.command("producer")
+def conformance_producer_command(
+    source: Annotated[Path, typer.Argument(exists=True, file_okay=False, readable=True)],
+) -> None:
+    """Verify an independent producer's normative PASS/WARN/BLOCK fixture suite."""
+    try:
+        result = verify_producer_conformance(source)
+    except (OSError, MCRConformanceError) as error:
+        typer.echo(json.dumps({"conformant": False, "error": str(error)}, indent=2))
+        raise typer.Exit(code=3) from error
+    typer.echo(result.model_dump_json(indent=2))
+
+
+@conformance_app.command("consumer")
+def conformance_consumer_command(
+    receipt: Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True)],
+    fixtures: Annotated[
+        Path,
+        typer.Option(
+            "--fixtures",
+            exists=True,
+            file_okay=False,
+            readable=True,
+            help="Normative PASS/WARN/BLOCK producer fixture directory.",
+        ),
+    ] = Path("examples/mcr_conformance"),
+) -> None:
+    """Verify a consumer receipt and fail-closed decision interpretation."""
+    try:
+        result = verify_consumer_conformance(receipt, fixtures=fixtures)
+    except (OSError, MCRConformanceError) as error:
+        typer.echo(json.dumps({"conformant": False, "error": str(error)}, indent=2))
         raise typer.Exit(code=3) from error
     typer.echo(result.model_dump_json(indent=2))
 

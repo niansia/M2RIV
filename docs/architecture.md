@@ -1,28 +1,31 @@
-# Architecture: Evidence Kernel, Pluggable Execution
+# Architecture: MCR Protocol, Evidence Kernel, Pluggable Execution
 
-M2RIV separates the semantics of a release decision from where model inference
-runs. The core is intentionally smaller than Ray, Kubernetes, or an evaluation
-platform.
+M2RIV separates the portable semantics of a release decision from both the tool
+that produced evidence and the system that consumes it. The core is intentionally
+smaller than Ray, Kubernetes, MLflow, Polygraphy, or an evaluation platform.
 
 ```text
-Model sources / registries
-          |
-  capability-negotiated adapters
-          |
-  compiled release plan + paired case keys
-          |
-  explicit execution backend  <---- optional Ray/K8s/local executor
-          |
-  append-only evidence objects
-          |
-  paired metric plugins (unit + direction)
-          |
-  statistical claims + policy compiler  <---- checkpoint bisect predicate
-          |
-  Model Change Report (MCR)
-          |
-  CI / registry promotion / deployment
+ModelOpt / Polygraphy / MLflow / evaluators / M2RIV CLI / internal tools
+                              |
+                  evidence + exact provenance
+                              |
+          Model Change Report (MCR protocol candidate)
+              /               |                 \
+     CI release gate      registry promotion     audit / bisect
+              \               |                 /
+                independent verification boundary
 ```
+
+The M2RIV reference implementation supplies one evidence path:
+
+```text
+adapters -> compiled plan -> executor -> observations -> paired metrics
+        -> statistical policy -> MCR -> conformance/verification
+```
+
+Neither path is privileged by the MCR contract. A producer may use Polygraphy,
+ModelOpt, an internal compiler CI, or another language as long as it satisfies the
+same public schemas, identities, decision states, and evidence references.
 
 ## Evidence kernel
 
@@ -92,12 +95,12 @@ paired pipeline emits a gate and report bundle; and only that gate status return
 to the localization algorithm. Every evaluated point therefore has the same
 evidence and failure semantics as an ordinary release comparison.
 
-## Model Change Report
+## Model Change Report protocol boundary
 
 MCR is the portable boundary. The strategic goal is for registries, evaluators,
 compiler toolchains, and CI providers to produce or consume MCR independently of
-the M2RIV CLI. If that happens, M2RIV becomes infrastructure rather than one more
-evaluation application.
+the M2RIV CLI. MCR is therefore the primary abstraction; the CLI is its reference
+implementation and may evolve or be replaced without invalidating the protocol.
 
 MCR schema 1.3 keeps per-observation references out of repeated metric records.
 Metrics point to content-addressed `EvidenceSet` objects in an external
@@ -113,6 +116,12 @@ is surfaced as an explicit warning rather than silently treated as verified.
 `--strict` promotes those warnings to an error for release gating. Verification is
 deliberately labeled `self-consistency-only`: without an external producer signature
 or transparency record it cannot establish who created the internally valid bundle.
+
+`m2riv conformance producer` adds a normative PASS/WARN/BLOCK producer profile.
+`m2riv conformance consumer` verifies a deterministic consumer receipt and proves
+that WARN/BLOCK remain non-authorizing. These checks establish interoperability,
+not model safety or vendor endorsement. The compatibility matrix records dry-run,
+fixture, and live-runtime evidence separately.
 
 The report `id` is a deterministic evidence identity over snapshots, release plan,
 stable metrics, finding evidence links, manifest, and supplemental artifacts.

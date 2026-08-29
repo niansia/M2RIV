@@ -8,6 +8,7 @@ from pathlib import Path
 from pydantic import BaseModel
 
 from m2riv.artifacts import ArtifactDiff, ArtifactProfile, NumericalDiff
+from m2riv.conformance import ConsumerConformanceReceipt, MCRConformanceResult
 from m2riv.core.models import (
     Claim,
     EvalCase,
@@ -18,6 +19,7 @@ from m2riv.core.models import (
     RunManifest,
     RuntimeProfile,
 )
+from m2riv.evidence import BackendComparisonEvidence
 from m2riv.execution import ExecutorDescriptor
 from m2riv.gate import GateDecision, GatePolicy
 from m2riv.planning import CompiledReleasePlan
@@ -52,6 +54,9 @@ PUBLIC_CONTRACTS: tuple[type[BaseModel], ...] = (
     ArtifactProfile,
     ArtifactDiff,
     NumericalDiff,
+    ConsumerConformanceReceipt,
+    MCRConformanceResult,
+    BackendComparisonEvidence,
 )
 
 

@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "id": "m2riv:sha256:21d3a69e330905dc2c1da94c273cf3f001f2f2585a060e18aaede0f7a5601be8",
+  "implementation_name": "m2riv.mlflow-consumer",
+  "implementation_version": "1.0.0",
+  "profiles": [
+    {
+      "profile": "pass",
+      "report_id": "m2riv:sha256:39d6301dc31d0eaa16411196f7e11172acf30f392dbfdd8fd88c4792ef10a9b9",
+      "decision_status": "PASS",
+      "release_authorized": true
+    },
+    {
+      "profile": "warn",
+      "report_id": "m2riv:sha256:fb68f0e9652fb70a946aeb838ef37454a169d8e03df944c33245b8dc1d635fa1",
+      "decision_status": "WARN",
+      "release_authorized": false
+    },
+    {
+      "profile": "block",
+      "report_id": "m2riv:sha256:a43e0280e6d25602cb6458716e1fea5e178b448069d20ffe7794d58445a48d24",
+      "decision_status": "BLOCK",
+      "release_authorized": false
+    }
+  ]
+}

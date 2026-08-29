@@ -1,0 +1,7 @@
+schema_version: 1.0.0
+policy_id: polygraphy-parity-release
+rules:
+  - rule_id: output-parity
+    metric: accuracy
+    margin: 0.0
+    min_pairs: 10

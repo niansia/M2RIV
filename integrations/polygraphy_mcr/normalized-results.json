@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "baseline_runner": "onnxrt-runner",
+  "candidate_runner": "trt-runner",
+  "iterations": [
+    {"case_id": "polygraphy-00", "outputs": {"logits": true}},
+    {"case_id": "polygraphy-01", "outputs": {"logits": true}},
+    {"case_id": "polygraphy-02", "outputs": {"logits": true}},
+    {"case_id": "polygraphy-03", "outputs": {"logits": true}},
+    {"case_id": "polygraphy-04", "outputs": {"logits": true}},
+    {"case_id": "polygraphy-05", "outputs": {"logits": true}},
+    {"case_id": "polygraphy-06", "outputs": {"logits": true}},
+    {"case_id": "polygraphy-07", "outputs": {"logits": true}},
+    {"case_id": "polygraphy-08", "outputs": {"logits": true}},
+    {"case_id": "polygraphy-09", "outputs": {"logits": false}}
+  ]
+}

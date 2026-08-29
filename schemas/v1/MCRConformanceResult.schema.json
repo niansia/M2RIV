@@ -1,0 +1,139 @@
+{
+  "$defs": {
+    "ConformanceProfile": {
+      "additionalProperties": false,
+      "description": "One normative PASS/WARN/BLOCK interoperability observation.",
+      "properties": {
+        "decision_status": {
+          "$ref": "#/$defs/MCRStatus"
+        },
+        "profile": {
+          "enum": [
+            "pass",
+            "warn",
+            "block"
+          ],
+          "title": "Profile",
+          "type": "string"
+        },
+        "release_authorized": {
+          "title": "Release Authorized",
+          "type": "boolean"
+        },
+        "report_id": {
+          "pattern": "^m2riv:sha256:[a-f0-9]{64}$",
+          "title": "Report Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "profile",
+        "report_id",
+        "decision_status",
+        "release_authorized"
+      ],
+      "title": "ConformanceProfile",
+      "type": "object"
+    },
+    "MCRStatus": {
+      "enum": [
+        "PASS",
+        "WARN",
+        "BLOCK",
+        "ERROR"
+      ],
+      "title": "MCRStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Machine-readable outcome for one producer or consumer conformance run.",
+  "properties": {
+    "checks": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 64,
+      "minItems": 1,
+      "title": "Checks",
+      "type": "array"
+    },
+    "conformant": {
+      "const": true,
+      "default": true,
+      "title": "Conformant",
+      "type": "boolean"
+    },
+    "id": {
+      "pattern": "^m2riv:sha256:[a-f0-9]{64}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "implementation_name": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Implementation Name"
+    },
+    "implementation_version": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9.+_-]{0,63}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Implementation Version"
+    },
+    "profiles": {
+      "items": {
+        "$ref": "#/$defs/ConformanceProfile"
+      },
+      "maxItems": 3,
+      "minItems": 3,
+      "title": "Profiles",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "subject": {
+      "enum": [
+        "producer",
+        "consumer"
+      ],
+      "title": "Subject",
+      "type": "string"
+    },
+    "warnings": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 64,
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "id",
+    "subject",
+    "profiles",
+    "checks"
+  ],
+  "title": "MCRConformanceResult",
+  "type": "object"
+}

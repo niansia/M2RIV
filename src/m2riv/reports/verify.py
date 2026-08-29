@@ -10,6 +10,7 @@ from pydantic import Field, ValidationError
 from m2riv.artifacts import ArtifactDiff, NumericalDiff
 from m2riv.core.identity import fingerprint, has_link_like_component, read_verified_file
 from m2riv.core.models import ContentId, Contract, EvidenceRef
+from m2riv.evidence import BackendComparisonEvidence
 from m2riv.io.json import StrictJSONError, parse_strict_json
 from m2riv.planning import CompiledReleasePlan
 from m2riv.reports.models import (
@@ -125,6 +126,17 @@ def _verify_supplemental_identity(reference: EvidenceRef, payload: Any) -> bool:
             )
             if numerical_diff.id != f"m2riv:sha256:{expected}":
                 raise MCRVerificationError("numerical diff identity does not match its contents")
+            return True
+        if reference.kind == "backend-comparison":
+            backend_comparison = BackendComparisonEvidence.model_validate(payload)
+            expected = fingerprint(
+                backend_comparison.model_dump(mode="python", exclude={"schema_version", "id"}),
+                namespace="backend-comparison-evidence",
+            )
+            if backend_comparison.id != f"m2riv:sha256:{expected}":
+                raise MCRVerificationError(
+                    "backend comparison identity does not match its contents"
+                )
             return True
     except ValidationError as error:
         raise MCRVerificationError(
