@@ -20,8 +20,8 @@ EXPECTED_ACCURACY_RANGES = {
     # The source weights are fixed. Bounded ranges still acknowledge that ORT's
     # platform-specific INT8 kernels can move borderline samples across argmax.
     "build-01-int8-balanced": ((595 / 629, 597 / 629), (42 / 47, 44 / 47)),
-    "build-02-int8-calibration-scale-065": ((582 / 629, 586 / 629), (34 / 47, 36 / 47)),
-    "build-03-int8-calibration-scale-060": ((579 / 629, 583 / 629), (32 / 47, 34 / 47)),
+    "build-02-int8-calibration-scale-065": ((584 / 629, 586 / 629), (35 / 47, 37 / 47)),
+    "build-03-int8-calibration-scale-060": ((581 / 629, 584 / 629), (33 / 47, 36 / 47)),
 }
 FIRST_BAD = "build-02-int8-calibration-scale-065"
 MAX_MCR_BYTES = 32 * 1024

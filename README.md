@@ -86,9 +86,9 @@ Expected release story with seed 23:
 ```text
 Build                                      Overall    Critical rare slice   Gate
 build-00-fp16                               94.75%                91.49%   PASS
-build-01-int8-balanced                      94.75%                91.49%   PASS
-build-02-int8-calibration-scale-065         92.85%                74.47%  BLOCK
-build-03-int8-calibration-scale-060         92.37%                70.21%  BLOCK
+build-01-int8-balanced                94.75–94.91%          91.49–93.62%   PASS
+build-02-int8-calibration-scale-065   92.85–93.16%          74.47–78.72%  BLOCK
+build-03-int8-calibration-scale-060   92.37–92.85%          70.21–76.60%  BLOCK
 
 First bad build: build-02-int8-calibration-scale-065
 ```
@@ -102,7 +102,9 @@ The critical slice is declared from inputs—rare training digit 1 with normaliz
 ink sum at least 18—not selected after seeing model failures. The complete
 [reproduction procedure](examples/onnx_quantization/README.md) explains the data,
 calibration mistake, policy, limitations, and generated evidence.
-The source fixture has a pinned SHA-256 and is checked before execution. MCR
+The displayed ranges are the bounded Linux/Windows results for byte-identical
+artifacts, not tolerance around different trained models. The source fixture has
+a pinned SHA-256 and is checked before execution. MCR
 executions record OS, architecture, Python, framework, and framework version, and
 CI preserves both Linux and Windows bundles so bounded runtime differences remain
 auditable without changing the PASS/BLOCK boundary.

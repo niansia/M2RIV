@@ -221,12 +221,12 @@ def build_correction(target: Path) -> None:
                 [
                     ["Build", "Overall", "Critical rare slice", "Gate"],
                     ["build-00-fp16", "94.75%", "91.49%", "PASS"],
-                    ["build-01-int8-balanced", "94.75%", "91.49%", "PASS"],
-                    ["build-02-int8-calibration-scale-065", "92.85%", "74.47%", "BLOCK"],
+                    ["build-01-int8-balanced", "94.75–94.91%", "91.49–93.62%", "PASS"],
+                    ["build-02-int8-calibration-scale-065", "92.85–93.16%", "74.47–78.72%", "BLOCK"],
                     [
                         "build-03-int8-calibration-scale-060",
-                        "92.37%*",
-                        "70.21%",
+                        "92.37–92.85%*",
+                        "70.21–76.60%",
                         "BLOCK",
                     ],
                 ],
