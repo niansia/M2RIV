@@ -116,9 +116,11 @@ class ObservationCache:
                     f"{CACHE_KEY_ENV} must contain at least {MIN_CACHE_KEY_BYTES} bytes"
                 )
             self.authentication_mode = "shared-hmac"
-        self._authentication_key = hashlib.sha256(
-            b"m2riv:observation-cache-hmac:v1\x00" + key_material
-        ).digest()
+        self._authentication_key = hmac.digest(
+            key_material,
+            b"m2riv:observation-cache-hmac:v1\x00",
+            "sha256",
+        )
 
     @staticmethod
     def _authentication_payload(key_digest: str, observation: Observation) -> dict[str, object]:
