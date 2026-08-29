@@ -1,0 +1,72 @@
+<mxfile host="app.diagrams.net" modified="2026-08-30T00:00:00.000Z" agent="M2RIV" version="26.0.16" type="device">
+  <diagram id="m2riv-release-evidence" name="Architecture">
+    <mxGraphModel dx="1680" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1680" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="title" value="M2RIV" style="text;html=1;align=center;verticalAlign=middle;fontSize=50;fontStyle=1;fontColor=#142342;" vertex="1" parent="1"><mxGeometry x="560" y="20" width="560" height="64" as="geometry"/></mxCell>
+        <mxCell id="subtitle" value="Vendor-neutral release evidence for deployable AI models" style="text;html=1;align=center;verticalAlign=middle;fontSize=24;fontColor=#344969;" vertex="1" parent="1"><mxGeometry x="440" y="85" width="800" height="40" as="geometry"/></mxCell>
+
+        <mxCell id="producers" value="1  Producers / Inputs" style="swimlane;html=1;rounded=1;startSize=56;fillColor=#F3F7FD;swimlaneFillColor=#FFFFFF;strokeColor=#A9B9D2;fontColor=#142342;fontSize=20;fontStyle=1;horizontal=1;" vertex="1" parent="1"><mxGeometry x="35" y="160" width="285" height="485" as="geometry"/></mxCell>
+        <mxCell id="p1" value="PyTorch / HF model" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBFDFF;strokeColor=#86A8DF;fontSize=17;" vertex="1" parent="producers"><mxGeometry x="18" y="76" width="249" height="48" as="geometry"/></mxCell>
+        <mxCell id="p2" value="API endpoint" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBFDFF;strokeColor=#86A8DF;fontSize=17;" vertex="1" parent="producers"><mxGeometry x="18" y="136" width="249" height="48" as="geometry"/></mxCell>
+        <mxCell id="p3" value="ONNX artifact" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBFDFF;strokeColor=#86A8DF;fontSize=17;" vertex="1" parent="producers"><mxGeometry x="18" y="196" width="249" height="48" as="geometry"/></mxCell>
+        <mxCell id="p4" value="TensorRT engine" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBFDFF;strokeColor=#86A8DF;fontSize=17;" vertex="1" parent="producers"><mxGeometry x="18" y="256" width="249" height="48" as="geometry"/></mxCell>
+        <mxCell id="p5" value="Polygraphy evidence" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBFDFF;strokeColor=#86A8DF;fontSize=17;" vertex="1" parent="producers"><mxGeometry x="18" y="316" width="249" height="48" as="geometry"/></mxCell>
+        <mxCell id="p6" value="MLflow registry" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBFDFF;strokeColor=#86A8DF;fontSize=17;" vertex="1" parent="producers"><mxGeometry x="18" y="376" width="249" height="48" as="geometry"/></mxCell>
+
+        <mxCell id="kernel" value="2  M2RIV Evidence Kernel" style="swimlane;html=1;rounded=1;startSize=56;fillColor=#F3F7FD;swimlaneFillColor=#FFFFFF;strokeColor=#A9B9D2;fontColor=#142342;fontSize=20;fontStyle=1;horizontal=1;" vertex="1" parent="1"><mxGeometry x="372" y="160" width="338" height="485" as="geometry"/></mxCell>
+        <mxCell id="k1" value="Artifact diff" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8FBFF;strokeColor=#86A8DF;fontSize=17;fontStyle=1;" vertex="1" parent="kernel"><mxGeometry x="20" y="80" width="142" height="105" as="geometry"/></mxCell>
+        <mxCell id="k2" value="Numerical diff" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8FBFF;strokeColor=#86A8DF;fontSize=17;fontStyle=1;" vertex="1" parent="kernel"><mxGeometry x="176" y="80" width="142" height="105" as="geometry"/></mxCell>
+        <mxCell id="k3" value="Contract checks" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8FBFF;strokeColor=#86A8DF;fontSize=17;fontStyle=1;" vertex="1" parent="kernel"><mxGeometry x="20" y="200" width="142" height="105" as="geometry"/></mxCell>
+        <mxCell id="k4" value="Paired statistics" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8FBFF;strokeColor=#86A8DF;fontSize=17;fontStyle=1;" vertex="1" parent="kernel"><mxGeometry x="176" y="200" width="142" height="105" as="geometry"/></mxCell>
+        <mxCell id="k5" value="Policy engine" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8FBFF;strokeColor=#86A8DF;fontSize=17;fontStyle=1;" vertex="1" parent="kernel"><mxGeometry x="20" y="320" width="142" height="105" as="geometry"/></mxCell>
+        <mxCell id="k6" value="Bisect" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8FBFF;strokeColor=#86A8DF;fontSize=17;fontStyle=1;" vertex="1" parent="kernel"><mxGeometry x="176" y="320" width="142" height="105" as="geometry"/></mxCell>
+        <mxCell id="kernel-caption" value="compare → quantify → gate → locate" style="text;html=1;align=center;fontSize=14;fontColor=#50627E;" vertex="1" parent="kernel"><mxGeometry x="40" y="442" width="258" height="28" as="geometry"/></mxCell>
+
+        <mxCell id="mcr-panel" value="3  MCR Protocol" style="swimlane;html=1;rounded=1;startSize=56;fillColor=#F3F7FD;swimlaneFillColor=#FFFFFF;strokeColor=#A9B9D2;fontColor=#142342;fontSize=20;fontStyle=1;horizontal=1;" vertex="1" parent="1"><mxGeometry x="760" y="160" width="258" height="485" as="geometry"/></mxCell>
+        <mxCell id="mcr-card" value="&lt;b&gt;Model Change Report&lt;/b&gt;&lt;br&gt;MCR 0.4&lt;br&gt;&lt;br&gt;• content identity&lt;br&gt;• evidence sets&lt;br&gt;• decision semantics&lt;br&gt;• portable bundle&lt;br&gt;• independent verification" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2F65C7;strokeWidth=2;fontSize=17;align=left;spacingLeft=20;verticalAlign=top;spacingTop=20;" vertex="1" parent="mcr-panel"><mxGeometry x="20" y="84" width="218" height="330" as="geometry"/></mxCell>
+
+        <mxCell id="consumers" value="4  Consumers / Integrations" style="swimlane;html=1;rounded=1;startSize=56;fillColor=#F3F7FD;swimlaneFillColor=#FFFFFF;strokeColor=#A9B9D2;fontColor=#142342;fontSize=19;fontStyle=1;horizontal=1;" vertex="1" parent="1"><mxGeometry x="1068" y="160" width="300" height="485" as="geometry"/></mxCell>
+        <mxCell id="c1" value="CI / GitHub Actions" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBFDFF;strokeColor=#86A8DF;fontSize=17;" vertex="1" parent="consumers"><mxGeometry x="20" y="86" width="260" height="52" as="geometry"/></mxCell>
+        <mxCell id="c2" value="Release controller" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBFDFF;strokeColor=#86A8DF;fontSize=17;" vertex="1" parent="consumers"><mxGeometry x="20" y="152" width="260" height="52" as="geometry"/></mxCell>
+        <mxCell id="c3" value="MLflow consumer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBFDFF;strokeColor=#86A8DF;fontSize=17;" vertex="1" parent="consumers"><mxGeometry x="20" y="218" width="260" height="52" as="geometry"/></mxCell>
+        <mxCell id="c4" value="Audit / governance" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBFDFF;strokeColor=#86A8DF;fontSize=17;" vertex="1" parent="consumers"><mxGeometry x="20" y="284" width="260" height="52" as="geometry"/></mxCell>
+        <mxCell id="c5" value="Third-party verifiers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBFDFF;strokeColor=#86A8DF;fontSize=17;" vertex="1" parent="consumers"><mxGeometry x="20" y="350" width="260" height="52" as="geometry"/></mxCell>
+
+        <mxCell id="decision" value="5  Release Decision" style="swimlane;html=1;rounded=1;startSize=56;fillColor=#F3F7FD;swimlaneFillColor=#FFFFFF;strokeColor=#A9B9D2;fontColor=#142342;fontSize=19;fontStyle=1;horizontal=1;" vertex="1" parent="1"><mxGeometry x="1418" y="160" width="228" height="485" as="geometry"/></mxCell>
+        <mxCell id="d1" value="PASS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3FAEF;strokeColor=#75A962;fontColor=#4F8739;fontSize=19;fontStyle=1;" vertex="1" parent="decision"><mxGeometry x="20" y="94" width="188" height="58" as="geometry"/></mxCell>
+        <mxCell id="d2" value="WARN" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8ED;strokeColor=#E8A84C;fontColor=#C77B19;fontSize=19;fontStyle=1;" vertex="1" parent="decision"><mxGeometry x="20" y="166" width="188" height="58" as="geometry"/></mxCell>
+        <mxCell id="d3" value="BLOCK" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF1F1;strokeColor=#D95D5D;fontColor=#B63E3E;fontSize=19;fontStyle=1;" vertex="1" parent="decision"><mxGeometry x="20" y="238" width="188" height="58" as="geometry"/></mxCell>
+        <mxCell id="d4" value="ERROR" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF4F2;strokeColor=#DF7565;fontColor=#BD4838;fontSize=19;fontStyle=1;" vertex="1" parent="decision"><mxGeometry x="20" y="310" width="188" height="58" as="geometry"/></mxCell>
+        <mxCell id="decision-caption" value="ship · review · stop · fix" style="text;html=1;align=center;fontSize=16;fontColor=#435674;" vertex="1" parent="decision"><mxGeometry x="20" y="402" width="188" height="34" as="geometry"/></mxCell>
+
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#17356F;strokeWidth=4;endArrow=block;endFill=1;" edge="1" parent="1" source="producers" target="kernel"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#17356F;strokeWidth=4;endArrow=block;endFill=1;" edge="1" parent="1" source="kernel" target="mcr-panel"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#17356F;strokeWidth=4;endArrow=block;endFill=1;" edge="1" parent="1" source="mcr-panel" target="consumers"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#17356F;strokeWidth=4;endArrow=block;endFill=1;" edge="1" parent="1" source="consumers" target="decision"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="nvidia-lane" value="NVIDIA vertical example" style="swimlane;html=1;rounded=1;startSize=46;fillColor=#F3F7FD;swimlaneFillColor=#FFFFFF;strokeColor=#A9B9D2;fontColor=#142342;fontSize=19;fontStyle=1;horizontal=1;" vertex="1" parent="1"><mxGeometry x="35" y="680" width="1610" height="178" as="geometry"/></mxCell>
+        <mxCell id="n1" value="FP16 model" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#9AA9BF;fontSize=16;fontStyle=1;" vertex="1" parent="nvidia-lane"><mxGeometry x="24" y="62" width="150" height="76" as="geometry"/></mxCell>
+        <mxCell id="n2" value="ModelOpt&lt;br&gt;quantization" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#9AA9BF;fontSize=16;fontStyle=1;" vertex="1" parent="nvidia-lane"><mxGeometry x="222" y="62" width="180" height="76" as="geometry"/></mxCell>
+        <mxCell id="n3" value="ONNX" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#9AA9BF;fontSize=16;fontStyle=1;" vertex="1" parent="nvidia-lane"><mxGeometry x="450" y="62" width="110" height="76" as="geometry"/></mxCell>
+        <mxCell id="n4" value="TensorRT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#9AA9BF;fontSize=16;fontStyle=1;" vertex="1" parent="nvidia-lane"><mxGeometry x="608" y="62" width="130" height="76" as="geometry"/></mxCell>
+        <mxCell id="n5" value="Polygraphy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#9AA9BF;fontSize=16;fontStyle=1;" vertex="1" parent="nvidia-lane"><mxGeometry x="786" y="62" width="142" height="76" as="geometry"/></mxCell>
+        <mxCell id="n6" value="M2RIV" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EEF4FF;strokeColor=#5D87D5;fontColor=#244F9D;fontSize=16;fontStyle=1;" vertex="1" parent="nvidia-lane"><mxGeometry x="976" y="62" width="112" height="76" as="geometry"/></mxCell>
+        <mxCell id="n7" value="MCR" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EEF4FF;strokeColor=#5D87D5;fontColor=#244F9D;fontSize=16;fontStyle=1;" vertex="1" parent="nvidia-lane"><mxGeometry x="1136" y="62" width="100" height="76" as="geometry"/></mxCell>
+        <mxCell id="n8" value="Gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#9AA9BF;fontSize=16;fontStyle=1;" vertex="1" parent="nvidia-lane"><mxGeometry x="1284" y="62" width="100" height="76" as="geometry"/></mxCell>
+        <mxCell id="n9" value="BLOCK" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF1F1;strokeColor=#D95D5D;fontColor=#B63E3E;fontSize=16;fontStyle=1;" vertex="1" parent="nvidia-lane"><mxGeometry x="1432" y="62" width="100" height="76" as="geometry"/></mxCell>
+
+        <mxCell id="ne1" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#17356F;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="nvidia-lane" source="n1" target="n2"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ne2" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#17356F;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="nvidia-lane" source="n2" target="n3"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ne3" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#17356F;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="nvidia-lane" source="n3" target="n4"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ne4" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#17356F;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="nvidia-lane" source="n4" target="n5"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ne5" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#17356F;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="nvidia-lane" source="n5" target="n6"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ne6" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#17356F;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="nvidia-lane" source="n6" target="n7"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ne7" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#17356F;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="nvidia-lane" source="n7" target="n8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ne8" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#17356F;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="nvidia-lane" source="n8" target="n9"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
