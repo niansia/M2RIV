@@ -10,8 +10,8 @@ This is an evidence checklist, not an OpenSSF badge claim.
   targets;
 - SHA-pinned GitHub Actions, read-only default permissions, isolated release OIDC,
   checksums, SPDX SBOM, and provenance attestations;
-- Dependabot, dependency audit, dependency review, CodeQL, and OpenSSF Scorecard
-  workflows;
+- Dependabot, dependency audit, dependency review, GitHub default CodeQL setup,
+  and OpenSSF Scorecard automation;
 - deterministic tests, coverage gate, strict typing, lint, schema drift,
   cross-language identity vectors, conformance, and adversarial tests;
 - protected compatibility surfaces with RFC, migration, and protocol changelog
