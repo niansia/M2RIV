@@ -2,28 +2,35 @@
 
 **Model-to-Release Inspection & Verification** *(pre-alpha working name)*
 
-M2RIV is an open-source release gate for **deployable model artifacts**. It
-compares a candidate quantized, compiled, converted, or runtime-specific build
-against its baseline; inspects what changed inside the artifact; measures paired
-regressions with confidence intervals; and bisects the build sequence that
-introduced a failure.
+M2RIV is the **vendor-neutral release-evidence layer for deployable AI models**.
+It turns a change between two model builds into a portable, content-addressed,
+independently verifiable Model Change Report (MCR).
 
-> Every model change should be reviewable before it ships.
+> MCR is the protocol candidate. M2RIV is the reference implementation.
+
+Any conforming producer may emit MCR without using the M2RIV CLI. Any registry,
+CI system, promotion controller, or experiment platform may verify and consume
+it without importing M2RIV Python. The reference CLI also inspects artifact
+changes, measures paired regressions with confidence intervals, applies
+fail-closed policy, and locates the first bad build.
 
 ## Why this exists
 
+MLflow already validates candidate metrics against thresholds and baselines.
+Polygraphy already compares TensorRT, ONNX Runtime, and other backend outputs.
 Promptfoo, DeepEval/Confident AI, Braintrust, and Inspect AI already provide strong
 application, agent, safety, and LLM-evaluation workflows. M2RIV does not claim
-that CI evaluation or release gating is empty territory. Its narrower target is
-the deployment build itself: FP16 vs INT8, ONNX opset changes, compiler revisions,
-runtime/provider changes, and later TensorRT/NPU/hardware builds.
+that comparison, CI evaluation, or release gating is empty territory. Its
+narrower target is the portable evidence boundary around a deployment change:
+FP16 vs INT8, ONNX opset changes, compiler revisions, runtime/provider changes,
+and TensorRT/NPU/hardware builds.
 
 If the thing under test is a prompt, RAG application, or agent trajectory, start
-with those evaluation tools. If the event under review is a model artifact being
-quantized or compiled for deployment, M2RIV is intended to preserve artifact
-provenance, paired statistical evidence, gate semantics, and regression onset in
-one portable Model Change Report. See the source-linked
-[competitive boundary](docs/competitive-landscape.md).
+with an application-evaluation tool. If you need backend/layer comparison, start
+with Polygraphy. If the question is whether one exact deployable build may replace
+another across organizational boundaries, M2RIV preserves artifact provenance,
+raw tool evidence, paired statistics, gate semantics, and regression onset in one
+portable MCR. See [when to use each tool](docs/competitive-landscape.md).
 
 The project is deliberately local-first and provider-agnostic. It does not train
 models, replace registries, or become a benchmark zoo.
@@ -62,14 +69,41 @@ The first foundation slice provides:
   links;
 - a standalone `m2riv mcr verify` conformance boundary that rehashes reports,
   manifests, sets, plans, and known supplemental artifacts from any producer;
+- first-class `m2riv conformance producer` and `consumer` profiles that preserve
+  PASS/WARN/BLOCK and require WARN/BLOCK to remain fail-closed;
 - explicit verifier completeness/coverage fields plus a full bundle emitted by a
   standard-library-only independent producer;
-- RFC 0012 canonical identity rules with matching Python and Node golden vectors;
+- external Polygraphy producer and MLflow consumer references outside the core
+  dependency graph;
+- RFC 0012 canonical identity rules with 20 typed and 1,024 binary64 Python,
+  Node, and Rust golden vectors plus two-way Python/Rust MCR production and
+  verification;
 - artifact traversal and byte budgets that fail before unbounded hashing/parsing;
 - portable JSON, Markdown, JUnit, and SARIF release outputs;
 - SHA-pinned CI plus tagged wheel/sdist builds with checksums, SPDX SBOM, and
   signed GitHub provenance attestations;
 - deterministic tests, strict typing, linting, and offline CI.
+
+## MCR protocol and conformance
+
+The public surface is specification-first:
+
+- [MCR specification candidate](docs/mcr-specification.md)
+- [producer and consumer conformance](docs/mcr-conformance.md)
+- [compatibility matrix](docs/mcr-compatibility.md)
+- [self-certification rules](docs/mcr-certification.md)
+- [normative JSON schemas](schemas/v1)
+- [cross-language identity vectors](examples/content_identity/README.md)
+
+```console
+m2riv conformance producer examples/mcr_conformance
+python integrations/mlflow_mcr/consume.py --emit-conformance-receipt \
+  examples/mcr_conformance integrations/mlflow_mcr/consumer-receipt.json
+m2riv conformance consumer integrations/mlflow_mcr/consumer-receipt.json
+```
+
+Conformance proves interoperability with a named MCR version. It does not prove
+model safety, producer identity, or that a dry-run integration executed on GPU.
 
 ## Real CPU-only quantization demo
 
@@ -113,6 +147,30 @@ executions record OS, architecture, Python, framework, and framework version, an
 CI preserves both Linux and Windows bundles so bounded runtime differences remain
 auditable without changing the PASS/BLOCK boundary.
 
+## Live NVIDIA ModelOpt → TensorRT vertical
+
+The target-specific vertical keeps Polygraphy as the backend oracle and adds MCR
+release semantics around it. On 2026-08-29 it was executed locally on an NVIDIA
+GeForce RTX 4060 Laptop GPU (driver 555.97), TensorRT 10.4.0, and Polygraphy
+0.53.4 over the same 629-case holdout:
+
+```text
+Build                                  Overall   Critical slice   TRT parity   Gate
+build-00-pytorch-fp16                    94.75%           91.49%      629/629   PASS
+build-01-modelopt-int8-balanced          94.91%           91.49%      629/629   PASS
+build-02-modelopt-int8-scale-065         93.32%           78.72%      629/629  BLOCK
+build-03-modelopt-int8-scale-060         92.85%           74.47%      629/629  BLOCK
+
+First bad build: build-02-modelopt-int8-scale-065
+```
+
+These are exact host-cohort results, not a general TensorRT performance claim.
+Latency is retained in the generated receipt; this short run is not used to rank
+builds. Windows/WDDM did not expose process VRAM through NVML, so VRAM is recorded
+as unavailable rather than zero. See the complete
+[NVIDIA reproduction](examples/nvidia_tensorrt_vertical/README.md) and the
+[technical report](docs/release-evidence-technical-report.md).
+
 ```console
 m2riv artifact diff \
   runs/onnx-quantization/artifacts/build-00-fp16.onnx \
@@ -126,7 +184,7 @@ m2riv artifact numerical-diff \
 m2riv bisect runs/onnx-quantization/checkpoints.jsonl --mode monotonic
 
 m2riv schema export ./schemas/v1
-# Exported 21 public schemas to schemas/v1
+# Exported 24 public schemas to schemas/v1
 
 m2riv mcr verify runs/onnx-quantization/reports/build-02-int8-calibration-scale-065
 # In a release gate, require every linked local component to be rehashed:
@@ -157,7 +215,9 @@ An MCR has two explicit identities. `id` addresses replay-stable evidence and
 excludes timestamps and run-scoped timing metrics; `run_id` addresses the exact
 execution, including timing, cache provenance, timestamp, and final verdict.
 The verifier accepts a bundle produced by M2RIV or another implementation; it
-does not execute the model or trust prose summaries.
+does not execute the model or trust prose summaries. Producer/consumer
+conformance adds semantic interoperability checks on top of this integrity
+boundary; it still does not establish authorship.
 `integrity_valid` means every performed check passed, while
 `verification_complete` means all referenced local bundle components were
 recognized and rehashed. This is a self-consistency check, not a producer
@@ -166,6 +226,13 @@ signature: the result explicitly reports `authenticity_verified: false` and
 [independent producer](examples/independent_producer/README.md),
 [full conformance bundle](examples/mcr_conformance/full), and
 [content-identity vectors](examples/content_identity/README.md).
+The [Polygraphy producer](integrations/polygraphy_mcr/README.md) and
+[MLflow consumer](integrations/mlflow_mcr/README.md) show both directions without
+adding either dependency to the kernel.
+The small [Rust reference](reference/mcr-reference-rust/README.md) reads simple
+evidence, emits an MCR accepted by Python, and independently verifies report/run
+IDs emitted by Python. It is repository-owned conformance evidence, not external
+adoption.
 
 For a recorded-output gate in GitHub Actions, the repository also exposes a thin
 composite action:
@@ -174,7 +241,7 @@ composite action:
 - uses: actions/checkout@REPLACE_WITH_IMMUTABLE_COMMIT
   with:
     persist-credentials: false
-- uses: M2RIV/m2riv@REPLACE_WITH_IMMUTABLE_COMMIT
+- uses: niansia/M2RIV@REPLACE_WITH_IMMUTABLE_COMMIT
   with:
     baseline: evidence/baseline.jsonl
     candidate: evidence/candidate.jsonl
@@ -207,8 +274,9 @@ The adapter bounds attempts, response bytes, per-request time, and cumulative
 elapsed time. Credentials never participate in snapshots, fingerprints, cache
 entries, reports, or error messages. Remote comparisons use a run-local cache by
 default, so mutable provider endpoints cannot silently reuse stale observations.
-Credential-bearing requests require HTTPS, and cloud metadata link-local endpoints
-are rejected. Loopback and private-network URLs remain available for self-hosted
+Credential-bearing requests require HTTPS; cloud metadata hostnames plus known
+link-local and non-link-local metadata addresses are rejected. Loopback and
+private-network URLs remain available for self-hosted
 inference without credentials.
 Use the non-secret credential-scope options when endpoint routing varies by tenant.
 See the [API comparison example](examples/api_compare/README.md).
@@ -267,7 +335,12 @@ threat models, and extension boundaries. The
 independent of local, Ray, Kubernetes, and proprietary execution fabrics.
 The [Plugin SDK guide](docs/plugin-sdk.md) shows how external maintainers can add
 metrics and execution backends without changing release semantics.
-See [ROADMAP.md](ROADMAP.md) for ecosystem milestones and
+See [ROADMAP.md](ROADMAP.md) for ecosystem milestones,
+[Blueprint v3.0](docs/blueprint-v3.0.md) ([PDF](docs/pdf/M2RIV_Blueprint_v3.0.pdf))
+for the narrowed six-month strategy, and
+[release-evidence technical report](docs/release-evidence-technical-report.md)
+([PDF](docs/pdf/M2RIV_Release_Evidence_Technical_Report.pdf)) for the protocol,
+corpus, CPU, and target-GPU case studies, and
 [GOVERNANCE.md](GOVERNANCE.md) for the path from contributor to maintainer.
 Release-facing changes are tracked in [CHANGELOG.md](CHANGELOG.md).
 Public publication is governed by the owner-side

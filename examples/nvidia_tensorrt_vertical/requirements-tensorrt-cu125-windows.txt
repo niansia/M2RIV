@@ -1,0 +1,8 @@
+# Reproduced on Windows, CUDA driver capability 12.5, RTX 4060 Laptop GPU.
+numpy==2.2.6
+onnxruntime==1.29.0
+polygraphy==0.53.4
+nvidia-ml-py==13.610.43
+tensorrt-cu12==10.4.0
+tensorrt-cu12-bindings==10.4.0
+tensorrt-cu12-libs==10.4.0

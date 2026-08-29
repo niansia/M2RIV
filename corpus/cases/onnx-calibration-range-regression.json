@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "onnx-calibration-range-regression",
+  "title": "INT8 calibration range hides a critical rare-slice regression",
+  "kind": "regression",
+  "axis": "quantization-calibration",
+  "status": "verified-in-ci",
+  "expected_decision": "BLOCK",
+  "expected_first_bad": "build-02-int8-calibration-scale-065",
+  "reproduction": "python examples/onnx_quantization/run_demo.py --output runs/onnx-quantization",
+  "verification": "python tools/verify_onnx_demo.py runs/onnx-quantization",
+  "source_paths": [
+    "examples/onnx_quantization/run_demo.py",
+    "examples/onnx_quantization/assets/digits-mlp-fp32.onnx.b64",
+    "examples/onnx_quantization/README.md"
+  ],
+  "limitations": "Fixed digits dataset, fixed MLP weights, CPU ONNX Runtime, and declared calibration sequence."
+}

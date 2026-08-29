@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "onnx-opset-upgrade-control",
+  "title": "ONNX opset 17 to 18 structural change with identical shared tensors",
+  "kind": "negative-control",
+  "axis": "opset",
+  "status": "verified-in-ci",
+  "expected_decision": "PASS",
+  "expected_first_bad": null,
+  "reproduction": "python examples/onnx_opset_upgrade/run_demo.py --output runs/onnx-opset-upgrade",
+  "verification": "m2riv mcr verify runs/onnx-opset-upgrade/report --strict",
+  "source_paths": [
+    "examples/onnx_opset_upgrade/run_demo.py",
+    "examples/onnx_opset_upgrade/README.md"
+  ],
+  "limitations": "Small CPU-only graph; a control for structural change without numerical divergence."
+}

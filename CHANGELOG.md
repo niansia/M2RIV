@@ -35,13 +35,30 @@ versions for portable JSON contracts. Pre-1.0 APIs may change with migration not
 - SHA-pinned CI plus tag builds with SHA-256 checksums, SPDX SBOM, and signed
   GitHub artifact provenance
 - Purple-team parser, cache, network, CI-renderer, plugin, and bisect controls
-- RFC 0012 canonical content-identity rules with stdlib Python/Node golden vectors
+- RFC 0012 canonical content-identity rules with 20 typed and 1,024 binary64
+  Python/Node/Rust golden vectors plus bidirectional Python/Rust MCR verification
 - A complete standard-library-only independent-producer MCR conformance bundle
 - MCRVerification 1.1 integrity/completeness semantics and evidence coverage counts
 - MCRVerification 1.2 explicit `self-consistency-only` trust scope and an
   `authenticity_verified` field that prevents integrity from implying provenance
 - A CI smoke test that executes the local composite action and asserts its BLOCK
   output, uploaded bundle, and producer-neutral verification path
+- First-class producer and consumer conformance commands, normative
+  PASS/WARN/BLOCK profiles, deterministic receipts, a compatibility matrix, and
+  self-certification rules
+- Repository-owned Polygraphy producer and MLflow consumer reference integrations
+  that remain outside the four-dependency evidence kernel
+- Content-addressed `BackendComparisonEvidence` with strict bundle verification
+  for retained external backend parity and runtime measurements
+- A live NVIDIA ModelOpt-to-TensorRT vertical with exact GPU/software provenance,
+  Polygraphy parity, quality gate, ordered-build localization, and a manual
+  target-runner workflow
+- An indexed regression corpus that distinguishes CI verification, target-only
+  verification, and independent reproduction
+- Blueprint v3.0, a release-evidence technical report, design-partner playbook,
+  brand recall study, and reproducible PDF build
+- Three new public schemas for backend evidence and producer/consumer conformance,
+  bringing the exported public surface to 24 contracts
 
 ### Changed
 
@@ -53,6 +70,8 @@ versions for portable JSON contracts. Pre-1.0 APIs may change with migration not
   reports one final exit code; verifier failures are canonical error code `3`
 - `m2riv mcr verify --strict` now fails when any linked local evidence cannot be
   recognized and rehashed; the reusable action uses strict verification
+- Project positioning now treats MCR as the protocol candidate and M2RIV as its
+  reference implementation, with deployment artifact evidence as the first wedge
 
 ### Security
 
@@ -78,9 +97,10 @@ versions for portable JSON contracts. Pre-1.0 APIs may change with migration not
   errors rather than tracebacks
 - Case IDs reject control/bidirectional-override characters and excess length;
   JUnit output removes XML 1.0-invalid controls defensively
-- Credential-bearing remote requests require HTTPS, cloud metadata link-local
-  endpoints are blocked, redirect-enabled custom clients are refused, and response
-  JSON is parsed with the same strict limits as local inputs
+- Credential-bearing remote requests require HTTPS; cloud metadata hostnames,
+  link-local endpoints, and known non-link-local addresses such as
+  `100.100.100.200` are blocked; redirect-enabled custom clients are refused, and
+  response JSON is parsed with the same strict limits as local inputs
 - ONNX inspection and execution consume the exact bounded bytes that were hashed,
   closing mutable-path and link-swap gaps; native ONNX remains a sandbox boundary
 - Report output and verifier references reject links, junctions, special files,

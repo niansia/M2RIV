@@ -35,9 +35,13 @@ jobs:
       - run: python -m pip_audit --local --skip-editable
       - run: python -m pip check
       - if: matrix.python-version == '3.13'
+        shell: bash
         run: |
           m2riv schema export schemas/v1
           git diff --exit-code -- schemas/v1
+          test -z "$(git status --porcelain --untracked-files=all -- schemas/v1)"
+          python tools/verify_regression_corpus.py
+          m2riv conformance producer examples/mcr_conformance
       - if: matrix.python-version == '3.13'
         run: python -m pip wheel . --no-deps --wheel-dir wheelhouse
 
@@ -78,6 +82,36 @@ jobs:
           m2riv mcr verify runs/action-smoke --strict
       - name: Verify cross-language content identity vectors
         run: node examples/content_identity/verify_golden.mjs
+
+  rust-mcr-interop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install the Python verifier and select the stable Rust toolchain
+        run: |
+          python -m pip install -e .
+          rustup toolchain install stable --profile minimal --component rustfmt
+          rustup default stable
+      - name: Verify typed identity vectors in Python, Node, and Rust
+        run: |
+          python examples/content_identity/generate_vectors.py --check
+          python examples/content_identity/verify_golden.py
+          node examples/content_identity/verify_golden.mjs
+          cargo fmt --manifest-path reference/mcr-reference-rust/Cargo.toml -- --check
+          cargo test --locked --manifest-path reference/mcr-reference-rust/Cargo.toml
+          cargo run --locked --quiet --manifest-path reference/mcr-reference-rust/Cargo.toml -- vectors examples/content_identity/golden-vectors.json
+          cargo run --locked --quiet --manifest-path reference/mcr-reference-rust/Cargo.toml -- float-vectors examples/content_identity/float-vectors.json
+      - name: Verify bidirectional Python and Rust MCR interoperability
+        run: |
+          python examples/independent_producer/generate_bundle.py --check
+          python tools/verify_rust_interop.py
 
   onnx-demo:
     strategy:

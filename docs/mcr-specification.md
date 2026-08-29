@@ -1,8 +1,10 @@
 # Model Change Report specification candidate
 
-Status: pre-alpha specification candidate  
-Current envelope: MCR 1.3.0  
-Identity protocol: RFC 0012  
+Status: pre-alpha specification candidate
+
+Current envelope: MCR 1.3.0
+
+Identity protocol: RFC 0012
 Normative schemas: [`schemas/v1`](../schemas/v1)
 
 MCR is a vendor-neutral, language-neutral release-evidence envelope for a change

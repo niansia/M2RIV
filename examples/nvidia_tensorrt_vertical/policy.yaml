@@ -1,0 +1,11 @@
+schema_version: 1.0.0
+policy_id: nvidia-modelopt-tensorrt-release
+rules:
+  - rule_id: overall-quality
+    metric: accuracy
+    margin: 0.03
+    min_pairs: 600
+  - rule_id: critical-rare-slice
+    metric: accuracy@risk=rare-high-ink
+    margin: 0.015
+    min_pairs: 40

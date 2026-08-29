@@ -1,0 +1,54 @@
+name: NVIDIA vertical
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  modelopt-tensorrt:
+    runs-on: [self-hosted, windows, x64, nvidia-gpu]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.11"
+      - name: Generate the fixed CPU suite
+        shell: pwsh
+        run: |
+          python -m venv .venv-suite
+          .venv-suite/Scripts/python -m pip install -e ".[onnx-demo]"
+          .venv-suite/Scripts/python examples/onnx_quantization/run_demo.py --output runs/onnx-quantization
+      - name: Build PyTorch and ModelOpt artifacts
+        shell: pwsh
+        run: |
+          python -m venv .venv-modelopt
+          .venv-modelopt/Scripts/python -m pip install -r examples/nvidia_tensorrt_vertical/requirements-modelopt.txt
+          .venv-modelopt/Scripts/python examples/nvidia_tensorrt_vertical/build_artifacts.py --fixture examples/onnx_quantization/assets/digits-mlp-fp32.onnx.b64 --output runs/nvidia/artifact-inputs
+      - name: Execute TensorRT, Polygraphy, gate, and bisect
+        shell: pwsh
+        run: |
+          python -m venv .venv-tensorrt
+          .venv-tensorrt/Scripts/python -m pip install -e .
+          .venv-tensorrt/Scripts/python -m pip install -r examples/nvidia_tensorrt_vertical/requirements-tensorrt-cu125-windows.txt
+          .venv-tensorrt/Scripts/python examples/nvidia_tensorrt_vertical/run_vertical.py --artifacts runs/nvidia/artifact-inputs --suite runs/onnx-quantization/suite.jsonl --output runs/nvidia/live --polygraphy-command .venv-tensorrt/Scripts/polygraphy.exe
+      - name: Verify target receipt and every MCR bundle
+        shell: pwsh
+        run: |
+          .venv-tensorrt/Scripts/python -c "import json,pathlib; p=json.loads(pathlib.Path('runs/nvidia/live/gpu-receipt.json').read_text()); assert p['first_bad_index'] == 2; assert [b['decision'] for b in p['builds']] == ['PASS','PASS','BLOCK','BLOCK']; assert all(b['backend_matched_cases'] == p['case_count'] for b in p['builds'])"
+          Get-ChildItem runs/nvidia/live/reports -Directory | ForEach-Object {
+            .venv-tensorrt/Scripts/m2riv.exe mcr verify $_.FullName --strict
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Upload exact target evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: nvidia-modelopt-tensorrt-${{ github.run_id }}
+          path: runs/nvidia
+          if-no-files-found: error
+          retention-days: 30

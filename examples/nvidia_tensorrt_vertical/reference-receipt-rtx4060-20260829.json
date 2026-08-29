@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0.0",
+  "evidence_level": "live-target-gpu",
+  "preflight": {
+    "gpu_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "driver_version": "555.97",
+    "gpu_memory_mib": 8188,
+    "tensorrt_version": "10.4.0",
+    "polygraphy_version": "0.53.4",
+    "operating_system": "Windows-10-10.0.26200-SP0",
+    "architecture": "AMD64",
+    "python_version": "3.11.15"
+  },
+  "case_count": 629,
+  "warmups": 3,
+  "absolute_tolerance": 0.05,
+  "relative_tolerance": 0.01,
+  "builds": [
+    {
+      "build": "build-00-pytorch-fp16",
+      "overall_accuracy": 0.9475357710651828,
+      "critical_slice_accuracy": 0.9148936170212766,
+      "decision": "PASS",
+      "backend_matched_cases": 629,
+      "case_count": 629,
+      "mean_latency_ms": 0.8752057965495439,
+      "p95_latency_ms": 1.0383129119873047,
+      "peak_vram_mib": null
+    },
+    {
+      "build": "build-01-modelopt-int8-balanced",
+      "overall_accuracy": 0.9491255961844197,
+      "critical_slice_accuracy": 0.9148936170212766,
+      "decision": "PASS",
+      "backend_matched_cases": 629,
+      "case_count": 629,
+      "mean_latency_ms": 0.988506550629681,
+      "p95_latency_ms": 1.024484634399414,
+      "peak_vram_mib": null
+    },
+    {
+      "build": "build-02-modelopt-int8-scale-065",
+      "overall_accuracy": 0.9332273449920508,
+      "critical_slice_accuracy": 0.7872340425531915,
+      "decision": "BLOCK",
+      "backend_matched_cases": 629,
+      "case_count": 629,
+      "mean_latency_ms": 0.9573408075281091,
+      "p95_latency_ms": 1.001596450805664,
+      "peak_vram_mib": null
+    },
+    {
+      "build": "build-03-modelopt-int8-scale-060",
+      "overall_accuracy": 0.9284578696343402,
+      "critical_slice_accuracy": 0.7446808510638298,
+      "decision": "BLOCK",
+      "backend_matched_cases": 629,
+      "case_count": 629,
+      "mean_latency_ms": 0.943905977452313,
+      "p95_latency_ms": 1.0104179382324219,
+      "peak_vram_mib": null
+    }
+  ],
+  "first_bad_index": 2,
+  "first_bad_build": "build-02-modelopt-int8-scale-065"
+}
