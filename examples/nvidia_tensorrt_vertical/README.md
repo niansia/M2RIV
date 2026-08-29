@@ -11,13 +11,13 @@ ModelOpt nor TensorRT enters the four-dependency M2RIV kernel.
 
 ## 1. Build artifacts
 
-```console
-python -m venv .venv-modelopt
-.venv-modelopt/Scripts/python -m pip install -r \
-  examples/nvidia_tensorrt_vertical/requirements-modelopt.txt
-.venv-modelopt/Scripts/python \
-  examples/nvidia_tensorrt_vertical/build_artifacts.py \
-  --fixture examples/onnx_quantization/assets/digits-mlp-fp32.onnx.b64 \
+```powershell
+uv venv --python 3.11 .venv-modelopt
+uv pip sync --python .venv-modelopt/Scripts/python.exe --require-hashes `
+  examples/nvidia_tensorrt_vertical/requirements-modelopt.lock
+.venv-modelopt/Scripts/python `
+  examples/nvidia_tensorrt_vertical/build_artifacts.py `
+  --fixture examples/onnx_quantization/assets/digits-mlp-fp32.onnx.b64 `
   --output runs/nvidia/artifact-inputs
 ```
 
@@ -27,16 +27,17 @@ scale only the declared calibration input to 0.65 and 0.60. Model weights and th
 
 ## 2. Execute on GPU
 
-```console
-python -m venv .venv-tensorrt
-.venv-tensorrt/Scripts/python -m pip install -e .
-.venv-tensorrt/Scripts/python -m pip install -r \
-  examples/nvidia_tensorrt_vertical/requirements-tensorrt-cu125-windows.txt
-.venv-tensorrt/Scripts/python \
-  examples/nvidia_tensorrt_vertical/run_vertical.py \
-  --artifacts runs/nvidia/artifact-inputs \
-  --suite runs/onnx-quantization/suite.jsonl \
-  --output runs/nvidia/live \
+```powershell
+$env:UV_PROJECT_ENVIRONMENT = ".venv-tensorrt"
+uv sync --frozen --extra onnx-demo
+uv pip install --python .venv-tensorrt/Scripts/python.exe --no-deps `
+  --require-hashes -r `
+  examples/nvidia_tensorrt_vertical/requirements-tensorrt-cu125-windows.lock
+.venv-tensorrt/Scripts/python `
+  examples/nvidia_tensorrt_vertical/run_vertical.py `
+  --artifacts runs/nvidia/artifact-inputs `
+  --suite runs/onnx-quantization/suite.jsonl `
+  --output runs/nvidia/live `
   --polygraphy-command .venv-tensorrt/Scripts/polygraphy.exe
 ```
 

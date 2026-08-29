@@ -10,6 +10,9 @@ jobs:
   modelopt-tensorrt:
     runs-on: [self-hosted, windows, x64, nvidia-gpu]
     timeout-minutes: 60
+    env:
+      UV_CACHE_DIR: ${{ runner.temp }}/m2riv-uv-cache
+      UV_NO_PROGRESS: "1"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -17,29 +20,28 @@ jobs:
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.11"
-      - name: Upgrade the packaging bootstrap above known vulnerable versions
-        run: python -m pip install "pip>=26.2" "setuptools>=83"
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "0.11.18"
+          enable-cache: false
       - name: Generate the fixed CPU suite
         shell: pwsh
         run: |
-          python -m venv .venv-suite
-          .venv-suite/Scripts/python -m pip install "pip>=26.2" "setuptools>=83"
-          .venv-suite/Scripts/python -m pip install -e ".[onnx-demo]"
+          $env:UV_PROJECT_ENVIRONMENT = ".venv-suite"
+          uv sync --frozen --extra onnx-demo
           .venv-suite/Scripts/python examples/onnx_quantization/run_demo.py --output runs/onnx-quantization
       - name: Build PyTorch and ModelOpt artifacts
         shell: pwsh
         run: |
-          python -m venv .venv-modelopt
-          .venv-modelopt/Scripts/python -m pip install "pip>=26.2" "setuptools>=83"
-          .venv-modelopt/Scripts/python -m pip install -r examples/nvidia_tensorrt_vertical/requirements-modelopt.txt
+          uv venv --python 3.11 .venv-modelopt
+          uv pip sync --python .venv-modelopt/Scripts/python.exe --require-hashes examples/nvidia_tensorrt_vertical/requirements-modelopt.lock
           .venv-modelopt/Scripts/python examples/nvidia_tensorrt_vertical/build_artifacts.py --fixture examples/onnx_quantization/assets/digits-mlp-fp32.onnx.b64 --output runs/nvidia/artifact-inputs
       - name: Execute TensorRT, Polygraphy, gate, and bisect
         shell: pwsh
         run: |
-          python -m venv .venv-tensorrt
-          .venv-tensorrt/Scripts/python -m pip install "pip>=26.2" "setuptools>=83"
-          .venv-tensorrt/Scripts/python -m pip install -e .
-          .venv-tensorrt/Scripts/python -m pip install -r examples/nvidia_tensorrt_vertical/requirements-tensorrt-cu125-windows.txt
+          $env:UV_PROJECT_ENVIRONMENT = ".venv-tensorrt"
+          uv sync --frozen --extra onnx-demo
+          uv pip install --python .venv-tensorrt/Scripts/python.exe --no-deps --require-hashes -r examples/nvidia_tensorrt_vertical/requirements-tensorrt-cu125-windows.lock
           .venv-tensorrt/Scripts/python examples/nvidia_tensorrt_vertical/run_vertical.py --artifacts runs/nvidia/artifact-inputs --suite runs/onnx-quantization/suite.jsonl --output runs/nvidia/live --polygraphy-command .venv-tensorrt/Scripts/polygraphy.exe
       - name: Verify target receipt and every MCR bundle
         shell: pwsh

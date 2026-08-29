@@ -131,3 +131,26 @@ def test_release_build_backend_is_exact_and_preinstalled() -> None:
     assert "--group action-build" in release
     assert "python -m build --no-isolation" in release
     assert "python -m build --no-isolation" in ci
+
+
+def test_nvidia_runner_uses_isolated_cache_and_hash_locked_dependencies() -> None:
+    source = (WORKFLOWS / "nvidia-vertical.yml").read_text(encoding="utf-8")
+
+    assert "astral-sh/setup-uv@" in source
+    assert 'version: "0.11.18"' in source
+    assert "enable-cache: false" in source
+    assert "UV_CACHE_DIR: ${{ runner.temp }}/m2riv-uv-cache" in source
+    assert "uv sync --frozen --extra onnx-demo" in source
+    assert source.count("--require-hashes") == 2
+    assert "python -m pip" not in source
+
+    for name in (
+        "requirements-modelopt.lock",
+        "requirements-tensorrt-cu125-windows.lock",
+    ):
+        lock = (ROOT / "examples" / "nvidia_tensorrt_vertical" / name).read_text("utf-8")
+        package_blocks = [
+            block for block in re.split(r"(?m)(?=^[A-Za-z0-9])", lock) if "==" in block
+        ]
+        assert package_blocks
+        assert all("--hash=sha256:" in block for block in package_blocks)
