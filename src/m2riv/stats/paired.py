@@ -141,7 +141,8 @@ def paired_bootstrap(
         else:
             effect_size = effect / difference_stddev
 
-    rng = random.Random(seed)
+    # Reproducible bootstrap sampling, not a cryptographic decision.
+    rng = random.Random(seed)  # nosec B311  # noqa: S311
     bootstrap_effects = [
         math.fsum(differences[rng.randrange(n_pairs)] for _ in range(n_pairs)) / n_pairs
         for _ in range(resamples)

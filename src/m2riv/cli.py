@@ -91,10 +91,14 @@ def version() -> None:
 @mcr_app.command("verify")
 def mcr_verify_command(
     source: Annotated[Path, typer.Argument(exists=True, readable=True)],
+    strict: Annotated[
+        bool,
+        typer.Option("--strict", help="Fail when any linked evidence cannot be rehashed."),
+    ] = False,
 ) -> None:
-    """Verify MCR schema, identities, manifests, sets, and linked evidence."""
+    """Verify MCR self-consistency, identities, manifests, and linked evidence."""
     try:
-        result = verify_report_bundle(source)
+        result = verify_report_bundle(source, require_complete=strict)
     except (OSError, MCRVerificationError) as error:
         typer.echo(json.dumps({"valid": False, "error": str(error)}, indent=2))
         raise typer.Exit(code=3) from error
@@ -481,9 +485,7 @@ def bisect_run_command(
     manifest: Annotated[Path, typer.Argument(exists=True, readable=True)],
     suite: Annotated[Path, typer.Option("--suite", exists=True, readable=True)],
     policy: Annotated[Path, typer.Option("--policy", exists=True, readable=True)],
-    destination: Annotated[Path, typer.Option("--output", "-o")] = Path(
-        "runs/bisect-run"
-    ),
+    destination: Annotated[Path, typer.Option("--output", "-o")] = Path("runs/bisect-run"),
     adapter_kind: Annotated[BisectAdapterKind, typer.Option("--adapter")] = (
         BisectAdapterKind.RECORDED
     ),

@@ -27,9 +27,7 @@ def _write_execution_fixture(root: Path) -> tuple[Path, Path, Path]:
                 "slices": {"frequency": "rare" if index >= 4 else "common"},
             }
         )
-    suite.write_text(
-        "".join(json.dumps(case) + "\n" for case in cases), encoding="utf-8"
-    )
+    suite.write_text("".join(json.dumps(case) + "\n" for case in cases), encoding="utf-8")
     policy.write_text(
         """schema_version: 1.0.0
 policy_id: executed-bisect

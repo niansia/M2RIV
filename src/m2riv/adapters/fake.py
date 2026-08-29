@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from m2riv.adapters.base import AdapterCapability
-from m2riv.core.identity import fingerprint
+from m2riv.core.identity import fingerprint, observation_content_id
 from m2riv.core.models import EvalCase, ModelSnapshot, Observation, RuntimeProfile
 
 
@@ -33,17 +33,14 @@ class FakeAdapter:
         for case in cases:
             output = self.responses.get(case.case_id, case.input)
             output_digest = fingerprint(output, namespace="observation-output")
-            observation_payload = {
-                "snapshot_id": self.snapshot.id,
-                "case_id": case.case_id,
-                "attempt": 0,
-                "seed": profile.seed,
-                "output_digest": output_digest,
-            }
-            observation_id = fingerprint(observation_payload, namespace="observation")
             observations.append(
                 Observation(
-                    id=f"m2riv:sha256:{observation_id}",
+                    id=observation_content_id(
+                        snapshot_id=self.snapshot.id,
+                        case_id=case.case_id,
+                        seed=profile.seed,
+                        output_digest=output_digest,
+                    ),
                     snapshot_id=self.snapshot.id,
                     case_id=case.case_id,
                     seed=profile.seed,

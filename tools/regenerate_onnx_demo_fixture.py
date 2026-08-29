@@ -26,13 +26,7 @@ from sklearn.neural_network import MLPClassifier
 
 ROOT = Path(__file__).resolve().parents[1]
 DEMO = ROOT / "examples" / "onnx_quantization" / "run_demo.py"
-DEFAULT_OUTPUT = (
-    ROOT
-    / "examples"
-    / "onnx_quantization"
-    / "assets"
-    / "digits-mlp-fp32.onnx.b64"
-)
+DEFAULT_OUTPUT = ROOT / "examples" / "onnx_quantization" / "assets" / "digits-mlp-fp32.onnx.b64"
 SEED = 23
 RARE_DIGIT = 1
 
@@ -50,9 +44,7 @@ def regenerate(output: Path) -> str:
     )
     rare_indices = np.flatnonzero(train_y == RARE_DIGIT)
     common_indices = np.flatnonzero(train_y != RARE_DIGIT)
-    retained = np.concatenate(
-        (common_indices, rare_indices[: len(rare_indices) // 4])
-    )
+    retained = np.concatenate((common_indices, rare_indices[: len(rare_indices) // 4]))
     np.random.default_rng(SEED).shuffle(retained)
     classifier = MLPClassifier(
         hidden_layer_sizes=(32,),

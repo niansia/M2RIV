@@ -222,7 +222,12 @@ def build_correction(target: Path) -> None:
                     ["Build", "Overall", "Critical rare slice", "Gate"],
                     ["build-00-fp16", "94.75%", "91.49%", "PASS"],
                     ["build-01-int8-balanced", "94.75–94.91%", "91.49–93.62%", "PASS"],
-                    ["build-02-int8-calibration-scale-065", "92.85–93.16%", "74.47–78.72%", "BLOCK"],
+                    [
+                        "build-02-int8-calibration-scale-065",
+                        "92.85–93.16%",
+                        "74.47–78.72%",
+                        "BLOCK",
+                    ],
                     [
                         "build-03-int8-calibration-scale-060",
                         "92.37–92.85%*",
@@ -253,12 +258,36 @@ def build_correction(target: Path) -> None:
             _table(
                 [
                     ["Project", "已驗證的核心", "M2RIV 的邊界"],
-                    ["Promptfoo", "AI app eval、red teaming、static scan、CI；2026-03-09 宣布由 OpenAI 收購。", "部署 artifact、compiler/runtime build provenance、paired artifact regression、build bisect。"],
-                    ["DeepEval / Confident AI", "Pytest-style LLM app metrics；governance policy 可在 CI block deployment。", "不建立 evaluator zoo；外部 metric 可作 evidence input。"],
-                    ["Braintrust", "Immutable experiments、CI comparison、production feedback。", "local-first artifact identity、portable MCR、vendor-neutral executor。"],
-                    ["Inspect AI", "LLM task / dataset / solver / scorer / agent / sandbox framework。", "Inspect suite 可輸入 evidence，但不是 M2RIV 的 benchmark surface。"],
-                    ["NVIDIA ModelOpt", "Quantization、distillation、pruning、sparsity、deployment export。", "ModelOpt 產生 build；M2RIV 判斷 build 是否可取代 baseline。"],
-                    ["ONNX Runtime", "Static / dynamic quantization、QDQ / QOperator、calibration、execution。", "ORT 產生並執行 graph；M2RIV 保存 semantic diff、gate、MCR、bisect。"],
+                    [
+                        "Promptfoo",
+                        "AI app eval、red teaming、static scan、CI；2026-03-09 宣布由 OpenAI 收購。",
+                        "部署 artifact、compiler/runtime build provenance、paired artifact regression、build bisect。",
+                    ],
+                    [
+                        "DeepEval / Confident AI",
+                        "Pytest-style LLM app metrics；governance policy 可在 CI block deployment。",
+                        "不建立 evaluator zoo；外部 metric 可作 evidence input。",
+                    ],
+                    [
+                        "Braintrust",
+                        "Immutable experiments、CI comparison、production feedback。",
+                        "local-first artifact identity、portable MCR、vendor-neutral executor。",
+                    ],
+                    [
+                        "Inspect AI",
+                        "LLM task / dataset / solver / scorer / agent / sandbox framework。",
+                        "Inspect suite 可輸入 evidence，但不是 M2RIV 的 benchmark surface。",
+                    ],
+                    [
+                        "NVIDIA ModelOpt",
+                        "Quantization、distillation、pruning、sparsity、deployment export。",
+                        "ModelOpt 產生 build；M2RIV 判斷 build 是否可取代 baseline。",
+                    ],
+                    [
+                        "ONNX Runtime",
+                        "Static / dynamic quantization、QDQ / QOperator、calibration、execution。",
+                        "ORT 產生並執行 graph；M2RIV 保存 semantic diff、gate、MCR、bisect。",
+                    ],
                 ],
                 [31 * mm, 66 * mm, 66 * mm],
             ),
@@ -294,10 +323,26 @@ def build_correction(target: Path) -> None:
             _table(
                 [
                     ["Threat", "Control", "仍然不保證"],
-                    ["Parser/resource bomb", "512 MiB default file limit；node、initializer、metadata、rank、I/O cardinality limits。", "Native ONNX parser 不是 sandbox。"],
-                    ["External path traversal", "Inspection 不載入 external data；reference runtime 直接拒絕 external tensor data。", "未來 large-model external data 需隔離 worker contract。"],
-                    ["Custom native code", "不載入 custom-op library；只指定 CPUExecutionProvider。", "ONNX Runtime 本身仍是 native dependency。"],
-                    ["TOCTOU", "解析前後重算 artifact hash；改變即 fail closed。", "Hostile shared filesystem 仍需 OS isolation。"],
+                    [
+                        "Parser/resource bomb",
+                        "512 MiB default file limit；node、initializer、metadata、rank、I/O cardinality limits。",
+                        "Native ONNX parser 不是 sandbox。",
+                    ],
+                    [
+                        "External path traversal",
+                        "Inspection 不載入 external data；reference runtime 直接拒絕 external tensor data。",
+                        "未來 large-model external data 需隔離 worker contract。",
+                    ],
+                    [
+                        "Custom native code",
+                        "不載入 custom-op library；只指定 CPUExecutionProvider。",
+                        "ONNX Runtime 本身仍是 native dependency。",
+                    ],
+                    [
+                        "TOCTOU",
+                        "解析前後重算 artifact hash；改變即 fail closed。",
+                        "Hostile shared filesystem 仍需 OS isolation。",
+                    ],
                 ],
                 [38 * mm, 72 * mm, 53 * mm],
             ),

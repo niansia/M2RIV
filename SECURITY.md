@@ -34,9 +34,21 @@ owner-side release checklist items before public v0.1.
 - OpenAI-compatible endpoints are external systems. Credentials are supplied at
   runtime and excluded from snapshots, cache keys, reports, and error messages.
   A redaction control is not proof that an arbitrary endpoint cannot exfiltrate
-  prompts sent to it.
+  prompts sent to it. Credential-bearing requests require HTTPS; cloud metadata
+  link-local addresses are refused. Private and loopback endpoints remain valid
+  for self-hosted inference when no credential is sent.
+- Cache envelopes are HMAC-authenticated. With no configuration the HMAC key is
+  random and process-local, so a new process treats old entries as misses. Set a
+  secret `M2RIV_CACHE_KEY` of at least 32 bytes only when deliberate cross-run or
+  multi-worker reuse is required. Anyone who can read that key can forge entries;
+  do not place it in reports, logs, command lines, or repository variables.
 - Reports attest what M2RIV observed under a named policy and runtime. They do not
   prove that an artifact is safe, unbiased, or suitable for every distribution.
+  `m2riv mcr verify` proves contract validity and content self-consistency only.
+  Its machine-readable result therefore reports `authenticity_verified: false`
+  and `trust_scope: self-consistency-only`; producer signatures are not yet part
+  of the MCR contract. Use `--strict` for a release gate so omitted linked local
+  evidence is an error rather than a warning.
 
 ## Fail-closed controls
 
@@ -45,6 +57,11 @@ owner-side release checklist items before public v0.1.
   malformed inputs, and unresolved evidence are not release-allowed.
 - JSONL/YAML parsing, cache envelopes, network responses, retry/time budgets,
   plugin cardinality, evidence cardinality, and execution plans are bounded.
+- JSON rejects duplicate keys, non-finite numbers, excessive nesting, and invalid
+  Unicode scalar values. YAML rejects duplicate keys, aliases above the limit,
+  unsafe tags, excessive nesting, and parser recursion failures. Report-visible
+  case IDs reject controls, bidi overrides, surrounding whitespace, and excess
+  length.
 - Artifact hashing defaults to a 16 GiB total/per-file ceiling and 100,000 traversed
   entries. ONNX parsing has a separate 512 MiB ceiling plus graph cardinality
   bounds. CLI budget flags may be reduced for CI tenants.
@@ -53,7 +70,10 @@ owner-side release checklist items before public v0.1.
 - Execution-driven bisect manifests accept only `checkpoint` and `artifact`.
   Commands and unknown fields are rejected.
 - Report bundles verify content identities and evidence-set references before
-  atomically publishing the MCR and its evidence manifest.
+  atomically publishing the MCR and its evidence manifest. Report paths, local
+  evidence references, and ONNX inputs are read or written without following
+  symbolic links or Windows reparse points; inspected ONNX bytes are the bytes
+  subsequently parsed or executed.
 
 Resource limits reduce accidental and adversarial exhaustion; they are not a
 replacement for OS-level CPU, memory, disk, process, and network quotas.
@@ -61,9 +81,11 @@ replacement for OS-level CPU, memory, disk, process, and network quotas.
 ## Build and release supply chain
 
 GitHub Actions dependencies are pinned to immutable commit SHAs. Weekly Dependabot
-checks propose Python and action updates. Tagged builds produce a wheel, source
+checks propose Python and action updates, and CI audits installed Python packages
+against the Python Packaging Advisory Database. Tagged builds produce a wheel, source
 distribution, SHA-256 checksum file, SPDX JSON SBOM, and GitHub/Sigstore artifact
-provenance. Verify a downloaded artifact with:
+provenance. Untrusted package build steps run without an OIDC token; the separate
+attestation job receives only the completed inert artifacts. Verify a download with:
 
 ```console
 sha256sum -c SHA256SUMS

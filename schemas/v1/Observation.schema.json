@@ -20,6 +20,7 @@
       "type": "integer"
     },
     "case_id": {
+      "maxLength": 256,
       "minLength": 1,
       "title": "Case Id",
       "type": "string"

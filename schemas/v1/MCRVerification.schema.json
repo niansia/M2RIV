@@ -14,6 +14,11 @@
   "additionalProperties": false,
   "description": "Machine-readable result from verifying one MCR bundle.",
   "properties": {
+    "authenticity_verified": {
+      "default": false,
+      "title": "Authenticity Verified",
+      "type": "boolean"
+    },
     "checks": {
       "items": {
         "type": "string"
@@ -42,9 +47,15 @@
       "type": "string"
     },
     "schema_version": {
-      "const": "1.1.0",
-      "default": "1.1.0",
+      "const": "1.2.0",
+      "default": "1.2.0",
       "title": "Schema Version",
+      "type": "string"
+    },
+    "trust_scope": {
+      "const": "self-consistency-only",
+      "default": "self-consistency-only",
+      "title": "Trust Scope",
       "type": "string"
     },
     "unverified_evidence_count": {

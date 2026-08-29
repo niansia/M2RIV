@@ -3,9 +3,24 @@
 from __future__ import annotations
 
 import json
-from xml.etree import ElementTree
+
+# This module only constructs XML; it never parses untrusted XML input.
+from xml.etree import ElementTree  # nosec B405
 
 from m2riv.reports.models import MCRStatus, ModelChangeReport
+
+
+def _xml_text(value: str) -> str:
+    """Replace characters XML 1.0 cannot represent before building CI output."""
+    return "".join(
+        character
+        if character in "\t\n\r"
+        or 0x20 <= ord(character) <= 0xD7FF
+        or 0xE000 <= ord(character) <= 0xFFFD
+        or 0x10000 <= ord(character) <= 0x10FFFF
+        else " "
+        for character in value
+    )
 
 
 def render_junit(report: ModelChangeReport) -> str:
@@ -39,19 +54,21 @@ def render_junit(report: ModelChangeReport) -> str:
         case = ElementTree.SubElement(
             suite,
             "testcase",
-            {"classname": "m2riv.gate", "name": finding.rule_id, "time": "0"},
+            {"classname": "m2riv.gate", "name": _xml_text(finding.rule_id), "time": "0"},
         )
         if finding.status is MCRStatus.BLOCK or (
             finding.status is MCRStatus.WARN and not report.decision.allowed
         ):
-            child = ElementTree.SubElement(case, "failure", {"message": finding.message})
-            child.text = finding.message
+            safe_message = _xml_text(finding.message)
+            child = ElementTree.SubElement(case, "failure", {"message": safe_message})
+            child.text = safe_message
         elif finding.status is MCRStatus.ERROR:
-            child = ElementTree.SubElement(case, "error", {"message": finding.message})
-            child.text = finding.message
+            safe_message = _xml_text(finding.message)
+            child = ElementTree.SubElement(case, "error", {"message": safe_message})
+            child.text = safe_message
         elif finding.status is MCRStatus.WARN:
             child = ElementTree.SubElement(case, "system-out")
-            child.text = f"WARN: {finding.message}"
+            child.text = f"WARN: {_xml_text(finding.message)}"
     ElementTree.indent(suite, space="  ")
     return ElementTree.tostring(suite, encoding="unicode", xml_declaration=True) + "\n"
 

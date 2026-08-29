@@ -26,7 +26,7 @@ class GateContract(BaseModel):
 class GateStatus(StrEnum):
     """Ordered release decision states."""
 
-    PASS = "pass"
+    PASS = "pass"  # nosec B105  # noqa: S105 - release status, not a credential
     WARN = "warn"
     BLOCK = "block"
     ERROR = "error"

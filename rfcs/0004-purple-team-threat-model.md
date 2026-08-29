@@ -131,12 +131,18 @@ evidence.
 ## Current v0.1 posture
 
 Implemented now: domain-separated canonical fingerprints; strict immutable contracts;
-recursive rejection of non-finite evidence values; finite non-negative latency;
-hash-only plaintext prohibition; streaming artifact hashing; link/special-file
-rejection; and mutation checks around file hashing.
+strict duplicate-key/non-finite/depth-bounded JSON and YAML; finite non-negative
+latency; hash-only plaintext prohibition; kernel-owned observation identity and
+adapter-output verification; authenticated atomic cache envelopes; streaming artifact
+hashing; link/special-file rejection; mutation checks around file hashing and ONNX
+reads; bounded response handling; and path-safe report publication and verification.
 
-Not yet security-complete: adapter output verification, cache envelopes/atomic writes,
-claim-strength verification, signatures, sandboxing, directory snapshot isolation,
-secret scanning, and the full statistical fail-closed rules above. Until those land,
-M2RIV output is development evidence and MUST NOT be presented as an attested production
-release decision.
+The default cache key is run-local. Deliberate shared-cache reuse requires an
+operator-provided HMAC key and protected cache-writer boundary; cache authentication
+does not make a compromised evaluator process trustworthy. The standalone MCR verifier
+proves self-consistency only and states that authenticity is unverified.
+
+Not yet security-complete: claim-strength verification, producer/report signatures,
+adapter/plugin sandboxing, atomic directory snapshot isolation, transparency logging,
+and the full statistical fail-closed rules above. Until those land, M2RIV output MUST
+NOT be presented as a cryptographically attested production release decision.

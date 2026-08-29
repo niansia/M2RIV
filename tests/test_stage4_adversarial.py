@@ -22,7 +22,7 @@ from m2riv.bisect import (
     bisect_regression,
 )
 from m2riv.cli import _write_github_summary, app
-from m2riv.core.identity import build_local_snapshot, fingerprint
+from m2riv.core.identity import build_local_snapshot, fingerprint, observation_content_id
 from m2riv.core.models import EvalCase, ModelFamily, Observation, RuntimeProfile
 from m2riv.engine import CacheKey, ObservationCache, PairedRunner
 from m2riv.engine.cache import MAX_CACHE_ENTRY_BYTES
@@ -75,12 +75,19 @@ def _cache_fixture() -> tuple[CacheKey, Observation]:
     case = EvalCase(case_id="cache-case", input="hello")
     profile = RuntimeProfile()
     output = "safe output"
+    output_digest = fingerprint(output, namespace="observation-output")
     observation = Observation(
-        id=_content_id("cache-observation"),
+        id=observation_content_id(
+            snapshot_id=snapshot_id,
+            case_id=case.case_id,
+            seed=profile.seed,
+            output_digest=output_digest,
+        ),
         snapshot_id=snapshot_id,
         case_id=case.case_id,
+        seed=profile.seed,
         output=output,
-        output_digest=fingerprint(output, namespace="observation-output"),
+        output_digest=output_digest,
     )
     return (
         CacheKey.for_case(

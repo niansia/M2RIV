@@ -103,9 +103,7 @@ def test_plan_command_reports_invalid_policy(tmp_path: Path) -> None:
     suite = tmp_path / "suite.jsonl"
     suite.write_text('{"case_id":"one","input":1}\n', encoding="utf-8")
 
-    result = runner.invoke(
-        app, ["plan", "--suite", str(suite), "--policy", str(policy)]
-    )
+    result = runner.invoke(app, ["plan", "--suite", str(suite), "--policy", str(policy)])
 
     assert result.exit_code == 3
     assert "ERROR:" in result.stderr

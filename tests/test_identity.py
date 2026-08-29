@@ -60,15 +60,11 @@ def test_canonical_json_rejects_ambiguous_values_and_normalizes_paths() -> None:
 def test_public_content_identity_golden_vectors_match_the_runtime() -> None:
     root = Path(__file__).parents[1]
     document = json.loads(
-        (root / "examples" / "content_identity" / "golden-vectors.json").read_text(
-            encoding="utf-8"
-        )
+        (root / "examples" / "content_identity" / "golden-vectors.json").read_text(encoding="utf-8")
     )
     for vector in document["vectors"]:
         assert canonical_json(vector["value"]).decode() == vector["canonical_json"]
-        assert fingerprint(vector["value"], namespace=vector["namespace"]) == vector[
-            "sha256"
-        ]
+        assert fingerprint(vector["value"], namespace=vector["namespace"]) == vector["sha256"]
 
     completed = subprocess.run(
         [sys.executable, str(root / "examples" / "content_identity" / "verify_golden.py")],
@@ -176,9 +172,7 @@ def test_artifact_hashing_enforces_byte_file_and_traversal_budgets(tmp_path: Pat
         ("max_entries", True),
     ],
 )
-def test_artifact_hashing_rejects_invalid_budgets(
-    tmp_path: Path, name: str, value: int
-) -> None:
+def test_artifact_hashing_rejects_invalid_budgets(tmp_path: Path, name: str, value: int) -> None:
     artifact = tmp_path / "model.bin"
     artifact.write_bytes(b"model")
     arguments = {name: value}

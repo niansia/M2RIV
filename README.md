@@ -43,7 +43,8 @@ The first foundation slice provides:
   whose values exceed explicit absolute/relative tolerances;
 - domain-separated fingerprints for execution-relevant configuration;
 - a CLI for inspecting artifacts, compiling release plans, and exporting schemas;
-- a strict paired runner with content-addressed, atomic case-level caching;
+- a strict paired runner with kernel-owned observation identity and authenticated,
+  atomic case-level caching;
 - pluggable paired metrics with explicit units and optimization direction;
 - explicit plugin manifests/registry without automatic untrusted-code loading;
 - executor-aware cache identity for local, Ray, Kubernetes, or custom fabrics;
@@ -128,6 +129,8 @@ m2riv schema export ./schemas/v1
 # Exported 21 public schemas to schemas/v1
 
 m2riv mcr verify runs/onnx-quantization/reports/build-02-int8-calibration-scale-065
+# In a release gate, require every linked local component to be rehashed:
+m2riv mcr verify runs/onnx-quantization/reports/build-02-int8-calibration-scale-065 --strict
 ```
 
 The smaller [opset-upgrade example](examples/onnx_opset_upgrade/README.md) covers
@@ -157,7 +160,10 @@ The verifier accepts a bundle produced by M2RIV or another implementation; it
 does not execute the model or trust prose summaries.
 `integrity_valid` means every performed check passed, while
 `verification_complete` means all referenced local bundle components were
-recognized and rehashed. See the [independent producer](examples/independent_producer/README.md),
+recognized and rehashed. This is a self-consistency check, not a producer
+signature: the result explicitly reports `authenticity_verified: false` and
+`trust_scope: self-consistency-only`. See the
+[independent producer](examples/independent_producer/README.md),
 [full conformance bundle](examples/mcr_conformance/full), and
 [content-identity vectors](examples/content_identity/README.md).
 
@@ -201,6 +207,9 @@ The adapter bounds attempts, response bytes, per-request time, and cumulative
 elapsed time. Credentials never participate in snapshots, fingerprints, cache
 entries, reports, or error messages. Remote comparisons use a run-local cache by
 default, so mutable provider endpoints cannot silently reuse stale observations.
+Credential-bearing requests require HTTPS, and cloud metadata link-local endpoints
+are rejected. Loopback and private-network URLs remain available for self-hosted
+inference without credentials.
 Use the non-secret credential-scope options when endpoint routing varies by tenant.
 See the [API comparison example](examples/api_compare/README.md).
 
@@ -248,9 +257,11 @@ when several metrics and slices reuse the same paired observations.
 See [RFC-0001](rfcs/0001-project-scope.md),
 [RFC-0002](rfcs/0002-core-contracts.md),
 [RFC-0003](rfcs/0003-evidence-graph.md), and
+[RFC-0004](rfcs/0004-purple-team-threat-model.md),
 [RFC-0005](rfcs/0005-network-and-bisect-threat-model.md), and
 [RFC-0006](rfcs/0006-plugin-execution-and-release-plan.md), and
-[RFC-0009](rfcs/0009-bounded-evidence-and-executed-bisect.md) for contracts,
+[RFC-0009](rfcs/0009-bounded-evidence-and-executed-bisect.md), and
+[RFC-0013](rfcs/0013-authenticated-cache-and-evidence-trust.md) for contracts,
 threat models, and extension boundaries. The
 [architecture note](docs/architecture.md) explains how the evidence kernel stays
 independent of local, Ray, Kubernetes, and proprietary execution fabrics.

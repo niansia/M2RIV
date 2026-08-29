@@ -38,7 +38,7 @@ class ArtifactComponent(Contract):
         parts = normalized.split("/")
         if (
             normalized.startswith("/")
-            or ":" in parts[0]
+            or any(":" in part for part in parts)
             or any(part in {"", ".", ".."} for part in parts)
             or any(not character.isprintable() for character in normalized)
         ):
@@ -128,9 +128,7 @@ class ArtifactDiff(Contract):
     changed_components: tuple[SafeName, ...] = Field(default=(), max_length=128)
     opset_changes: tuple[OpsetChange, ...] = Field(default=(), max_length=64)
     operator_changes: tuple[NamedCountChange, ...] = Field(default=(), max_length=4096)
-    initializer_dtype_changes: tuple[NamedCountChange, ...] = Field(
-        default=(), max_length=128
-    )
+    initializer_dtype_changes: tuple[NamedCountChange, ...] = Field(default=(), max_length=128)
     node_count_delta: int | None = None
     initializer_count_delta: int | None = None
     parameter_count_delta: int | None = None

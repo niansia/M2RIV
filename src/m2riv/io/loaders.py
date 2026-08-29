@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +13,16 @@ from yaml.tokens import AliasToken
 
 from m2riv.core.models import EvalCase
 from m2riv.gate import GatePolicy
+from m2riv.io.json import (
+    MAX_JSON_DEPTH as MAX_JSON_DEPTH,
+)
+from m2riv.io.json import (
+    MAX_JSON_NODES as MAX_JSON_NODES,
+)
+from m2riv.io.json import (
+    StrictJSONError,
+    parse_strict_json,
+)
 
 
 class InputFormatError(ValueError):
@@ -23,45 +32,10 @@ class InputFormatError(ValueError):
 MAX_JSONL_LINE_BYTES = 1024 * 1024
 MAX_JSONL_FILE_BYTES = 64 * 1024 * 1024
 MAX_JSONL_RECORDS = 100_000
-MAX_JSON_DEPTH = 64
-MAX_JSON_NODES = 100_000
 MAX_POLICY_BYTES = 1024 * 1024
 MAX_YAML_ALIASES = 32
 MAX_YAML_DEPTH = 64
 MAX_YAML_NODES = 100_000
-
-
-class _DuplicateKeyError(ValueError):
-    pass
-
-
-def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    result: dict[str, Any] = {}
-    for key, value in pairs:
-        if key in result:
-            raise _DuplicateKeyError(f"duplicate JSON object key {key!r}")
-        result[key] = value
-    return result
-
-
-def _reject_json_constant(value: str) -> None:
-    raise ValueError(f"non-finite JSON constant {value!r} is not allowed")
-
-
-def _validate_json_structure(value: Any) -> None:
-    nodes = 0
-    stack: list[tuple[Any, int]] = [(value, 0)]
-    while stack:
-        node, depth = stack.pop()
-        nodes += 1
-        if nodes > MAX_JSON_NODES:
-            raise ValueError(f"JSON exceeds {MAX_JSON_NODES} node limit")
-        if depth > MAX_JSON_DEPTH:
-            raise ValueError(f"JSON exceeds {MAX_JSON_DEPTH} depth limit")
-        if isinstance(node, dict):
-            stack.extend((child, depth + 1) for child in node.values())
-        elif isinstance(node, list):
-            stack.extend((child, depth + 1) for child in node)
 
 
 def _load_jsonl(path: Path) -> tuple[tuple[int, dict[str, Any]], ...]:
@@ -90,20 +64,14 @@ def _load_jsonl(path: Path) -> tuple[tuple[int, dict[str, Any]], ...]:
                 if not raw_line.strip():
                     continue
                 try:
-                    value = json.loads(
+                    value = parse_strict_json(
                         raw_line,
-                        object_pairs_hook=_unique_json_object,
-                        parse_constant=_reject_json_constant,
+                        max_depth=MAX_JSON_DEPTH,
+                        max_nodes=MAX_JSON_NODES,
                     )
-                    _validate_json_structure(value)
-                except RecursionError as error:
+                except StrictJSONError as error:
                     raise InputFormatError(
-                        f"{path}:{line_number}: invalid JSON: nesting limit exceeded"
-                    ) from error
-                except (json.JSONDecodeError, _DuplicateKeyError, ValueError) as error:
-                    reason = error.msg if isinstance(error, json.JSONDecodeError) else str(error)
-                    raise InputFormatError(
-                        f"{path}:{line_number}: invalid JSON: {reason}"
+                        f"{path}:{line_number}: invalid JSON: {error}"
                     ) from error
                 if not isinstance(value, dict):
                     raise InputFormatError(f"{path}:{line_number}: row must be a JSON object")
@@ -204,10 +172,16 @@ def load_policy(path: str | Path) -> GatePolicy:
         alias_count = sum(isinstance(token, AliasToken) for token in yaml.scan(document))
         if alias_count > MAX_YAML_ALIASES:
             raise InputFormatError(f"{source}: YAML alias count exceeds {MAX_YAML_ALIASES} limit")
-        value = yaml.load(document, Loader=_UniqueKeySafeLoader)
+        # This loader derives from SafeLoader and only strengthens mapping-key checks.
+        value = yaml.load(  # nosec B506
+            document,
+            Loader=_UniqueKeySafeLoader,  # noqa: S506
+        )
         _validate_yaml_structure(value)
     except InputFormatError:
         raise
+    except RecursionError as error:
+        raise InputFormatError(f"{source}: invalid policy YAML: nesting limit exceeded") from error
     except (OSError, UnicodeDecodeError, yaml.YAMLError) as error:
         raise InputFormatError(f"{source}: invalid policy YAML") from error
     if not isinstance(value, dict):

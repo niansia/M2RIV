@@ -6,8 +6,10 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from math import isfinite
 from typing import Annotated, Any, Literal
+from unicodedata import bidirectional
 
 from pydantic import (
+    AfterValidator,
     BaseModel,
     ConfigDict,
     Field,
@@ -23,6 +25,25 @@ SafePluginName = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9][A-Za-z0
 SafePluginVersion = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9][A-Za-z0-9.+_-]{0,63}$")]
 SafePluginCapability = Annotated[
     str, StringConstraints(pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
+]
+
+_BIDI_CONTROL_CLASSES = frozenset({"LRE", "RLE", "LRO", "RLO", "PDF", "LRI", "RLI", "FSI", "PDI"})
+
+
+def _validate_case_id(value: str) -> str:
+    if value != value.strip():
+        raise ValueError("case_id must not have leading or trailing whitespace")
+    if any(not character.isprintable() for character in value):
+        raise ValueError("case_id must contain only printable characters")
+    if any(bidirectional(character) in _BIDI_CONTROL_CLASSES for character in value):
+        raise ValueError("case_id must not contain Unicode bidi controls")
+    return value
+
+
+SafeCaseId = Annotated[
+    str,
+    StringConstraints(min_length=1, max_length=256),
+    AfterValidator(_validate_case_id),
 ]
 
 _SENSITIVE_CONFIG_KEYS = frozenset(
@@ -181,7 +202,7 @@ class EvalCase(Contract):
     """One replayable, pairable evaluation unit."""
 
     schema_version: Literal["1.0.0"] = SCHEMA_VERSION
-    case_id: Annotated[str, StringConstraints(min_length=1)]
+    case_id: SafeCaseId
     input: Any
     expected: Any | None = None
     contract: dict[str, Any] | None = None
@@ -211,7 +232,7 @@ class Observation(Contract):
     schema_version: Literal["1.0.0"] = SCHEMA_VERSION
     id: ContentId
     snapshot_id: ContentId
-    case_id: Annotated[str, StringConstraints(min_length=1)]
+    case_id: SafeCaseId
     attempt: Annotated[int, Field(ge=0)] = 0
     seed: int | None = None
     output: Any | None = None

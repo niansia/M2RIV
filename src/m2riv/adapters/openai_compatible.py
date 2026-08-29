@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import ipaddress
 import json
 import math
 import re
@@ -15,7 +16,7 @@ from typing import Any
 import httpx
 
 from m2riv.adapters.base import AdapterCapability
-from m2riv.core.identity import canonical_json, fingerprint
+from m2riv.core.identity import canonical_json, fingerprint, observation_content_id
 from m2riv.core.models import (
     EvalCase,
     EvidenceAccess,
@@ -25,6 +26,7 @@ from m2riv.core.models import (
     Observation,
     RuntimeProfile,
 )
+from m2riv.io.json import StrictJSONError, parse_strict_json
 
 _ADAPTER_VERSION = "1.0.0"
 _DEFAULT_MAX_RESPONSE_BYTES = 10 * 1024 * 1024
@@ -51,6 +53,14 @@ _RESERVED_REQUEST_KEYS = frozenset(
     {"functioncall", "functions", "messages", "model", "stream", "toolchoice", "tools"}
 )
 _SAFE_IDENTITY_LABEL = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:/@+-]{0,127}\Z")
+_METADATA_HOSTS = frozenset(
+    {
+        "instance-data",
+        "instance-data.ec2.internal",
+        "metadata.google.internal",
+        "metadata.goog",
+    }
+)
 
 
 class OpenAICompatibleError(RuntimeError):
@@ -95,18 +105,68 @@ def _validate_profile(value: Mapping[str, Any], *, location: str) -> dict[str, A
     return decoded
 
 
+def _legacy_ipv4_address(host: str) -> ipaddress.IPv4Address | None:
+    """Parse the historical inet_aton numeric forms accepted by many resolvers."""
+    if not host.isascii() or re.fullmatch(r"[0-9A-Fa-fxX.]+", host) is None:
+        return None
+    parts = host.split(".")
+    if not 1 <= len(parts) <= 4 or any(not part for part in parts):
+        return None
+
+    def component(raw: str) -> int:
+        if raw.casefold().startswith("0x"):
+            return int(raw[2:], 16)
+        if len(raw) > 1 and raw.startswith("0"):
+            return int(raw, 8)
+        return int(raw, 10)
+
+    try:
+        values = [component(part) for part in parts]
+    except ValueError:
+        return None
+    widths = {
+        1: (32,),
+        2: (8, 24),
+        3: (8, 8, 16),
+        4: (8, 8, 8, 8),
+    }[len(values)]
+    if any(value < 0 or value >= 2**width for value, width in zip(values, widths, strict=True)):
+        return None
+    numeric = 0
+    for value, width in zip(values, widths, strict=True):
+        numeric = (numeric << width) | value
+    return ipaddress.IPv4Address(numeric)
+
+
 def _normalize_endpoint(endpoint: str) -> str:
     raw = endpoint.strip()
     if not raw or "\x00" in raw:
         raise ValueError("endpoint must be non-blank and contain no NUL bytes")
     try:
         url = httpx.URL(raw)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, httpx.InvalidURL):
         raise ValueError("endpoint must be a valid HTTP(S) URL") from None
     if url.scheme not in {"http", "https"} or not url.host:
         raise ValueError("endpoint must be an absolute HTTP(S) URL")
     if url.username or url.password or url.query or url.fragment:
         raise ValueError("endpoint must not contain credentials, query, or fragment")
+    host = url.host.rstrip(".").casefold()
+    if host in _METADATA_HOSTS:
+        raise ValueError("endpoint must not target a cloud metadata service")
+    address: ipaddress.IPv4Address | ipaddress.IPv6Address | None = None
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        # Resolvers may accept decimal, hexadecimal, octal, and shortened IPv4
+        # forms. Parse them locally without performing a DNS lookup.
+        address = _legacy_ipv4_address(host)
+    mapped = address.ipv4_mapped if isinstance(address, ipaddress.IPv6Address) else None
+    if address is not None and (
+        address.is_link_local
+        or bool(mapped and mapped.is_link_local)
+        or address == ipaddress.IPv6Address("fd00:ec2::254")
+    ):
+        raise ValueError("endpoint must not target a link-local metadata address")
     return str(url).rstrip("/")
 
 
@@ -263,6 +323,7 @@ class OpenAICompatibleAdapter:
         max_elapsed_s: float = 120.0,
         credential_scope: str | None = None,
         deployment_revision: str | None = None,
+        allow_insecure_http: bool = False,
         transport: httpx.BaseTransport | None = None,
         client: httpx.Client | None = None,
     ) -> None:
@@ -308,8 +369,20 @@ class OpenAICompatibleAdapter:
             raise ValueError(f"max_elapsed_s must be finite and in (0, {_MAX_ELAPSED_S}]")
         if client is not None and transport is not None:
             raise ValueError("client and transport are mutually exclusive")
+        if not isinstance(allow_insecure_http, bool):
+            raise ValueError("allow_insecure_http must be a boolean")
+        if client is not None and client.follow_redirects:
+            raise ValueError("custom clients must disable redirect following")
 
         self._endpoint = _normalize_endpoint(endpoint)
+        if (
+            api_key is not None
+            and httpx.URL(self._endpoint).scheme == "http"
+            and not allow_insecure_http
+        ):
+            raise ValueError(
+                "api_key transmission requires HTTPS unless allow_insecure_http is explicitly set"
+            )
         self._model = model.strip()
         self._credential_scope = _validate_identity_label(
             credential_scope, field_name="credential_scope"
@@ -346,6 +419,7 @@ class OpenAICompatibleAdapter:
             "credential_scope": self._credential_scope,
             "deployment_revision": self._deployment_revision,
             "endpoint": self._endpoint,
+            "allow_insecure_http": allow_insecure_http,
             "execution": {
                 "max_retries": self._max_retries,
                 "max_response_bytes": self._max_response_bytes,
@@ -530,8 +604,8 @@ class OpenAICompatibleAdapter:
             )
 
         try:
-            payload = json.loads(response_body)
-        except ValueError:
+            payload = parse_strict_json(response_body)
+        except StrictJSONError:
             raise OpenAICompatibleError(
                 f"remote endpoint returned invalid JSON for {case_label}"
             ) from None
@@ -555,18 +629,14 @@ class OpenAICompatibleAdapter:
             traces["usage"] = usage
 
         output_digest = fingerprint(content, namespace="observation-output")
-        observation_payload = {
-            "snapshot_id": self._snapshot.id,
-            "case_id": case.case_id,
-            "attempt": attempts - 1,
-            "seed": profile.seed,
-            "output_digest": output_digest,
-            "traces": traces,
-        }
-        observation_id = fingerprint(observation_payload, namespace="observation")
         try:
             return Observation(
-                id=f"m2riv:sha256:{observation_id}",
+                id=observation_content_id(
+                    snapshot_id=self._snapshot.id,
+                    case_id=case.case_id,
+                    seed=profile.seed,
+                    output_digest=output_digest,
+                ),
                 snapshot_id=self._snapshot.id,
                 case_id=case.case_id,
                 attempt=attempts - 1,

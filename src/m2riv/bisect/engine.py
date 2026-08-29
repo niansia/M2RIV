@@ -12,7 +12,7 @@ from m2riv.gate import GateStatus
 class BisectStatus(StrEnum):
     """The only statuses an ordered checkpoint evaluation may return."""
 
-    PASS = "pass"
+    PASS = "pass"  # nosec B105  # noqa: S105 - release status, not a credential
     BLOCK = "block"
     WARN = "warn"
     ERROR = "error"
@@ -29,7 +29,7 @@ class BisectMode(StrEnum):
 class BisectOutcome(StrEnum):
     """High-level outcome of a bisect run."""
 
-    ALL_PASS = "all_pass"
+    ALL_PASS = "all_pass"  # nosec B105  # noqa: S105 - outcome, not a credential
     FIRST_FAILING = "first_failing"
     REGRESSION_BOUNDED = "regression_bounded"
     NO_FAILURE_OBSERVED = "no_failure_observed"

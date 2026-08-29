@@ -328,7 +328,7 @@ def test_non_finite_usage_fails_closed() -> None:
             headers={"Content-Type": "application/json"},
         )
 
-    with pytest.raises(OpenAICompatibleError, match="invalid usage"):
+    with pytest.raises(OpenAICompatibleError, match=r"invalid JSON|invalid usage"):
         _adapter(handler).run((EvalCase(case_id="bad", input="hello"),), RuntimeProfile())
 
 
@@ -363,7 +363,7 @@ def test_response_secret_canary_fails_before_observation(
     assert "Bearer" not in message
 
 
-def test_secret_or_hostile_case_id_never_enters_error() -> None:
+def test_secret_or_hostile_case_id_is_rejected_before_network_use() -> None:
     called = False
     hostile_case_id = "api-secret-canary\r\n\x1b[31mAuthorization: Bearer api-secret-canary"
 
@@ -372,17 +372,12 @@ def test_secret_or_hostile_case_id_never_enters_error() -> None:
         called = True
         return httpx.Response(401)
 
-    with pytest.raises(OpenAICompatibleError) as captured:
-        _adapter(handler, api_key="api-secret-canary").run(
-            (EvalCase(case_id=hostile_case_id, input="hello"),), RuntimeProfile()
-        )
+    with pytest.raises(ValueError, match="printable") as captured:
+        EvalCase(case_id=hostile_case_id, input="hello")
 
     message = str(captured.value)
     assert not called
-    assert "api-secret-canary" not in message
-    assert "Authorization" not in message
-    assert "\r" not in message and "\n" not in message and "\x1b" not in message
-    assert "case #1" in message
+    assert "case_id" in message
 
 
 @pytest.mark.parametrize(

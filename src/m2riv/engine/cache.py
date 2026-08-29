@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import os
+import secrets
 import stat
 import tempfile
 from dataclasses import dataclass
@@ -11,11 +14,21 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from m2riv.core.identity import canonical_json, fingerprint
-from m2riv.core.models import EvalCase, Observation, RetentionMode, RuntimeProfile
+from m2riv.core.identity import (
+    canonical_json,
+    fingerprint,
+    has_link_like_component,
+    observation_content_id,
+)
+from m2riv.core.models import Digest, EvalCase, Observation, RetentionMode, RuntimeProfile
 from m2riv.execution.local import LOCAL_EXECUTOR_FINGERPRINT
+from m2riv.io.json import StrictJSONError, parse_strict_json
 
 MAX_CACHE_ENTRY_BYTES = 64 * 1024 * 1024
+CACHE_KEY_ENV = "M2RIV_CACHE_KEY"
+MIN_CACHE_KEY_BYTES = 32
+CacheAuthenticationMode = Literal["run-local-hmac", "shared-hmac"]
+_PROCESS_LOCAL_KEY_MATERIAL = secrets.token_bytes(32)
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,16 +85,74 @@ class CacheKey:
 class _CacheEnvelope(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    cache_format: Literal["m2riv-observation-cache-v1"] = "m2riv-observation-cache-v1"
+    cache_format: Literal["m2riv-observation-cache-v2"] = "m2riv-observation-cache-v2"
     key_digest: str
     observation: Observation
+    authentication_tag: Digest
 
 
 class ObservationCache:
     """A local cache whose entries become visible through an atomic replace."""
 
-    def __init__(self, root: str | Path) -> None:
+    def __init__(
+        self,
+        root: str | Path,
+        *,
+        authentication_key: str | bytes | None = None,
+    ) -> None:
         self.root = Path(root)
+        supplied = authentication_key
+        if supplied is None:
+            supplied = os.environ.get(CACHE_KEY_ENV)
+        if supplied is None:
+            key_material = _PROCESS_LOCAL_KEY_MATERIAL
+            self.authentication_mode: CacheAuthenticationMode = "run-local-hmac"
+        else:
+            if not isinstance(supplied, (str, bytes)):
+                raise TypeError("cache authentication key must be text or bytes")
+            key_material = supplied.encode("utf-8") if isinstance(supplied, str) else supplied
+            if len(key_material) < MIN_CACHE_KEY_BYTES:
+                raise ValueError(
+                    f"{CACHE_KEY_ENV} must contain at least {MIN_CACHE_KEY_BYTES} bytes"
+                )
+            self.authentication_mode = "shared-hmac"
+        self._authentication_key = hashlib.sha256(
+            b"m2riv:observation-cache-hmac:v1\x00" + key_material
+        ).digest()
+
+    @staticmethod
+    def _authentication_payload(key_digest: str, observation: Observation) -> dict[str, object]:
+        return {
+            "cache_format": "m2riv-observation-cache-v2",
+            "key_digest": key_digest,
+            "observation": observation,
+        }
+
+    def _authentication_tag(self, key_digest: str, observation: Observation) -> str:
+        return hmac.new(
+            self._authentication_key,
+            canonical_json(self._authentication_payload(key_digest, observation)),
+            hashlib.sha256,
+        ).hexdigest()
+
+    @staticmethod
+    def _observation_matches_key(observation: Observation, key: CacheKey) -> bool:
+        if observation.snapshot_id != key.snapshot_id or observation.case_id != key.case_id:
+            return False
+        if observation.seed != key.runtime_profile.seed:
+            return False
+        if observation.retention == RetentionMode.FULL:
+            actual_digest = fingerprint(observation.output, namespace="observation-output")
+            if actual_digest != observation.output_digest:
+                return False
+        expected_id = observation_content_id(
+            snapshot_id=observation.snapshot_id,
+            case_id=observation.case_id,
+            seed=observation.seed,
+            output_digest=observation.output_digest,
+            retention=observation.retention,
+        )
+        return hmac.compare_digest(observation.id, expected_id)
 
     def path_for(self, key: CacheKey) -> Path:
         """Resolve a key to its deterministic, sharded cache path."""
@@ -100,7 +171,11 @@ class ObservationCache:
             shard_stat = path.lstat()
         except OSError:
             return False
-        return stat.S_ISDIR(shard_stat.st_mode) and not cls._is_reparse_or_symlink(shard_stat)
+        return (
+            stat.S_ISDIR(shard_stat.st_mode)
+            and not cls._is_reparse_or_symlink(shard_stat)
+            and not has_link_like_component(path)
+        )
 
     @classmethod
     def _safe_entry(cls, path: Path) -> os.stat_result | None:
@@ -164,29 +239,32 @@ class ObservationCache:
             return None
 
         try:
-            envelope = _CacheEnvelope.model_validate_json(payload)
-        except (ValidationError, ValueError):
+            envelope = _CacheEnvelope.model_validate(parse_strict_json(payload))
+        except (StrictJSONError, ValidationError, ValueError):
             return None
 
         observation = envelope.observation
         if envelope.key_digest != key.digest:
             return None
-        if observation.snapshot_id != key.snapshot_id or observation.case_id != key.case_id:
+        expected_tag = self._authentication_tag(envelope.key_digest, observation)
+        if not hmac.compare_digest(envelope.authentication_tag, expected_tag):
             return None
-        if observation.retention == RetentionMode.FULL:
-            actual_digest = fingerprint(observation.output, namespace="observation-output")
-            if actual_digest != observation.output_digest:
-                return None
+        if not self._observation_matches_key(observation, key):
+            return None
         return observation
 
     def put(self, key: CacheKey, observation: Observation) -> None:
         """Atomically persist an observation after checking its cache-key identity."""
-        if observation.snapshot_id != key.snapshot_id or observation.case_id != key.case_id:
-            raise ValueError("observation identity does not match its cache key")
+        if not self._observation_matches_key(observation, key):
+            raise ValueError("observation identity or content does not match its cache key")
 
         path = self.path_for(key)
         self._prepare_shard(path.parent)
-        envelope = _CacheEnvelope(key_digest=key.digest, observation=observation)
+        envelope = _CacheEnvelope(
+            key_digest=key.digest,
+            observation=observation,
+            authentication_tag=self._authentication_tag(key.digest, observation),
+        )
         encoded = canonical_json(envelope)
         if len(encoded) > MAX_CACHE_ENTRY_BYTES:
             raise ValueError(f"cache envelope exceeds {MAX_CACHE_ENTRY_BYTES} byte limit")

@@ -7,9 +7,9 @@ from dataclasses import dataclass
 
 from m2riv.adapters import OpenAICompatibleError
 from m2riv.adapters.base import ModelAdapter
-from m2riv.core.identity import fingerprint
+from m2riv.core.identity import fingerprint, observation_content_id
 from m2riv.core.models import EvalCase, ModelSnapshot, Observation, RetentionMode, RuntimeProfile
-from m2riv.engine.cache import CacheKey, ObservationCache
+from m2riv.engine.cache import CacheAuthenticationMode, CacheKey, ObservationCache
 from m2riv.execution import ExecutionBackend, ExecutorDescriptor, LocalExecutor
 
 
@@ -42,6 +42,7 @@ class PairedRunResult:
     cases: tuple[PairedCaseResult, ...]
     baseline_execution: ExecutionTrace
     candidate_execution: ExecutionTrace
+    cache_authentication: CacheAuthenticationMode
 
     @property
     def cache_hit_count(self) -> int:
@@ -97,8 +98,11 @@ class PairedRunner:
         """Execute cache misses and return results in evaluation-suite order."""
         ordered_cases = tuple(cases)
         self._validate_case_ids(ordered_cases)
-        baseline_snapshot = baseline.describe()
-        candidate_snapshot = candidate.describe()
+        try:
+            baseline_snapshot = ModelSnapshot.model_validate(baseline.describe())
+            candidate_snapshot = ModelSnapshot.model_validate(candidate.describe())
+        except Exception:
+            raise RunnerContractError("adapter snapshot description failed validation") from None
 
         baseline_result = self._run_side(
             adapter=baseline,
@@ -134,6 +138,7 @@ class PairedRunner:
             cases=paired,
             baseline_execution=baseline_result.execution,
             candidate_execution=candidate_result.execution,
+            cache_authentication=self.cache.authentication_mode,
         )
 
     @staticmethod
@@ -199,10 +204,15 @@ class PairedRunner:
                 raise RunnerContractError(
                     f"execution backend {descriptor.executor_id!r} failed"
                 ) from None
+            if not isinstance(fresh, Sequence) or isinstance(fresh, (str, bytes, bytearray)):
+                raise RunnerContractError(
+                    f"execution backend {descriptor.executor_id!r} returned a non-sequence"
+                )
             fresh_by_id = self._validate_observations(
                 observations=fresh,
                 requested=tuple(misses),
                 snapshot=snapshot,
+                profile=profile,
             )
             for case in misses:
                 observation = fresh_by_id[case.case_id]
@@ -225,14 +235,16 @@ class PairedRunner:
         observations: Sequence[Observation],
         requested: tuple[EvalCase, ...],
         snapshot: ModelSnapshot,
+        profile: RuntimeProfile,
     ) -> dict[str, Observation]:
         requested_ids = {case.case_id for case in requested}
         by_id: dict[str, Observation] = {}
         duplicates: set[str] = set()
         for observation in observations:
+            if not isinstance(observation, Observation):
+                raise RunnerContractError("adapter returned a non-Observation value")
             if observation.case_id in by_id:
                 duplicates.add(observation.case_id)
-            by_id[observation.case_id] = observation
             if observation.snapshot_id != snapshot.id:
                 raise RunnerContractError(
                     f"adapter returned case {observation.case_id!r} for the wrong snapshot"
@@ -245,6 +257,22 @@ class PairedRunner:
                         f"{observation.case_id!r}"
                     )
                     raise RunnerContractError(message)
+            if observation.seed != profile.seed:
+                raise RunnerContractError(
+                    f"adapter returned case {observation.case_id!r} with the wrong seed"
+                )
+            canonical = observation.model_copy(
+                update={
+                    "id": observation_content_id(
+                        snapshot_id=observation.snapshot_id,
+                        case_id=observation.case_id,
+                        seed=observation.seed,
+                        output_digest=observation.output_digest,
+                        retention=observation.retention,
+                    )
+                }
+            )
+            by_id[canonical.case_id] = canonical
 
         actual_ids = set(by_id)
         missing = requested_ids - actual_ids

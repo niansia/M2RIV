@@ -7,9 +7,9 @@ import yaml
 
 ROOT = Path(__file__).parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
-WORKFLOW_FILES = tuple(WORKFLOWS.glob("*.yml")) + tuple(
-    ROOT.glob("examples/**/*.yml")
-) + (ROOT / "action.yml",)
+WORKFLOW_FILES = (
+    tuple(WORKFLOWS.glob("*.yml")) + tuple(ROOT.glob("examples/**/*.yml")) + (ROOT / "action.yml",)
+)
 IMMUTABLE_ACTION = re.compile(r"^\s*uses:\s+[^\s@]+@[0-9a-f]{40}(?:\s+#.*)?$")
 
 
@@ -31,7 +31,10 @@ def test_release_build_has_provenance_sbom_and_gated_trusted_publish() -> None:
     workflow = yaml.load(source, Loader=yaml.BaseLoader)
     build = workflow["jobs"]["build"]
 
-    assert build["permissions"] == {
+    assert "permissions" not in build
+    attest = workflow["jobs"]["attest"]
+    assert attest["needs"] == "build"
+    assert attest["permissions"] == {
         "attestations": "write",
         "contents": "read",
         "id-token": "write",
@@ -41,7 +44,7 @@ def test_release_build_has_provenance_sbom_and_gated_trusted_publish() -> None:
     assert "SHA256SUMS" in source
     assert "packages: write" not in source
     publish = workflow["jobs"]["publish"]
-    assert publish["needs"] == "build"
+    assert publish["needs"] == ["build", "attest"]
     assert publish["permissions"] == {"contents": "read", "id-token": "write"}
     assert publish["environment"]["name"] == "pypi"
     assert "M2RIV_BRAND_CLEARED" in publish["if"]
@@ -64,9 +67,12 @@ def test_reusable_action_verifies_and_uploads_before_enforcing_decision() -> Non
 
     assert action["runs"]["using"] == "composite"
     assert "m2riv mcr verify" in source
-    assert names.index("Verify portable report identities") < names.index(
-        "Resolve final action result"
-    ) < names.index("Upload release evidence") < names.index("Enforce release decision")
+    assert (
+        names.index("Verify portable report identities")
+        < names.index("Resolve final action result")
+        < names.index("Upload release evidence")
+        < names.index("Enforce release decision")
+    )
     assert action["outputs"]["exit-code"]["value"] == "${{ steps.final.outputs.exit-code }}"
     assert "M2RIV_VERIFY_EXIT_CODE" in source
     assert "final_code=3" in source

@@ -7,9 +7,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
@@ -25,6 +30,7 @@ jobs:
       - run: ruff check .
       - run: mypy src
       - run: pytest --cov=m2riv --cov-report=term-missing --cov-fail-under=91
+      - run: python -m pip_audit --local --skip-editable
       - run: python -m pip check
       - if: matrix.python-version == '3.13'
         run: |
@@ -35,6 +41,7 @@ jobs:
 
   action-smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -66,7 +73,7 @@ jobs:
           test -f runs/action-smoke/summary.md
           test -f runs/action-smoke/junit.xml
           test -f runs/action-smoke/results.sarif
-          m2riv mcr verify runs/action-smoke
+          m2riv mcr verify runs/action-smoke --strict
       - name: Verify cross-language content identity vectors
         run: node examples/content_identity/verify_golden.mjs
 
@@ -76,6 +83,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:

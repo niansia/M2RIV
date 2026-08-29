@@ -48,9 +48,7 @@ FIXTURE_SHA256 = "1d6652110add0355b2c6f4e2ab5aee63be1690384d41c79dc6eff201afd3bd
 
 class ArrayCalibrationReader(CalibrationDataReader):
     def __init__(self, rows: np.ndarray) -> None:
-        self._rows = iter(
-            {"input": row[None, :].astype(np.float32, copy=False)} for row in rows
-        )
+        self._rows = iter({"input": row[None, :].astype(np.float32, copy=False)} for row in rows)
 
     def get_next(self) -> dict[str, np.ndarray] | None:
         return next(self._rows, None)
@@ -316,9 +314,7 @@ rules:
                 encoding="utf-8",
             )
         comparisons.append((name, comparison))
-        checkpoint_rows.append(
-            {"checkpoint": name, "status": comparison.gate.status.value}
-        )
+        checkpoint_rows.append({"checkpoint": name, "status": comparison.gate.status.value})
         artifact_checkpoint_rows.append(
             {
                 "checkpoint": name,
@@ -327,9 +323,7 @@ rules:
         )
 
     _write_jsonl(destination / "checkpoints.jsonl", checkpoint_rows)
-    _write_jsonl(
-        destination / "artifact-checkpoints.jsonl", artifact_checkpoint_rows
-    )
+    _write_jsonl(destination / "artifact-checkpoints.jsonl", artifact_checkpoint_rows)
     bisect_result = bisect_regression(
         len(checkpoint_rows),
         lambda index: checkpoint_rows[index]["status"],

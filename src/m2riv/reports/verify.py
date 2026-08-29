@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path, PurePosixPath
 from typing import Any, Literal
 
 from pydantic import Field, ValidationError
 
 from m2riv.artifacts import ArtifactDiff, NumericalDiff
-from m2riv.core.identity import fingerprint
+from m2riv.core.identity import fingerprint, has_link_like_component, read_verified_file
 from m2riv.core.models import ContentId, Contract, EvidenceRef
+from m2riv.io.json import StrictJSONError, parse_strict_json
 from m2riv.planning import CompiledReleasePlan
 from m2riv.reports.models import (
     EvidenceManifest,
@@ -32,9 +32,11 @@ class MCRVerificationError(ValueError):
 class MCRVerification(Contract):
     """Machine-readable result from verifying one MCR bundle."""
 
-    schema_version: Literal["1.1.0"] = "1.1.0"
+    schema_version: Literal["1.2.0"] = "1.2.0"
     valid: bool = True
     integrity_valid: bool = True
+    authenticity_verified: bool = False
+    trust_scope: Literal["self-consistency-only"] = "self-consistency-only"
     verification_complete: bool
     verification_scope: Literal["report-and-local-bundle"] = "report-and-local-bundle"
     verified_evidence_count: int = Field(ge=0)
@@ -48,17 +50,21 @@ class MCRVerification(Contract):
 
 def _read_json(path: Path, *, budget: list[int]) -> Any:
     try:
-        size = path.stat().st_size
+        encoded = read_verified_file(path, max_bytes=MAX_JSON_FILE_BYTES)
+    except ValueError as error:
+        if "exceeds" in str(error):
+            raise MCRVerificationError(
+                f"bundle file exceeds JSON size limit: {path.name}"
+            ) from error
+        raise MCRVerificationError(f"required bundle file is unavailable: {path.name}") from error
     except OSError as error:
         raise MCRVerificationError(f"required bundle file is unavailable: {path.name}") from error
-    if size > MAX_JSON_FILE_BYTES:
-        raise MCRVerificationError(f"bundle file exceeds JSON size limit: {path.name}")
-    budget[0] += size
+    budget[0] += len(encoded)
     if budget[0] > MAX_BUNDLE_JSON_BYTES:
         raise MCRVerificationError("bundle exceeds total JSON size limit")
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        return parse_strict_json(encoded)
+    except StrictJSONError as error:
         raise MCRVerificationError(f"bundle file is not valid UTF-8 JSON: {path.name}") from error
 
 
@@ -67,11 +73,25 @@ def _local_reference(root: Path, uri: str) -> Path | None:
         return None
     normalized = uri.replace("\\", "/")
     relative = PurePosixPath(normalized)
-    if relative.is_absolute() or not relative.parts or any(
-        part in {"", ".", ".."} for part in relative.parts
+    if (
+        relative.is_absolute()
+        or not relative.parts
+        or any(
+            part in {"", ".", ".."}
+            or ":" in part
+            or any(not character.isprintable() for character in part)
+            for part in relative.parts
+        )
     ):
         raise MCRVerificationError("bundle reference must be a safe relative path")
-    candidate = root.joinpath(*relative.parts).resolve()
+    cursor = root
+    paths = [root]
+    for part in relative.parts:
+        cursor /= part
+        paths.append(cursor)
+    if any(has_link_like_component(path) for path in paths):
+        raise MCRVerificationError("bundle references must not use symbolic links")
+    candidate = cursor.resolve()
     resolved_root = root.resolve()
     if not candidate.is_relative_to(resolved_root):
         raise MCRVerificationError("bundle reference escapes the report directory")
@@ -91,28 +111,20 @@ def _verify_supplemental_identity(reference: EvidenceRef, payload: Any) -> bool:
         if reference.kind == "artifact-diff":
             artifact_diff = ArtifactDiff.model_validate(payload)
             expected = fingerprint(
-                artifact_diff.model_dump(
-                    mode="python", exclude={"schema_version", "id"}
-                ),
+                artifact_diff.model_dump(mode="python", exclude={"schema_version", "id"}),
                 namespace="artifact-diff",
             )
             if artifact_diff.id != f"m2riv:sha256:{expected}":
-                raise MCRVerificationError(
-                    "artifact diff identity does not match its contents"
-                )
+                raise MCRVerificationError("artifact diff identity does not match its contents")
             return True
         if reference.kind == "numerical-diff":
             numerical_diff = NumericalDiff.model_validate(payload)
             expected = fingerprint(
-                numerical_diff.model_dump(
-                    mode="python", exclude={"schema_version", "id"}
-                ),
+                numerical_diff.model_dump(mode="python", exclude={"schema_version", "id"}),
                 namespace="onnx-numerical-diff",
             )
             if numerical_diff.id != f"m2riv:sha256:{expected}":
-                raise MCRVerificationError(
-                    "numerical diff identity does not match its contents"
-                )
+                raise MCRVerificationError("numerical diff identity does not match its contents")
             return True
     except ValidationError as error:
         raise MCRVerificationError(
@@ -148,9 +160,7 @@ def _verify_release_plan(root: Path, report: ModelChangeReport, budget: list[int
         plan = CompiledReleasePlan.model_validate(_read_json(path, budget=budget))
     except ValidationError as error:
         raise MCRVerificationError("release plan does not match its contract") from error
-    expected = fingerprint(
-        plan.model_dump(mode="python", exclude={"id"}), namespace="release-plan"
-    )
+    expected = fingerprint(plan.model_dump(mode="python", exclude={"id"}), namespace="release-plan")
     if plan.id != report.release_plan_id or plan.id != f"m2riv:sha256:{expected}":
         raise MCRVerificationError("release plan identity does not match the MCR")
     return True
@@ -183,9 +193,7 @@ def _verify_manifest(
             raise MCRVerificationError("evidence set identity does not match its members")
     available_sets = {item.id for item in manifest.sets}
     referenced_sets = {
-        metric.evidence_set_id
-        for metric in report.metrics
-        if metric.evidence_set_id is not None
+        metric.evidence_set_id for metric in report.metrics if metric.evidence_set_id is not None
     } | {
         finding.evidence_set_id
         for finding in report.decision.findings
@@ -196,8 +204,12 @@ def _verify_manifest(
     return manifest
 
 
-def verify_report_bundle(source: str | Path) -> MCRVerification:
-    """Verify a report file or its containing bundle without executing a model."""
+def verify_report_bundle(
+    source: str | Path,
+    *,
+    require_complete: bool = False,
+) -> MCRVerification:
+    """Verify report self-consistency without claiming producer authenticity."""
     requested = Path(source)
     report_path = requested / "m2riv-report.json" if requested.is_dir() else requested
     root = report_path.parent
@@ -237,6 +249,10 @@ def verify_report_bundle(source: str | Path) -> MCRVerification:
                 f"{reference.kind} embeds the referenced id but has no built-in rehasher"
             )
             unverified_evidence_count += 1
+    if require_complete and warnings:
+        raise MCRVerificationError(
+            f"strict verification requires all linked evidence; found {len(warnings)} warning(s)"
+        )
     return MCRVerification(
         verification_complete=not warnings,
         verified_evidence_count=verified_evidence_count,

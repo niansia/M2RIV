@@ -2,7 +2,7 @@
 
 - Decision status: Accepted
 - Implementation status: Implemented for MCR 1.3
-- Contract impact: Model Change Report 1.3; MCRVerification 1.1
+- Contract impact: Model Change Report 1.3; MCRVerification 1.2
 
 ## Problem
 
@@ -38,6 +38,13 @@ without warnings. Verified and unverified supplemental-evidence counts make a
 partial result machine-visible instead of requiring consumers to infer it from
 warning prose. The verification scope is explicitly `report-and-local-bundle`;
 the verifier does not fetch remote evidence or execute a model.
+
+MCRVerification 1.2 makes the trust boundary machine-readable. A locally valid
+bundle reports `trust_scope: self-consistency-only` and
+`authenticity_verified: false`. Recomputing unkeyed content identities proves that
+the bundle is internally self-consistent; it does not prove who produced it or
+whether the producer's observations were truthful. The `--strict` option makes any
+completeness warning fatal, but it does not change this authenticity boundary.
 
 ## Compatibility
 

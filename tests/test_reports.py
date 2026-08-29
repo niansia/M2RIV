@@ -184,9 +184,7 @@ def test_evidence_identity_excludes_timestamp_and_run_scoped_metrics() -> None:
         candidate_snapshot_id=content_id("candidate-stable"),
         metrics=(
             first.metrics[0],
-            first.metrics[1].model_copy(
-                update={"baseline_value": 1.5, "candidate_value": 2.5}
-            ),
+            first.metrics[1].model_copy(update={"baseline_value": 1.5, "candidate_value": 2.5}),
         ),
         decision=first.decision,
         created_at=datetime(2026, 8, 29, tzinfo=UTC),
@@ -355,12 +353,8 @@ def test_verifier_checks_plan_numerical_diff_and_warning_boundaries(
         ),
     )
     write_report_bundle(report, tmp_path, release_plan=plan)
-    (tmp_path / "numerical.json").write_text(
-        numerical.model_dump_json(indent=2), encoding="utf-8"
-    )
-    (tmp_path / "note.json").write_text(
-        json.dumps({"id": unknown_id}), encoding="utf-8"
-    )
+    (tmp_path / "numerical.json").write_text(numerical.model_dump_json(indent=2), encoding="utf-8")
+    (tmp_path / "note.json").write_text(json.dumps({"id": unknown_id}), encoding="utf-8")
 
     verified = verify_report_bundle(tmp_path)
 
@@ -402,9 +396,7 @@ def test_verifier_rejects_missing_malformed_and_oversized_reports(
 def test_verifier_rejects_unsafe_or_mismatched_supplemental_evidence(
     tmp_path: Path,
 ) -> None:
-    escaped = EvidenceRef(
-        id=content_id("escaped"), kind="external-note", uri="../outside.json"
-    )
+    escaped = EvidenceRef(id=content_id("escaped"), kind="external-note", uri="../outside.json")
     escaped_report = create_report(
         baseline_snapshot_id=content_id("escaped-baseline"),
         candidate_snapshot_id=content_id("escaped-candidate"),
@@ -416,9 +408,7 @@ def test_verifier_rejects_unsafe_or_mismatched_supplemental_evidence(
     with pytest.raises(MCRVerificationError, match="safe relative path"):
         verify_report_bundle(tmp_path / "escaped")
 
-    mismatch = EvidenceRef(
-        id=content_id("expected-body"), kind="external-note", uri="note.json"
-    )
+    mismatch = EvidenceRef(id=content_id("expected-body"), kind="external-note", uri="note.json")
     mismatch_report = create_report(
         baseline_snapshot_id=content_id("mismatch-baseline"),
         candidate_snapshot_id=content_id("mismatch-candidate"),
@@ -484,9 +474,10 @@ def test_external_evidence_manifest_is_content_addressed_and_validated(tmp_path:
 
     bundle = write_report_bundle(report, tmp_path, evidence_manifest=manifest)
     assert bundle.evidence_manifest_path is not None
-    assert EvidenceManifest.model_validate_json(
-        bundle.evidence_manifest_path.read_text("utf-8")
-    ) == manifest
+    assert (
+        EvidenceManifest.model_validate_json(bundle.evidence_manifest_path.read_text("utf-8"))
+        == manifest
+    )
     assert "evidence-manifest.json" in bundle.markdown_path.read_text("utf-8")
     verified = verify_report_bundle(tmp_path)
     assert "manifest-id" in verified.checks
@@ -533,9 +524,7 @@ def test_verifier_rejects_manifest_contract_identity_count_and_set_failures(
     with pytest.raises(MCRVerificationError, match="remote evidence manifests"):
         verify_report_bundle(tmp_path / "remote")
 
-    reference = EvidenceManifestRef(
-        id=manifest.id, evidence_count=1, set_count=1
-    )
+    reference = EvidenceManifestRef(id=manifest.id, evidence_count=1, set_count=1)
     report = create_report(
         baseline_snapshot_id=content_id("manifest-baseline"),
         candidate_snapshot_id=content_id("manifest-candidate"),
@@ -553,9 +542,7 @@ def test_verifier_rejects_manifest_contract_identity_count_and_set_failures(
         evidence,
         (evidence_set.model_copy(update={"id": content_id("wrong-set")}),),
     )
-    wrong_reference = EvidenceManifestRef(
-        id=wrong_identity.id, evidence_count=1, set_count=1
-    )
+    wrong_reference = EvidenceManifestRef(id=wrong_identity.id, evidence_count=1, set_count=1)
     wrong_report = create_report(
         baseline_snapshot_id=content_id("wrong-set-baseline"),
         candidate_snapshot_id=content_id("wrong-set-candidate"),
@@ -648,9 +635,9 @@ def test_report_contracts_reject_duplicate_and_incoherent_provenance() -> None:
             sample_report().model_dump()
             | {
                 "metrics": [
-                    sample_report().metrics[0].model_copy(
-                        update={"evidence_set_id": content_id("dangling")}
-                    )
+                    sample_report()
+                    .metrics[0]
+                    .model_copy(update={"evidence_set_id": content_id("dangling")})
                 ]
             }
         )
@@ -668,9 +655,7 @@ def test_bundle_writer_rejects_mismatched_plan_and_manifest_links(tmp_path: Path
     with pytest.raises(ValueError, match="must be provided together"):
         write_report_bundle(report, tmp_path / "manifest-only", evidence_manifest=manifest)
 
-    reference = EvidenceManifestRef(
-        id=manifest.id, evidence_count=1, set_count=1
-    )
+    reference = EvidenceManifestRef(id=manifest.id, evidence_count=1, set_count=1)
     linked = create_report(
         baseline_snapshot_id=content_id("writer-baseline"),
         candidate_snapshot_id=content_id("writer-candidate"),

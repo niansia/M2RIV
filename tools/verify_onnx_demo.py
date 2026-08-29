@@ -70,14 +70,13 @@ def verify(destination: Path) -> None:
             raise ValueError(f"{checkpoint} evidence manifest identity is not linked")
         evidence = manifest.get("evidence", [])
         evidence_sets = manifest.get("sets", [])
-        if reference.get("evidence_count") != len(evidence) or reference.get(
-            "set_count"
-        ) != len(evidence_sets):
+        if reference.get("evidence_count") != len(evidence) or reference.get("set_count") != len(
+            evidence_sets
+        ):
             raise ValueError(f"{checkpoint} evidence manifest counts do not match")
         set_ids = {item.get("id") for item in evidence_sets}
         if any(
-            metric.get("evidence_set_id") not in set_ids
-            for metric in report.get("metrics", [])
+            metric.get("evidence_set_id") not in set_ids for metric in report.get("metrics", [])
         ):
             raise ValueError(f"{checkpoint} metric has a dangling evidence set")
         if any(

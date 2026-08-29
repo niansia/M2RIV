@@ -93,9 +93,7 @@ def compare_artifacts(baseline: ArtifactProfile, candidate: ArtifactProfile) -> 
             _counts(candidate.onnx.initializer_dtype_counts),
         )
         node_delta = candidate.onnx.node_count - baseline.onnx.node_count
-        initializer_delta = (
-            candidate.onnx.initializer_count - baseline.onnx.initializer_count
-        )
+        initializer_delta = candidate.onnx.initializer_count - baseline.onnx.initializer_count
         parameter_delta = candidate.onnx.parameter_count - baseline.onnx.parameter_count
         inputs_changed = candidate.onnx.inputs != baseline.onnx.inputs
         outputs_changed = candidate.onnx.outputs != baseline.onnx.outputs

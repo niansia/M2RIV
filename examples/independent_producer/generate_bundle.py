@@ -248,9 +248,7 @@ def build_bundle() -> dict[str, dict[str, Any]]:
         "evidence_manifest": manifest_ref,
         "evidence": supplemental,
     }
-    report_id = "m2riv:sha256:" + fingerprint(
-        evidence_payload, "model-change-evidence"
-    )
+    report_id = "m2riv:sha256:" + fingerprint(evidence_payload, "model-change-evidence")
     run_payload = {
         "schema_version": "1.3.0",
         "evidence_id": report_id,

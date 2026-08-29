@@ -21,12 +21,17 @@ from m2riv.core.identity import (
     MAX_ARTIFACT_FILE_BYTES,
     fingerprint,
     hash_artifact,
+    read_verified_file,
 )
 
 MAX_ONNX_BYTES = 512 * 1024 * 1024
 MAX_ONNX_NODES = 1_000_000
 MAX_ONNX_INITIALIZERS = 1_000_000
 MAX_ONNX_METADATA = 1024
+MAX_ONNX_GRAPHS = 100_000
+MAX_ONNX_ATTRIBUTES = 4_000_000
+MAX_ONNX_TENSOR_RANK = 32
+MAX_ONNX_PARAMETER_COUNT = 1_000_000_000_000_000
 
 _COMPONENT_ROLES = {
     "config.json": "config",
@@ -58,14 +63,13 @@ def _tensor_spec(value: Any, onnx: Any) -> OnnxTensorSpec:
     else:
         parsed: list[str] = []
         for dimension in tensor_type.shape.dim:
-            if len(parsed) >= 32:
-                raise ArtifactInspectionError("ONNX tensor rank exceeds 32")
+            if len(parsed) >= MAX_ONNX_TENSOR_RANK:
+                raise ArtifactInspectionError(f"ONNX tensor rank exceeds {MAX_ONNX_TENSOR_RANK}")
             if dimension.HasField("dim_value"):
                 parsed.append(str(dimension.dim_value))
             elif dimension.HasField("dim_param"):
                 parsed.append(
-                    _bounded_text(dimension.dim_param, label="symbolic dimension", limit=128)
-                    or "?"
+                    _bounded_text(dimension.dim_param, label="symbolic dimension", limit=128) or "?"
                 )
             else:
                 parsed.append("?")
@@ -75,6 +79,73 @@ def _tensor_spec(value: Any, onnx: Any) -> OnnxTensorSpec:
     except ValueError as error:
         raise ArtifactInspectionError("ONNX tensor has an unsupported element type") from error
     return OnnxTensorSpec(name=name, element_type=element_type, shape=dimensions)
+
+
+def _tensor_elements(value: Any) -> int:
+    if len(value.dims) > MAX_ONNX_TENSOR_RANK:
+        raise ArtifactInspectionError(f"ONNX tensor rank exceeds {MAX_ONNX_TENSOR_RANK}")
+    elements = 1
+    for raw_dimension in value.dims:
+        dimension = int(raw_dimension)
+        if dimension < 0:
+            raise ArtifactInspectionError("ONNX initializer dimension must be non-negative")
+        elements *= dimension
+        if elements > MAX_ONNX_PARAMETER_COUNT:
+            raise ArtifactInspectionError(
+                f"ONNX parameter count exceeds {MAX_ONNX_PARAMETER_COUNT}"
+            )
+    return elements
+
+
+def _uses_external_data(value: Any, onnx: Any) -> bool:
+    return bool(value.external_data) or value.data_location == onnx.TensorProto.EXTERNAL
+
+
+def _walk_graphs(model: Any, onnx: Any) -> tuple[tuple[Any, ...], tuple[Any, ...], bool]:
+    graphs: list[Any] = []
+    nodes: list[Any] = []
+    stack = [model.graph]
+    attribute_count = 0
+    uses_external_data = False
+    while stack:
+        graph = stack.pop()
+        graphs.append(graph)
+        if len(graphs) > MAX_ONNX_GRAPHS:
+            raise ArtifactInspectionError(f"ONNX model exceeds {MAX_ONNX_GRAPHS} graph limit")
+        nodes.extend(graph.node)
+        if len(nodes) > MAX_ONNX_NODES:
+            raise ArtifactInspectionError(f"ONNX graph exceeds {MAX_ONNX_NODES} node limit")
+        for initializer in graph.initializer:
+            uses_external_data = uses_external_data or _uses_external_data(initializer, onnx)
+        for sparse in graph.sparse_initializer:
+            uses_external_data = (
+                uses_external_data
+                or _uses_external_data(sparse.values, onnx)
+                or _uses_external_data(sparse.indices, onnx)
+            )
+        for node in graph.node:
+            attribute_count += len(node.attribute)
+            if attribute_count > MAX_ONNX_ATTRIBUTES:
+                raise ArtifactInspectionError(
+                    f"ONNX model exceeds {MAX_ONNX_ATTRIBUTES} attribute limit"
+                )
+            for attribute in node.attribute:
+                if attribute.type == onnx.AttributeProto.GRAPH:
+                    stack.append(attribute.g)
+                elif attribute.type == onnx.AttributeProto.GRAPHS:
+                    stack.extend(attribute.graphs)
+                elif attribute.type == onnx.AttributeProto.TENSOR:
+                    _tensor_elements(attribute.t)
+                    uses_external_data = uses_external_data or _uses_external_data(
+                        attribute.t, onnx
+                    )
+                elif attribute.type == onnx.AttributeProto.TENSORS:
+                    for tensor in attribute.tensors:
+                        _tensor_elements(tensor)
+                    uses_external_data = uses_external_data or any(
+                        _uses_external_data(tensor, onnx) for tensor in attribute.tensors
+                    )
+    return tuple(graphs), tuple(nodes), uses_external_data
 
 
 def _quantization_format(
@@ -111,28 +182,25 @@ def _inspect_onnx(path: Path, *, max_bytes: int) -> OnnxGraphSummary:
     try:
         import onnx
 
-        model = onnx.load_model(path, load_external_data=False)
+        encoded = read_verified_file(
+            path,
+            max_bytes=max_bytes,
+            expected_digest=initial_digest.digest,
+        )
+        model = onnx.load_model_from_string(encoded)
     except ImportError as error:
         raise ArtifactInspectionError(
             "ONNX inspection requires the optional 'onnx' extra"
         ) from error
+    except ValueError as error:
+        raise ArtifactInspectionError(str(error)) from error
     except Exception:
         raise ArtifactInspectionError("ONNX artifact could not be parsed") from None
-    if (
-        hash_artifact(
-            path,
-            max_total_bytes=max_bytes,
-            max_file_bytes=max_bytes,
-            max_entries=1,
-        ).digest
-        != initial_digest.digest
-    ):
-        raise ArtifactInspectionError("ONNX artifact changed while being inspected")
 
     graph = model.graph
-    if len(graph.node) > MAX_ONNX_NODES:
-        raise ArtifactInspectionError(f"ONNX graph exceeds {MAX_ONNX_NODES} node limit")
-    if len(graph.initializer) > MAX_ONNX_INITIALIZERS:
+    graphs, nodes, uses_external_data = _walk_graphs(model, onnx)
+    initializer_count = sum(len(item.initializer) + len(item.sparse_initializer) for item in graphs)
+    if initializer_count > MAX_ONNX_INITIALIZERS:
         raise ArtifactInspectionError(
             f"ONNX graph exceeds {MAX_ONNX_INITIALIZERS} initializer limit"
         )
@@ -140,34 +208,34 @@ def _inspect_onnx(path: Path, *, max_bytes: int) -> OnnxGraphSummary:
         raise ArtifactInspectionError(f"ONNX metadata exceeds {MAX_ONNX_METADATA} entry limit")
 
     operators: Counter[str] = Counter()
-    for node in graph.node:
+    for node in nodes:
         domain = _bounded_text(node.domain, label="operator domain", limit=128) or "ai.onnx"
         op_type = _bounded_text(node.op_type, label="operator type", limit=128)
         operators[f"{domain}::{op_type}"] += 1
 
     dtype_counts: Counter[str] = Counter()
     parameter_count = 0
-    uses_external_data = False
-    for initializer in graph.initializer:
-        try:
-            dtype = onnx.TensorProto.DataType.Name(initializer.data_type)
-        except ValueError as error:
-            raise ArtifactInspectionError("ONNX initializer has an unsupported dtype") from error
-        dtype_counts[dtype] += 1
-        elements = 1
-        for dimension in initializer.dims:
-            elements *= int(dimension)
-        parameter_count += elements
-        uses_external_data = uses_external_data or bool(initializer.external_data) or (
-            initializer.data_location == onnx.TensorProto.EXTERNAL
-        )
-
+    for current_graph in graphs:
+        initializers = list(current_graph.initializer)
+        initializers.extend(sparse.values for sparse in current_graph.sparse_initializer)
+        for initializer in initializers:
+            try:
+                dtype = onnx.TensorProto.DataType.Name(initializer.data_type)
+            except ValueError as error:
+                raise ArtifactInspectionError(
+                    "ONNX initializer has an unsupported dtype"
+                ) from error
+            dtype_counts[dtype] += 1
+            parameter_count += _tensor_elements(initializer)
+            if parameter_count > MAX_ONNX_PARAMETER_COUNT:
+                raise ArtifactInspectionError(
+                    f"ONNX parameter count exceeds {MAX_ONNX_PARAMETER_COUNT}"
+                )
     opsets = tuple(
         sorted(
             (
                 OnnxOpset(
-                    domain=_bounded_text(item.domain, label="opset domain", limit=128)
-                    or "ai.onnx",
+                    domain=_bounded_text(item.domain, label="opset domain", limit=128) or "ai.onnx",
                     version=item.version,
                 )
                 for item in model.opset_import
@@ -187,13 +255,11 @@ def _inspect_onnx(path: Path, *, max_bytes: int) -> OnnxGraphSummary:
     return OnnxGraphSummary(
         ir_version=model.ir_version,
         producer_name=_bounded_text(model.producer_name, label="producer name", limit=256),
-        producer_version=_bounded_text(
-            model.producer_version, label="producer version", limit=128
-        ),
+        producer_version=_bounded_text(model.producer_version, label="producer version", limit=128),
         model_version=max(0, model.model_version),
         opsets=opsets,
-        node_count=len(graph.node),
-        initializer_count=len(graph.initializer),
+        node_count=len(nodes),
+        initializer_count=initializer_count,
         parameter_count=parameter_count,
         operator_counts=tuple(
             OnnxCount(name=name, count=count) for name, count in sorted(operators.items())
@@ -304,9 +370,7 @@ def inspect_artifact(
         if component.role == "model-onnx"
     )
     onnx_summary = (
-        _inspect_onnx(onnx_paths[0], max_bytes=max_onnx_bytes)
-        if len(onnx_paths) == 1
-        else None
+        _inspect_onnx(onnx_paths[0], max_bytes=max_onnx_bytes) if len(onnx_paths) == 1 else None
     )
     if source.is_file() and source.suffix.casefold() == ".onnx":
         artifact_format = ArtifactFormat.ONNX

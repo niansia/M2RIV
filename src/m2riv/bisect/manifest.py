@@ -72,9 +72,7 @@ def load_checkpoint_artifacts(path: str | Path) -> tuple[CheckpointArtifact, ...
             raise InputFormatError(
                 f"{source}:{line_number}: row must contain only checkpoint and artifact"
             )
-        checkpoint = _safe_checkpoint(
-            row["checkpoint"], source=source, line_number=line_number
-        )
+        checkpoint = _safe_checkpoint(row["checkpoint"], source=source, line_number=line_number)
         if checkpoint in seen:
             raise InputFormatError(f"{source}:{line_number}: duplicate checkpoint {checkpoint!r}")
         raw_artifact = row["artifact"]
@@ -82,10 +80,7 @@ def load_checkpoint_artifacts(path: str | Path) -> tuple[CheckpointArtifact, ...
             not isinstance(raw_artifact, str)
             or not raw_artifact.strip()
             or len(raw_artifact) > 4096
-            or any(
-                ord(character) < 32 or 127 <= ord(character) < 160
-                for character in raw_artifact
-            )
+            or any(ord(character) < 32 or 127 <= ord(character) < 160 for character in raw_artifact)
         ):
             raise InputFormatError(
                 f"{source}:{line_number}: artifact must be a safe non-blank path"

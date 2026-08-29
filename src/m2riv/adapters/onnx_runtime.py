@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import os
 import platform
 from collections.abc import Sequence
 from pathlib import Path
@@ -10,8 +11,13 @@ from time import perf_counter_ns
 from typing import Any, Literal
 
 from m2riv.adapters.base import AdapterCapability
-from m2riv.artifacts import ArtifactInspectionError, inspect_artifact
-from m2riv.core.identity import build_local_snapshot, fingerprint
+from m2riv.artifacts import MAX_ONNX_BYTES, ArtifactInspectionError, inspect_artifact
+from m2riv.core.identity import (
+    build_snapshot_from_artifact_digest,
+    fingerprint,
+    observation_content_id,
+    read_verified_file,
+)
 from m2riv.core.models import EvalCase, ModelFamily, ModelSnapshot, Observation, RuntimeProfile
 
 MAX_INPUT_ELEMENTS = 4_000_000
@@ -61,7 +67,21 @@ class OnnxRuntimeAdapter:
             raise OnnxRuntimeError("artifact must contain exactly one inspectable ONNX model")
         if artifact_profile.onnx.uses_external_data:
             raise OnnxRuntimeError("external ONNX tensor data is not supported")
+        components = tuple(
+            item for item in artifact_profile.components if item.role == "model-onnx"
+        )
+        if len(components) != 1:
+            raise OnnxRuntimeError("artifact must contain exactly one ONNX component")
+        model_source = source if source.is_file() else source / components[0].relative_path
         try:
+            model_bytes = read_verified_file(
+                model_source,
+                max_bytes=MAX_ONNX_BYTES,
+                expected_digest=components[0].digest,
+            )
+            # ONNX Runtime telemetry is outside the evidence contract and is disabled
+            # before importing the native runtime. Respect an explicit operator value.
+            os.environ.setdefault("ORT_DISABLE_TELEMETRY", "1")
             import numpy as np
             import onnxruntime as ort  # type: ignore[import-untyped]
 
@@ -70,14 +90,14 @@ class OnnxRuntimeAdapter:
             options.inter_op_num_threads = 1
             options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
             session = ort.InferenceSession(
-                str(source),
+                model_bytes,
                 sess_options=options,
                 providers=["CPUExecutionProvider"],
             )
         except ImportError as error:
-            raise OnnxRuntimeError(
-                "ONNX execution requires the optional 'onnx' extra"
-            ) from error
+            raise OnnxRuntimeError("ONNX execution requires the optional 'onnx' extra") from error
+        except ValueError as error:
+            raise OnnxRuntimeError(str(error)) from error
         except Exception:
             raise OnnxRuntimeError("ONNX Runtime could not create a CPU session") from None
 
@@ -112,8 +132,9 @@ class OnnxRuntimeAdapter:
         self._numpy_dtype = numpy_dtype
         self._output_mode = output_mode
         self._runtime_version = _safe_io_name(ort.__version__, label="runtime version")
-        self._snapshot = build_local_snapshot(
-            source,
+        self._snapshot = build_snapshot_from_artifact_digest(
+            artifact_profile.artifact,
+            source_uri=str(source),
             model_family=model_family,
             runtime_profile=RuntimeProfile(
                 framework="onnxruntime",
@@ -154,9 +175,7 @@ class OnnxRuntimeAdapter:
         return self._snapshot
 
     def capabilities(self) -> frozenset[AdapterCapability]:
-        return frozenset(
-            {AdapterCapability.BATCH, AdapterCapability.HARDWARE_METRICS}
-        )
+        return frozenset({AdapterCapability.BATCH, AdapterCapability.HARDWARE_METRICS})
 
     def _case_input(self, case: EvalCase) -> Any:
         value = case.input
@@ -169,9 +188,7 @@ class OnnxRuntimeAdapter:
         except Exception:
             raise OnnxRuntimeError("case input could not be converted to the ONNX dtype") from None
         if array.size > MAX_INPUT_ELEMENTS:
-            raise OnnxRuntimeError(
-                f"case input exceeds {MAX_INPUT_ELEMENTS} element limit"
-            )
+            raise OnnxRuntimeError(f"case input exceeds {MAX_INPUT_ELEMENTS} element limit")
         if array.ndim == self._input_rank - 1:
             array = self._numpy.expand_dims(array, axis=0)
         if array.ndim != self._input_rank:
@@ -181,9 +198,7 @@ class OnnxRuntimeAdapter:
     def _normalize_output(self, value: Any) -> Any:
         array = self._numpy.asarray(value)
         if array.size > MAX_OUTPUT_ELEMENTS:
-            raise OnnxRuntimeError(
-                f"ONNX output exceeds {MAX_OUTPUT_ELEMENTS} element limit"
-            )
+            raise OnnxRuntimeError(f"ONNX output exceeds {MAX_OUTPUT_ELEMENTS} element limit")
         if self._output_mode == "argmax":
             array = self._numpy.asarray(self._numpy.argmax(array, axis=-1))
         if array.size == 1:
@@ -207,9 +222,9 @@ class OnnxRuntimeAdapter:
             try:
                 for _ in range(profile.repetitions):
                     started = perf_counter_ns()
-                    raw_output = self._session.run(
-                        [self._output_name], {self._input_name: value}
-                    )[0]
+                    raw_output = self._session.run([self._output_name], {self._input_name: value})[
+                        0
+                    ]
                     elapsed_ns += perf_counter_ns() - started
             except Exception:
                 raise OnnxRuntimeError("ONNX Runtime inference failed") from None
@@ -218,17 +233,14 @@ class OnnxRuntimeAdapter:
             if not math.isfinite(latency_ms) or latency_ms < 0:
                 raise OnnxRuntimeError("ONNX Runtime returned invalid timing evidence")
             output_digest = fingerprint(output, namespace="observation-output")
-            observation_payload = {
-                "snapshot_id": self._snapshot.id,
-                "case_id": case.case_id,
-                "attempt": 0,
-                "seed": profile.seed,
-                "output_digest": output_digest,
-            }
-            observation_id = fingerprint(observation_payload, namespace="observation")
             observations.append(
                 Observation(
-                    id=f"m2riv:sha256:{observation_id}",
+                    id=observation_content_id(
+                        snapshot_id=self._snapshot.id,
+                        case_id=case.case_id,
+                        seed=profile.seed,
+                        output_digest=output_digest,
+                    ),
                     snapshot_id=self._snapshot.id,
                     case_id=case.case_id,
                     seed=profile.seed,

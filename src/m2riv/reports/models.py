@@ -18,7 +18,7 @@ SafeExecutionCapability = Annotated[
 
 
 class MCRStatus(StrEnum):
-    PASS = "PASS"
+    PASS = "PASS"  # nosec B105  # noqa: S105 - release status, not a credential
     WARN = "WARN"
     BLOCK = "BLOCK"
     ERROR = "ERROR"
@@ -235,9 +235,7 @@ def create_report(
         "baseline_snapshot_id": baseline_snapshot_id,
         "candidate_snapshot_id": candidate_snapshot_id,
         "release_plan_id": release_plan_id,
-        "metrics": tuple(
-            metric for metric in metrics if metric.identity_scope == "evidence"
-        ),
+        "metrics": tuple(metric for metric in metrics if metric.identity_scope == "evidence"),
         "finding_evidence": tuple(
             {
                 "rule_id": finding.rule_id,

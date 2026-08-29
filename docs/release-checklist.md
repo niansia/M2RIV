@@ -17,8 +17,9 @@ test suite does not satisfy these account-level controls.
   repository, content-ID namespace, action reference, and documentation name agree.
 - Enable GitHub private vulnerability reporting; subscribe at least two monitored
   maintainer accounts to security alerts and test the notification path.
-- Protect tag creation and require review for changes to `release.yml` and
-  `.github/CODEOWNERS`.
+- Enable secret scanning, push protection, dependency security updates, and branch
+  protection; protect tag creation and require review for changes to `release.yml`
+  and `.github/CODEOWNERS`.
 
 PyPI identifies a Trusted Publisher by repository owner, repository, workflow,
 and optionally environment. The publish job has only `contents: read` and

@@ -54,6 +54,7 @@ onnx-demo = [
 dev = [
   "build>=1.2,<2",
   "mypy>=1.14,<2",
+  "pip-audit>=2.9,<3",
   "pytest>=9.0.3,<10",
   "pytest-cov>=6,<7",
   "ruff>=0.9,<1",
@@ -80,7 +81,10 @@ line-length = 100
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "S105", "S314", "S506", "S603"]
 
 [tool.mypy]
 python_version = "3.11"

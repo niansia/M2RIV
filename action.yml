@@ -93,7 +93,7 @@ runs:
         M2RIV_OUTPUT: ${{ inputs.output }}
       run: |
         set +e
-        m2riv mcr verify "$M2RIV_OUTPUT"
+        m2riv mcr verify "$M2RIV_OUTPUT" --strict
         result=$?
         set -e
         echo "exit-code=$result" >> "$GITHUB_OUTPUT"

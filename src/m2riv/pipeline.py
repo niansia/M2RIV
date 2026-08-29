@@ -333,9 +333,7 @@ def compare_release(
         for case_id in gate.critical_failures
     )
     evidence_manifest = (
-        create_evidence_manifest(
-            tuple(evidence_entries.values()), tuple(evidence_sets.values())
-        )
+        create_evidence_manifest(tuple(evidence_entries.values()), tuple(evidence_sets.values()))
         if evidence_sets
         else None
     )
@@ -418,6 +416,13 @@ def compare_release(
         evidence=tuple(supplemental_refs.values()),
         limitations=(
             "Metrics are paired over observed cases; this is not a general safety certification.",
+            (
+                "Cache entries used a process-local HMAC key; no cache evidence was trusted "
+                "across processes."
+                if run.cache_authentication == "run-local-hmac"
+                else "Shared cache entries were HMAC-authenticated with M2RIV_CACHE_KEY; this "
+                "authenticates cache writers, not the MCR producer."
+            ),
         ),
     )
     return ReleaseComparison(

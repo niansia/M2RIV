@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-import tempfile
+import os
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,7 +11,7 @@ from typing import Any
 
 from m2riv.artifacts.inspector import ArtifactInspectionError, inspect_artifact
 from m2riv.artifacts.models import NumericalDiff, TensorNumericalDiff
-from m2riv.core.identity import fingerprint
+from m2riv.core.identity import fingerprint, read_verified_file
 from m2riv.core.models import EvalCase
 
 MAX_NUMERICAL_CASES = 128
@@ -47,13 +47,24 @@ def _load_model(path: Path) -> tuple[Any, Any]:
         raise NumericalDiffError("numerical diff requires one inspectable ONNX model per side")
     if profile.onnx.uses_external_data:
         raise NumericalDiffError("numerical diff refuses external ONNX tensor data")
+    components = tuple(item for item in profile.components if item.role == "model-onnx")
+    if len(components) != 1:
+        raise NumericalDiffError("numerical diff requires exactly one ONNX component")
+    model_path = path if path.is_file() else path / components[0].relative_path
     try:
         import onnx
 
-        model = onnx.load_model(path, load_external_data=False)
+        encoded = read_verified_file(
+            model_path,
+            max_bytes=components[0].size_bytes,
+            expected_digest=components[0].digest,
+        )
+        model = onnx.load_model_from_string(encoded)
         inferred = onnx.shape_inference.infer_shapes(model)
     except ImportError as error:
         raise NumericalDiffError("numerical diff requires the optional 'onnx' extra") from error
+    except ValueError as error:
+        raise NumericalDiffError(str(error)) from error
     except Exception:
         raise NumericalDiffError("ONNX shape inference failed") from None
     return profile, inferred
@@ -80,21 +91,18 @@ def _ordered_outputs(model: Any, available: set[str]) -> tuple[str, ...]:
 
 
 def _produced_names(model: Any) -> set[str]:
-    return {
-        name
-        for node in model.graph.node
-        for name in node.output
-        if name
-    } | {output.name for output in model.graph.output if output.name}
+    return {name for node in model.graph.node for name in node.output if name} | {
+        output.name for output in model.graph.output if output.name
+    }
 
 
-def _instrument(model: Any, names: Sequence[str], path: Path, onnx: Any) -> None:
+def _instrument(model: Any, names: Sequence[str]) -> bytes:
     typed = _typed_values(model)
     existing = {item.name for item in model.graph.output}
     for name in names:
         if name not in existing:
             model.graph.output.add().CopyFrom(typed[name])
-    onnx.save_model(model, path)
+    return bytes(model.SerializeToString())
 
 
 def _numpy_dtypes(np: Any) -> dict[str, Any]:
@@ -190,29 +198,25 @@ def compare_onnx_numerics(
         raise NumericalDiffError("comparable tensor count exceeds the numerical diff limit")
     try:
         import numpy as np
-        import onnx
+
+        os.environ.setdefault("ORT_DISABLE_TELEMETRY", "1")
         import onnxruntime as ort  # type: ignore[import-untyped]
     except ImportError as error:
-        raise NumericalDiffError(
-            "numerical diff requires the optional 'onnx' extra"
-        ) from error
+        raise NumericalDiffError("numerical diff requires the optional 'onnx' extra") from error
 
     options = ort.SessionOptions()
     options.intra_op_num_threads = 1
     options.inter_op_num_threads = 1
     options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
     options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_DISABLE_ALL
-    temporary_paths: list[Path] = []
     try:
-        for model in (baseline_model, candidate_model):
-            with tempfile.NamedTemporaryFile(suffix=".onnx", delete=False) as handle:
-                temporary_paths.append(Path(handle.name))
-            _instrument(model, ordered, temporary_paths[-1], onnx)
+        baseline_bytes = _instrument(baseline_model, ordered)
+        candidate_bytes = _instrument(candidate_model, ordered)
         baseline_session = ort.InferenceSession(
-            str(temporary_paths[0]), options, providers=["CPUExecutionProvider"]
+            baseline_bytes, options, providers=["CPUExecutionProvider"]
         )
         candidate_session = ort.InferenceSession(
-            str(temporary_paths[1]), options, providers=["CPUExecutionProvider"]
+            candidate_bytes, options, providers=["CPUExecutionProvider"]
         )
         baseline_inputs = baseline_session.get_inputs()
         candidate_inputs = candidate_session.get_inputs()
@@ -276,9 +280,6 @@ def compare_onnx_numerics(
         raise
     except Exception:
         raise NumericalDiffError("ONNX Runtime numerical comparison failed") from None
-    finally:
-        for path in temporary_paths:
-            path.unlink(missing_ok=True)
 
     tensor_diffs: list[TensorNumericalDiff] = []
     for name in ordered:
@@ -301,9 +302,7 @@ def compare_onnx_numerics(
                 within_tolerance=item.within,
             )
         )
-    first_divergent = next(
-        (item.name for item in tensor_diffs if not item.within_tolerance), None
-    )
+    first_divergent = next((item.name for item in tensor_diffs if not item.within_tolerance), None)
     payload = {
         "baseline_profile_id": baseline_profile.id,
         "candidate_profile_id": candidate_profile.id,

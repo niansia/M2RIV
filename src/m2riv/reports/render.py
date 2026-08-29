@@ -64,9 +64,7 @@ def render_markdown(report: ModelChangeReport) -> str:
             f"{interval} | {metric.sample_size} |"
         )
 
-    metric_sets = tuple(
-        metric for metric in report.metrics if metric.evidence_set_id is not None
-    )
+    metric_sets = tuple(metric for metric in report.metrics if metric.evidence_set_id is not None)
     if metric_sets:
         lines.extend(
             [

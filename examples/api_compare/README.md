@@ -22,9 +22,17 @@ An unauthenticated local endpoint can omit the environment variables. The suite
 uses exact-match outputs only as a canonical smoke test; projects should provide
 domain metrics through the `PairedMetric` boundary.
 
+Credential-bearing requests require HTTPS. Link-local cloud metadata endpoints
+are rejected, while loopback and RFC 1918 endpoints remain available for
+unauthenticated self-hosted inference. The Python adapter has an explicit
+`allow_insecure_http=True` escape hatch for isolated development networks; the CLI
+does not expose it so credentials cannot be downgraded accidentally.
+
 Remote observations are cached only for this command invocation. Persistent reuse
 is unsafe unless the deployment revision and non-secret credential scope are part
-of model identity.
+of model identity. SDK callers that deliberately reuse a cache across processes
+must also provide the same secret `M2RIV_CACHE_KEY` (at least 32 bytes). Without it,
+each process uses a new HMAC key and entries from older processes are misses.
 
 Exit code `0` is release-allowed, `2` is `BLOCK`, `3` means the evaluation was
 invalid or incomplete, and `4` is a `WARN` not explicitly allowed by policy.

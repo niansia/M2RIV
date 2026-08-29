@@ -28,9 +28,7 @@ from m2riv.cli import app
 from m2riv.core.models import EvalCase, ModelFamily, RuntimeProfile
 
 
-def _model(
-    path: Path, *, half: bool = False, opset: int = 17, weight_scale: float = 1.0
-) -> Path:
+def _model(path: Path, *, half: bool = False, opset: int = 17, weight_scale: float = 1.0) -> Path:
     dtype = np.float16 if half else np.float32
     tensor_type = TensorProto.FLOAT16 if half else TensorProto.FLOAT
     weights = numpy_helper.from_array(np.eye(2, dtype=dtype) * weight_scale, "weights")
@@ -63,9 +61,7 @@ def test_onnx_profile_and_diff_expose_structure_not_weights(tmp_path: Path) -> N
     assert fp32.onnx.node_count == 2
     assert fp32.onnx.parameter_count == 4
     assert fp32.onnx.quantization_format == "none"
-    assert {item.name: item.count for item in fp32.onnx.initializer_dtype_counts} == {
-        "FLOAT": 1
-    }
+    assert {item.name: item.count for item in fp32.onnx.initializer_dtype_counts} == {"FLOAT": 1}
     diff = compare_artifacts(fp32, fp16)
     assert diff.artifact_changed
     assert {item.name: item.delta for item in diff.initializer_dtype_changes} == {
@@ -80,9 +76,7 @@ def test_artifact_diff_handles_generic_files_and_opset_changes(tmp_path: Path) -
     candidate_file = tmp_path / "candidate.bin"
     baseline_file.write_bytes(b"baseline")
     candidate_file.write_bytes(b"candidate-longer")
-    generic = compare_artifacts(
-        inspect_artifact(baseline_file), inspect_artifact(candidate_file)
-    )
+    generic = compare_artifacts(inspect_artifact(baseline_file), inspect_artifact(candidate_file))
 
     assert generic.node_count_delta is None
     assert generic.size_delta_bytes == len(b"candidate-longer") - len(b"baseline")
@@ -112,7 +106,10 @@ def test_directory_profile_hashes_sidecars_and_avoids_ambiguous_onnx(tmp_path: P
     }
 
 
-@pytest.mark.parametrize("relative_path", ["../escape", "/absolute", "C:/drive"])
+@pytest.mark.parametrize(
+    "relative_path",
+    ["../escape", "/absolute", "C:/drive", "folder/evidence.json:stream"],
+)
 def test_artifact_component_requires_portable_relative_path(relative_path: str) -> None:
     with pytest.raises(ValidationError, match="portable relative path"):
         ArtifactComponent(
@@ -124,9 +121,7 @@ def test_artifact_component_requires_portable_relative_path(relative_path: str) 
 
 
 def test_onnx_runtime_adapter_executes_cpu_cases(tmp_path: Path) -> None:
-    adapter = OnnxRuntimeAdapter(
-        _model(tmp_path / "model.onnx"), model_family=ModelFamily.CV
-    )
+    adapter = OnnxRuntimeAdapter(_model(tmp_path / "model.onnx"), model_family=ModelFamily.CV)
     cases = (
         EvalCase(case_id="left", input=[2.0, 1.0], expected=0),
         EvalCase(case_id="right", input=[1.0, 2.0], expected=1),
@@ -238,6 +233,51 @@ def test_onnx_adapter_rejects_external_tensor_data(tmp_path: Path) -> None:
 
     assert inspect_artifact(source).onnx is not None
     assert inspect_artifact(source).onnx.uses_external_data
+    with pytest.raises(OnnxRuntimeError, match="external ONNX tensor data"):
+        OnnxRuntimeAdapter(source)
+
+
+def test_nested_onnx_subgraph_external_data_is_detected(tmp_path: Path) -> None:
+    external = helper.make_tensor("nested_weight", TensorProto.FLOAT, [1], [0.0])
+    external.ClearField("float_data")
+    external.data_location = TensorProto.EXTERNAL
+    location = external.external_data.add()
+    location.key = "location"
+    location.value = "../../outside.bin"
+    safe = helper.make_tensor("safe_weight", TensorProto.FLOAT, [1], [0.0])
+    then_graph = helper.make_graph(
+        [helper.make_node("Identity", ["nested_weight"], ["then_output"])],
+        "then-branch",
+        [],
+        [helper.make_tensor_value_info("then_output", TensorProto.FLOAT, [1])],
+        [external],
+    )
+    else_graph = helper.make_graph(
+        [helper.make_node("Identity", ["safe_weight"], ["else_output"])],
+        "else-branch",
+        [],
+        [helper.make_tensor_value_info("else_output", TensorProto.FLOAT, [1])],
+        [safe],
+    )
+    graph = helper.make_graph(
+        [
+            helper.make_node(
+                "If", ["condition"], ["output"], then_branch=then_graph, else_branch=else_graph
+            )
+        ],
+        "nested-external-data",
+        [helper.make_tensor_value_info("condition", TensorProto.BOOL, [])],
+        [helper.make_tensor_value_info("output", TensorProto.FLOAT, [1])],
+    )
+    model = helper.make_model(graph, opset_imports=[helper.make_opsetid("", 17)])
+    source = tmp_path / "nested-external.onnx"
+    source.write_bytes(model.SerializeToString())
+
+    profile = inspect_artifact(source)
+
+    assert profile.onnx is not None
+    assert profile.onnx.uses_external_data is True
+    assert profile.onnx.node_count == 3
     with pytest.raises(OnnxRuntimeError, match="external ONNX tensor data"):
         OnnxRuntimeAdapter(source)
 

@@ -9,8 +9,8 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, ValidationError
 
 from m2riv.adapters.base import AdapterCapability
-from m2riv.core.identity import fingerprint
-from m2riv.core.models import EvalCase, ModelSnapshot, Observation, RuntimeProfile
+from m2riv.core.identity import fingerprint, observation_content_id
+from m2riv.core.models import EvalCase, ModelSnapshot, Observation, RuntimeProfile, SafeCaseId
 from m2riv.io.loaders import InputFormatError, _load_jsonl
 
 
@@ -19,7 +19,7 @@ class RecordedOutput(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True, allow_inf_nan=False)
 
-    case_id: str = Field(min_length=1)
+    case_id: SafeCaseId
     output: Any
     latency_ms: FiniteFloat | None = Field(default=None, ge=0)
     traces: dict[str, Any] = Field(default_factory=dict)
@@ -65,18 +65,14 @@ class RecordedAdapter:
             if record is None:
                 continue
             output_digest = fingerprint(record.output, namespace="observation-output")
-            payload = {
-                "snapshot_id": self._snapshot.id,
-                "case_id": case.case_id,
-                "seed": profile.seed,
-                "output_digest": output_digest,
-                "latency_ms": record.latency_ms,
-                "traces": record.traces,
-            }
-            observation_id = fingerprint(payload, namespace="observation")
             observations.append(
                 Observation(
-                    id=f"m2riv:sha256:{observation_id}",
+                    id=observation_content_id(
+                        snapshot_id=self._snapshot.id,
+                        case_id=case.case_id,
+                        seed=profile.seed,
+                        output_digest=output_digest,
+                    ),
                     snapshot_id=self._snapshot.id,
                     case_id=case.case_id,
                     seed=profile.seed,

@@ -110,6 +110,9 @@ MCR contract, recomputes stable and run identities, rehashes manifests and evide
 sets, checks all set references, and rehashes release plans plus recognized
 artifact/numerical diffs when their bodies are present. Unknown or remote evidence
 is surfaced as an explicit warning rather than silently treated as verified.
+`--strict` promotes those warnings to an error for release gating. Verification is
+deliberately labeled `self-consistency-only`: without an external producer signature
+or transparency record it cannot establish who created the internally valid bundle.
 
 The report `id` is a deterministic evidence identity over snapshots, release plan,
 stable metrics, finding evidence links, manifest, and supplemental artifacts.

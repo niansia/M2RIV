@@ -16,10 +16,13 @@ from pydantic import BaseModel
 
 from m2riv.core.models import (
     ArtifactDigest,
+    ContentId,
+    Digest,
     EvidenceAccess,
     ModelFamily,
     ModelRef,
     ModelSnapshot,
+    RetentionMode,
     RuntimeProfile,
 )
 
@@ -76,6 +79,32 @@ def fingerprint(value: Any, *, namespace: str) -> str:
     return digest.hexdigest()
 
 
+def observation_content_id(
+    *,
+    snapshot_id: ContentId,
+    case_id: str,
+    seed: int | None,
+    output_digest: Digest,
+    retention: RetentionMode = RetentionMode.FULL,
+) -> ContentId:
+    """Return the kernel-owned identity for replay-stable observation content.
+
+    Retry counts, latency, traces, and timestamps are deliberately excluded: they
+    describe one execution, not the model output evidence itself.
+    """
+    digest = fingerprint(
+        {
+            "snapshot_id": snapshot_id,
+            "case_id": case_id,
+            "seed": seed,
+            "output_digest": output_digest,
+            "retention": retention,
+        },
+        namespace="observation",
+    )
+    return f"m2riv:sha256:{digest}"
+
+
 def _hash_file(path: Path, *, max_bytes: int) -> tuple[str, int]:
     before = path.lstat()
     if not stat.S_ISREG(before.st_mode):
@@ -112,9 +141,76 @@ def _hash_file(path: Path, *, max_bytes: int) -> tuple[str, int]:
     return digest.hexdigest(), size
 
 
+def read_verified_file(
+    path: str | Path,
+    *,
+    max_bytes: int,
+    expected_digest: str | None = None,
+) -> bytes:
+    """Read one immutable regular file without following links or accepting swaps."""
+    source = Path(path)
+    before = source.lstat()
+    if not stat.S_ISREG(before.st_mode) or has_link_like_component(source):
+        raise ValueError(f"artifact entry must be a regular file: {source}")
+    if before.st_size > max_bytes:
+        raise ValueError(f"artifact file exceeds the {max_bytes} byte budget: {source}")
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    descriptor = os.open(source, flags)
+    try:
+        opened = os.fstat(descriptor)
+        if not stat.S_ISREG(opened.st_mode) or (before.st_dev, before.st_ino) != (
+            opened.st_dev,
+            opened.st_ino,
+        ):
+            raise ValueError(f"artifact changed while being opened: {source}")
+        chunks: list[bytes] = []
+        size = 0
+        digest = hashlib.sha256()
+        while chunk := os.read(descriptor, min(_CHUNK_SIZE, max_bytes - size + 1)):
+            size += len(chunk)
+            if size > max_bytes:
+                raise ValueError(f"artifact file exceeds the {max_bytes} byte budget: {source}")
+            chunks.append(chunk)
+            digest.update(chunk)
+        after = os.fstat(descriptor)
+        if (
+            opened.st_size != after.st_size
+            or opened.st_mtime_ns != after.st_mtime_ns
+            or size != after.st_size
+        ):
+            raise ValueError(f"artifact changed while being read: {source}")
+    finally:
+        os.close(descriptor)
+    actual_digest = digest.hexdigest()
+    if expected_digest is not None and actual_digest != expected_digest:
+        raise ValueError(f"artifact changed after inspection: {source}")
+    return b"".join(chunks)
+
+
 def _is_link_like(path: Path) -> bool:
     is_junction = getattr(os.path, "isjunction", None)
-    return path.is_symlink() or bool(is_junction and is_junction(path))
+    try:
+        path_stat = path.lstat()
+    except OSError:
+        return path.is_symlink() or bool(is_junction and is_junction(path))
+    attributes = getattr(path_stat, "st_file_attributes", 0)
+    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+    return (
+        path.is_symlink()
+        or bool(is_junction and is_junction(path))
+        or bool(attributes & reparse_flag)
+    )
+
+
+def has_link_like_component(path: str | Path) -> bool:
+    """Return whether an existing path component is a symlink or reparse point."""
+    cursor = Path(path)
+    while True:
+        if (cursor.exists() or cursor.is_symlink()) and _is_link_like(cursor):
+            return True
+        if cursor.parent == cursor:
+            return False
+        cursor = cursor.parent
 
 
 def hash_artifact(
@@ -135,13 +231,11 @@ def hash_artifact(
     artifact = Path(path)
     if not artifact.exists():
         raise FileNotFoundError(artifact)
-    if _is_link_like(artifact):
+    if has_link_like_component(artifact):
         raise ValueError("symbolic-link artifacts are rejected; resolve them explicitly")
 
     if artifact.is_file():
-        digest, size = _hash_file(
-            artifact, max_bytes=min(max_total_bytes, max_file_bytes)
-        )
+        digest, size = _hash_file(artifact, max_bytes=min(max_total_bytes, max_file_bytes))
         return ArtifactDigest(digest=digest, size_bytes=size, logical_name=artifact.name)
 
     if not artifact.is_dir():
@@ -164,9 +258,7 @@ def hash_artifact(
         if not stat.S_ISREG(candidate_stat.st_mode):
             raise ValueError(f"artifact entry must be a regular file: {candidate}")
         remaining = max_total_bytes - total_size
-        file_digest, size = _hash_file(
-            candidate, max_bytes=min(max_file_bytes, max(0, remaining))
-        )
+        file_digest, size = _hash_file(candidate, max_bytes=min(max_file_bytes, max(0, remaining)))
         relative = candidate.relative_to(artifact).as_posix()
         entries.append((relative, file_digest, size))
         total_size += size
@@ -203,6 +295,28 @@ def build_local_snapshot(
         max_file_bytes=max_artifact_file_bytes,
         max_entries=max_artifact_entries,
     )
+    return build_snapshot_from_artifact_digest(
+        artifact_digest,
+        source_uri=os.fspath(artifact),
+        model_family=model_family,
+        runtime_profile=profile,
+        execution_config=config,
+        labels=labels,
+    )
+
+
+def build_snapshot_from_artifact_digest(
+    artifact_digest: ArtifactDigest,
+    *,
+    source_uri: str,
+    model_family: ModelFamily = ModelFamily.CUSTOM,
+    runtime_profile: RuntimeProfile | None = None,
+    execution_config: dict[str, Any] | None = None,
+    labels: dict[str, str] | None = None,
+) -> ModelSnapshot:
+    """Build a snapshot from an artifact digest captured in the same trusted read."""
+    profile = runtime_profile or RuntimeProfile()
+    config = execution_config or {}
     config_digest = fingerprint(
         {"runtime_profile": profile, "execution_config": config},
         namespace="execution-config",
@@ -212,7 +326,6 @@ def build_local_snapshot(
         "config_fingerprint": config_digest,
     }
     snapshot_digest = fingerprint(identity_payload, namespace="model-snapshot")
-    source_uri = os.fspath(artifact)
     return ModelSnapshot(
         id=f"m2riv:sha256:{snapshot_digest}",
         source=ModelRef(uri=source_uri),
