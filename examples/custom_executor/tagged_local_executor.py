@@ -1,4 +1,4 @@
-"""Minimal executor plugin shape; replace execute() with Ray/K8s dispatch."""
+"""Minimal executor plugin shape; replace execute() with remote dispatch."""
 
 from __future__ import annotations
 

@@ -93,7 +93,8 @@ and covers 4,514 retained files. The source `gpu-receipt.json` SHA-256 is
 the target manifest SHA-256 is
 `7a1036ff5aa1541d82678bd3adb74c5160f58ba746c55336964b883c0a940186`.
 The complete engines, Polygraphy outputs, and MCR bundles are distributed as a
-separate evidence archive because TensorRT engines are target-specific binaries.
+separate [GitHub Release evidence archive](https://github.com/niansia/M2RIV/releases/tag/evidence-rtx4060-20260829)
+because TensorRT engines are target-specific binaries.
 `M2RIV-nvidia-evidence-RTX4060-MCR0.4-20260829.zip` has SHA-256
 `06a060000afb40cd9dd6e529b08249863d20a91706030d2b505493572fd21a05`.
 The compact receipt is a first-party observation, not independent reproduction.

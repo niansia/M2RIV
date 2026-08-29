@@ -8,9 +8,10 @@ safety-critical release.
 
 ## Reporting a vulnerability
 
-Do not open a public issue for a suspected vulnerability. Use GitHub's private
-vulnerability reporting for this repository. If that control is unavailable,
-contact the repository owner privately through the verified GitHub profile and
+Do not open a public issue for a suspected vulnerability. Submit a
+[private security advisory](https://github.com/niansia/M2RIV/security/advisories/new)
+for this repository. If that control is unavailable, contact the repository owner
+privately through the [verified GitHub profile](https://github.com/niansia) and
 include the affected version, reproduction steps, impact, and any suggested
 mitigation. Do not include real credentials, customer model outputs, or
 proprietary artifacts.

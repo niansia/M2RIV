@@ -1,5 +1,5 @@
 # Custom execution backend
-`TaggedLocalExecutor` demonstrates the exact boundary a Ray or Kubernetes plugin
+`TaggedLocalExecutor` demonstrates the exact boundary a remote execution plugin
 implements. Its non-secret worker-pool configuration participates in both the
 manifest and executor descriptor fingerprint.
 

@@ -2,7 +2,7 @@
 
 M2RIV separates the portable semantics of a release decision from both the tool
 that produced evidence and the system that consumes it. The core is intentionally
-smaller than Ray, Kubernetes, MLflow, Polygraphy, or an evaluation platform.
+smaller than any registry, comparator, evaluation platform, or execution fabric.
 
 ```text
 ModelOpt / Polygraphy / MLflow / evaluators / M2RIV CLI / internal tools
@@ -63,7 +63,7 @@ libraries. Hostile artifacts still belong in an OS-isolated executor.
 ## Execution fabric
 
 Adapters describe models and produce observations. Executors decide whether work
-runs locally, in subprocesses, through Ray, on Kubernetes, or inside a proprietary
+runs locally, in subprocesses, through a remote worker, or inside an external
 scheduler. Cases and observations remain identical across execution fabrics, so
 distributed execution can be added without changing release semantics.
 

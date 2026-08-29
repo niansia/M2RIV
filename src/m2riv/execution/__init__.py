@@ -1,4 +1,4 @@
-"""Pluggable execution backends for local, Ray, Kubernetes, or custom fabrics."""
+"""Pluggable execution backends for local, remote, or custom fabrics."""
 
 from m2riv.execution.base import ExecutionBackend, ExecutorDescriptor
 from m2riv.execution.local import LOCAL_EXECUTOR_FINGERPRINT, LocalExecutor

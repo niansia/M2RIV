@@ -46,7 +46,7 @@ registration is rejected.
 
 An executor exposes an `ExecutorDescriptor` and an `execute` method. Its config
 fingerprint participates in every observation cache key. Switching from local to
-Ray, Kubernetes, another container image, or a different scheduling configuration
+a remote worker, another container image, or a different scheduling configuration
 therefore cannot silently reuse incompatible observations.
 
 The runner independently validates returned snapshot IDs, case IDs, output

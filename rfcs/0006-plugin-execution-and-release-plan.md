@@ -23,10 +23,10 @@ the actual baseline/candidate executor provenance.
 
 ## Rationale
 
-Ray and Kubernetes should be execution fabrics underneath M2RIV, not dependencies
-of its release semantics. Likewise, a third-party metric should extend numeric
-evidence without gaining authority to reinterpret `PASS`, `WARN`, `BLOCK`, or
-`ERROR`.
+External schedulers should remain execution fabrics underneath M2RIV, not
+dependencies of its release semantics. Likewise, a third-party metric should
+extend numeric evidence without gaining authority to reinterpret `PASS`, `WARN`,
+`BLOCK`, or `ERROR`.
 
 Automatic plugin loading is intentionally deferred. It creates a supply-chain and
 arbitrary-code-execution boundary that cannot be made safe through a manifest

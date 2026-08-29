@@ -1,12 +1,12 @@
-# Release Evidence for Deployable AI Models
+# Release-evidence case study
 
-## A contract-based approach to artifact regression, statistical gating, and build localization
+## Artifact regression, statistical gating, and build localization
 
-Status: M2RIV technical report, revision 2026-08-29
+Status: reproducible first-party case study, revision 2026-08-29
 
 Scope: MCR 0.4 protocol candidate and M2RIV reference implementation
 
-## Abstract
+## Summary
 
 Deployable model releases cross optimizer, compiler, runtime, hardware, registry,
 and CI boundaries. Native tools can produce excellent local answers while still
@@ -18,7 +18,7 @@ decision-bound report identity, and volatile run identity; requires fail-closed
 PASS/WARN/BLOCK/ERROR semantics;
 and supports producer and consumer conformance without importing M2RIV Python.
 
-This report evaluates the approach with a CPU ONNX quantization regression, an
+This case study exercises the approach with a CPU ONNX quantization regression, an
 ONNX opset negative control, an independently implemented standard-library MCR
 producer, a repository-owned Polygraphy producer and MLflow consumer, and a live
 NVIDIA ModelOpt → TensorRT execution on an RTX 4060 Laptop GPU. In the live GPU
@@ -145,8 +145,9 @@ The root is
 over 4,514 retained files produced from source revision
 `073d55b95116e5ef2f420de2e424d5d1c5c29061`. The complete archive SHA-256 is
 `06a060000afb40cd9dd6e529b08249863d20a91706030d2b505493572fd21a05`.
-The exact target-root, manifest, receipt, and archive digests are published with
-the compact receipt.
+The [GitHub Release evidence pack](https://github.com/niansia/M2RIV/releases/tag/evidence-rtx4060-20260829)
+publishes the exact target root plus a separate checksum file; the repository
+retains the compact receipt and reproduction source.
 
 The recorded single-case runner timings are retained as run evidence, but this
 short execution does not establish a performance ranking. Windows/WDDM did not
@@ -191,15 +192,12 @@ execution-provider changes, tokenizer/config sidecars, dynamic shapes, Jetson/DL
 compatibility, and non-monotonic compiler sequences. A planned case does not count
 as verified; a repository-owned run does not count as external adoption.
 
-## 9. Falsifiability and next work
+## 9. Limitations and next validation
 
-The protocol thesis is weakened if design partners prefer vendor-native reports
-and reject portable promotion semantics, or if an adjacent standard becomes the
-accepted cross-tool contract. The next milestones are therefore not more
-evaluators. They are an independently rerun NVIDIA bundle, external MCR producers
-and consumers, three retained design-partner CI gates, and ten independently
-reproduced corpus cases. North-star metrics explicitly exclude repository-owned
-integrations from external adoption.
+The target-GPU evidence is first-party and covers one hardware/software cohort.
+The protocol still needs independent target reruns and producer/consumer
+implementations maintained outside this repository. Repository-owned integrations
+remain reference implementations and are not presented as external adoption.
 
 ## References
 
