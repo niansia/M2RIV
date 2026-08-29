@@ -30,8 +30,11 @@ and [security model](https://docs.pypi.org/trusted-publishers/security-model/).
 ## Per-release checks
 
 1. Confirm the version and changelog, then rerun lint, typing, tests, schema drift,
-   wheel build/install, both ONNX platform jobs, and conformance fixtures.
+   wheel build/install, both ONNX platform jobs, the composite-action smoke job,
+   both language identity vectors, and all conformance fixtures.
 2. Review every change to the release workflow and immutable action SHAs.
+   Regenerate `action-requirements.lock` from the committed `uv.lock` whenever a
+   core dependency changes and review the resulting hashes.
 3. Create the signed/protected `v*` tag from the reviewed commit.
 4. Approve the `pypi` environment only after the build job produces wheel, source
    distribution, SHA256SUMS, SPDX SBOM, and GitHub provenance.

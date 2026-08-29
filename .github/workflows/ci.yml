@@ -33,6 +33,43 @@ jobs:
       - if: matrix.python-version == '3.13'
         run: python -m pip wheel . --no-deps --wheel-dir wheelhouse
 
+  action-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Run the repository's composite action
+        id: gate
+        continue-on-error: true
+        uses: ./
+        with:
+          baseline: examples/recorded_compare/baseline.jsonl
+          candidate: examples/recorded_compare/candidate.jsonl
+          suite: examples/recorded_compare/suite.jsonl
+          policy: examples/recorded_compare/policy.yaml
+          output: runs/action-smoke
+          slice-key: frequency
+          resamples: "200"
+          artifact-name: action-smoke-${{ github.run_id }}
+      - name: Assert BLOCK semantics and portable bundle
+        if: always()
+        env:
+          M2RIV_ACTION_OUTCOME: ${{ steps.gate.outcome }}
+          M2RIV_ACTION_EXIT_CODE: ${{ steps.gate.outputs.exit-code }}
+        run: |
+          test "$M2RIV_ACTION_OUTCOME" = "failure"
+          test "$M2RIV_ACTION_EXIT_CODE" = "2"
+          test -f runs/action-smoke/m2riv-report.json
+          test -f runs/action-smoke/evidence-manifest.json
+          test -f runs/action-smoke/release-plan.json
+          test -f runs/action-smoke/summary.md
+          test -f runs/action-smoke/junit.xml
+          test -f runs/action-smoke/results.sarif
+          m2riv mcr verify runs/action-smoke
+      - name: Verify cross-language content identity vectors
+        run: node examples/content_identity/verify_golden.mjs
+
   onnx-demo:
     strategy:
       fail-fast: false

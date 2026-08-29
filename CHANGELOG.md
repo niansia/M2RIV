@@ -35,6 +35,11 @@ versions for portable JSON contracts. Pre-1.0 APIs may change with migration not
 - SHA-pinned CI plus tag builds with SHA-256 checksums, SPDX SBOM, and signed
   GitHub artifact provenance
 - Purple-team parser, cache, network, CI-renderer, plugin, and bisect controls
+- RFC 0012 canonical content-identity rules with stdlib Python/Node golden vectors
+- A complete standard-library-only independent-producer MCR conformance bundle
+- MCRVerification 1.1 integrity/completeness semantics and evidence coverage counts
+- A CI smoke test that executes the local composite action and asserts its BLOCK
+  output, uploaded bundle, and producer-neutral verification path
 
 ### Changed
 
@@ -42,6 +47,8 @@ versions for portable JSON contracts. Pre-1.0 APIs may change with migration not
   parse dependency stubs on every CI matrix runner
 - `effect_size` now contains paired Cohen's dz when defined; raw change remains
   exclusively in `effect` / MCR `delta`
+- The reusable action installs its dependency graph from a hash-locked export and
+  reports one final exit code; verifier failures are canonical error code `3`
 
 ### Security
 

@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0.0",
+  "canonicalization_version": "v1",
+  "algorithm": "sha256",
+  "vectors": [
+    {
+      "name": "object-order-unicode",
+      "namespace": "golden-basic",
+      "value": {
+        "z": null,
+        "a": "M2RIV",
+        "unicode": "模型"
+      },
+      "canonical_json": "{\"a\":\"M2RIV\",\"unicode\":\"模型\",\"z\":null}",
+      "sha256": "e04d7da158d019248d951b59f4da781756e7b2ba05da69632f6b0ceacedb06a5"
+    },
+    {
+      "name": "numbers-and-arrays",
+      "namespace": "golden-numbers",
+      "value": {
+        "values": [-0.0, 0.5, -1.25, 42, true, false, null]
+      },
+      "canonical_json": "{\"values\":[-0.0,0.5,-1.25,42,true,false,null]}",
+      "sha256": "d63985b6c5e8312da3d50197885064831dc31b5248236bf2f01e65d190704205"
+    },
+    {
+      "name": "nested-escaping",
+      "namespace": "golden-nested",
+      "value": {
+        "outer": {
+          "line": "one\ntwo",
+          "quote": "\"",
+          "slash": "a/b"
+        },
+        "array": [
+          {"b": 2, "a": 1},
+          "é"
+        ]
+      },
+      "canonical_json": "{\"array\":[{\"a\":1,\"b\":2},\"é\"],\"outer\":{\"line\":\"one\\ntwo\",\"quote\":\"\\\"\",\"slash\":\"a/b\"}}",
+      "sha256": "2c475981d300dcb4beed9c4c82ab16d079b2158438f3d86783f89539cb8ebe3c"
+    }
+  ]
+}

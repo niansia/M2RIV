@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "id": "m2riv:sha256:fe859005793136a4c20265fe78ca199ddd0afc50f8feada38684f3434347695c",
+  "policy_id": "independent-policy",
+  "policy_fingerprint": "1111111111111111111111111111111111111111111111111111111111111111",
+  "suite_fingerprint": "2222222222222222222222222222222222222222222222222222222222222222",
+  "runtime_profile_fingerprint": "3333333333333333333333333333333333333333333333333333333333333333",
+  "seed": 17,
+  "resamples": 200,
+  "confidence_level": 0.95,
+  "slice_keys": [],
+  "metrics": [
+    {
+      "metric_id": "accuracy",
+      "base_metric_id": "accuracy",
+      "scope": "overall",
+      "direction": "higher_is_better",
+      "unit": "fraction",
+      "binary": true,
+      "plugin_name": null,
+      "plugin_version": null
+    }
+  ],
+  "bindings": [
+    {
+      "rule_id": "accuracy-floor",
+      "metric_id": "accuracy",
+      "base_metric_id": "accuracy"
+    }
+  ],
+  "plugins": []
+}

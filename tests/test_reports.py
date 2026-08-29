@@ -258,6 +258,10 @@ def test_standalone_verifier_detects_report_tampering(tmp_path: Path) -> None:
     bundle = write_report_bundle(sample_report(), tmp_path)
     verified = verify_report_bundle(tmp_path)
     assert verified.valid is True
+    assert verified.integrity_valid is True
+    assert verified.verification_complete is True
+    assert verified.verified_evidence_count == 0
+    assert verified.unverified_evidence_count == 0
     assert verified.decision_status == "BLOCK"
     assert {"report-contract", "report-id", "run-id"}.issubset(verified.checks)
 
@@ -304,6 +308,9 @@ def test_standalone_verifier_rehashes_known_supplemental_evidence(
 
     verified = verify_report_bundle(tmp_path)
     assert "supplemental-id:artifact-diff" in verified.checks
+    assert verified.verification_complete is True
+    assert verified.verified_evidence_count == 1
+    assert verified.unverified_evidence_count == 0
     tampered = json.loads(evidence_path.read_text("utf-8"))
     tampered["size_delta_bytes"] = 99
     evidence_path.write_text(json.dumps(tampered), encoding="utf-8")
@@ -360,6 +367,9 @@ def test_verifier_checks_plan_numerical_diff_and_warning_boundaries(
     assert "release-plan-id" in verified.checks
     assert "supplemental-id:numerical-diff" in verified.checks
     assert len(verified.warnings) == 3
+    assert verified.verification_complete is False
+    assert verified.verified_evidence_count == 1
+    assert verified.unverified_evidence_count == 3
 
 
 def test_verifier_rejects_missing_malformed_and_oversized_reports(
@@ -734,6 +744,34 @@ def test_external_producer_conformance_fixtures_are_current_and_valid() -> None:
         result = verify_report_bundle(fixture)
         assert result.valid is True
         assert result.decision_status == expected
+
+
+def test_independent_full_bundle_is_current_complete_and_valid() -> None:
+    root = Path(__file__).parents[1]
+    producer = root / "examples" / "independent_producer" / "generate_bundle.py"
+    source = producer.read_text(encoding="utf-8")
+    assert "from m2riv" not in source
+    assert "import m2riv" not in source
+    subprocess.run(
+        [sys.executable, str(producer), "--check"],
+        check=True,
+        timeout=30,
+    )
+
+    result = verify_report_bundle(root / "examples" / "mcr_conformance" / "full")
+    assert result.valid is True
+    assert result.integrity_valid is True
+    assert result.verification_complete is True
+    assert result.decision_status == "BLOCK"
+    assert result.verified_evidence_count == 2
+    assert result.unverified_evidence_count == 0
+    assert {
+        "manifest-id",
+        "evidence-set-ids",
+        "release-plan-id",
+        "supplemental-id:artifact-diff",
+        "supplemental-id:numerical-diff",
+    }.issubset(result.checks)
 
 
 @pytest.mark.parametrize(

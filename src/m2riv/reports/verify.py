@@ -32,8 +32,13 @@ class MCRVerificationError(ValueError):
 class MCRVerification(Contract):
     """Machine-readable result from verifying one MCR bundle."""
 
-    schema_version: Literal["1.0.0"] = "1.0.0"
+    schema_version: Literal["1.1.0"] = "1.1.0"
     valid: bool = True
+    integrity_valid: bool = True
+    verification_complete: bool
+    verification_scope: Literal["report-and-local-bundle"] = "report-and-local-bundle"
+    verified_evidence_count: int = Field(ge=0)
+    unverified_evidence_count: int = Field(ge=0)
     report_id: ContentId
     run_id: ContentId
     decision_status: MCRStatus
@@ -204,6 +209,8 @@ def verify_report_bundle(source: str | Path) -> MCRVerification:
     _verify_report_identity(report)
     checks = ["report-contract", "report-id", "run-id"]
     warnings: list[str] = []
+    verified_evidence_count = 0
+    unverified_evidence_count = 0
     manifest = _verify_manifest(root, report, budget)
     if manifest is not None:
         checks.extend(("manifest-id", "evidence-set-ids", "evidence-set-references"))
@@ -214,19 +221,26 @@ def verify_report_bundle(source: str | Path) -> MCRVerification:
     for reference in report.evidence:
         if reference.redacted or reference.uri is None:
             warnings.append(f"{reference.kind} evidence body is unavailable")
+            unverified_evidence_count += 1
             continue
         path = _local_reference(root, reference.uri)
         if path is None:
             warnings.append(f"remote {reference.kind} evidence was not fetched")
+            unverified_evidence_count += 1
             continue
         payload = _read_json(path, budget=budget)
         if _verify_supplemental_identity(reference, payload):
             checks.append(f"supplemental-id:{reference.kind}")
+            verified_evidence_count += 1
         else:
             warnings.append(
                 f"{reference.kind} embeds the referenced id but has no built-in rehasher"
             )
+            unverified_evidence_count += 1
     return MCRVerification(
+        verification_complete=not warnings,
+        verified_evidence_count=verified_evidence_count,
+        unverified_evidence_count=unverified_evidence_count,
         report_id=report.id,
         run_id=report.run_id,
         decision_status=report.decision.status,

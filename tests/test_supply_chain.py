@@ -21,7 +21,9 @@ def test_every_external_action_is_pinned_to_a_commit() -> None:
         if line.strip().startswith("uses:")
     ]
     assert uses_lines
-    assert all(IMMUTABLE_ACTION.match(line) for line in uses_lines)
+    external_uses = [line for line in uses_lines if not line.strip().startswith("uses: ./")]
+    assert external_uses
+    assert all(IMMUTABLE_ACTION.match(line) for line in external_uses)
 
 
 def test_release_build_has_provenance_sbom_and_gated_trusted_publish() -> None:
@@ -63,8 +65,23 @@ def test_reusable_action_verifies_and_uploads_before_enforcing_decision() -> Non
     assert action["runs"]["using"] == "composite"
     assert "m2riv mcr verify" in source
     assert names.index("Verify portable report identities") < names.index(
-        "Upload release evidence"
-    ) < names.index("Enforce release decision")
+        "Resolve final action result"
+    ) < names.index("Upload release evidence") < names.index("Enforce release decision")
+    assert action["outputs"]["exit-code"]["value"] == "${{ steps.final.outputs.exit-code }}"
+    assert "M2RIV_VERIFY_EXIT_CODE" in source
+    assert "final_code=3" in source
+    assert "--require-hashes" in source
+    assert "--no-deps" in source
+    dependency_lock = (ROOT / "action-requirements.lock").read_text("utf-8")
+    assert "--hash=sha256:" in dependency_lock
     assert "${{ inputs.baseline }}" not in next(
         step["run"] for step in steps if step["name"] == "Compare and gate candidate"
     )
+
+
+def test_ci_executes_the_local_composite_action_and_checks_its_outputs() -> None:
+    source = (WORKFLOWS / "ci.yml").read_text("utf-8")
+    assert "uses: ./" in source
+    assert "steps.gate.outputs.exit-code" in source
+    assert 'test "$M2RIV_ACTION_EXIT_CODE" = "2"' in source
+    assert "m2riv mcr verify runs/action-smoke" in source

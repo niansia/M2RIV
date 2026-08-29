@@ -21,6 +21,10 @@ promised before maintainers and users validate the preceding contracts.
 - [x] Standalone MCR bundle verifier and external-producer conformance fixtures
 - [x] Reusable GitHub Action for compare, verify, upload, and fail-closed status
 - [x] Linux/Windows ONNX evidence matrix with runtime/platform provenance
+- [x] Normative v1 content identity, Python/Node golden vectors, and a complete
+  standard-library-only independent-producer conformance bundle
+- [x] Composite-action end-to-end CI with a hash-locked dependency graph and
+  explicit verifier completeness/coverage semantics
 - [x] SHA-pinned CI and tagged builds with checksums, SBOM, and provenance
 
 Exit criterion: a new user can produce a reviewable release decision locally or

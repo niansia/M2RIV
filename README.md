@@ -61,6 +61,9 @@ The first foundation slice provides:
   links;
 - a standalone `m2riv mcr verify` conformance boundary that rehashes reports,
   manifests, sets, plans, and known supplemental artifacts from any producer;
+- explicit verifier completeness/coverage fields plus a full bundle emitted by a
+  standard-library-only independent producer;
+- RFC 0012 canonical identity rules with matching Python and Node golden vectors;
 - artifact traversal and byte budgets that fail before unbounded hashing/parsing;
 - portable JSON, Markdown, JUnit, and SARIF release outputs;
 - SHA-pinned CI plus tagged wheel/sdist builds with checksums, SPDX SBOM, and
@@ -152,6 +155,11 @@ excludes timestamps and run-scoped timing metrics; `run_id` addresses the exact
 execution, including timing, cache provenance, timestamp, and final verdict.
 The verifier accepts a bundle produced by M2RIV or another implementation; it
 does not execute the model or trust prose summaries.
+`integrity_valid` means every performed check passed, while
+`verification_complete` means all referenced local bundle components were
+recognized and rehashed. See the [independent producer](examples/independent_producer/README.md),
+[full conformance bundle](examples/mcr_conformance/full), and
+[content-identity vectors](examples/content_identity/README.md).
 
 For a recorded-output gate in GitHub Actions, the repository also exposes a thin
 composite action:
@@ -168,8 +176,10 @@ composite action:
     policy: evidence/policy.yaml
 ```
 
-It installs the checked-out M2RIV revision, compares and verifies the report,
-uploads the bounded release bundle, and then surfaces the fail-closed exit code.
+It installs the checked-out M2RIV revision from a hash-locked dependency export,
+compares and verifies the report, uploads the bounded release bundle, and then
+surfaces one fail-closed exit code. CI executes the action itself against the
+recorded-output example and asserts the expected `BLOCK` result.
 
 To compare provider-managed or self-hosted OpenAI-compatible endpoints without
 putting credentials in shell history:

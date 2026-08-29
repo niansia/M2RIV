@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -54,6 +55,29 @@ def test_canonical_json_rejects_ambiguous_values_and_normalizes_paths() -> None:
     for namespace in ("", "invalid\0namespace"):
         with pytest.raises(ValueError, match="namespace"):
             fingerprint("value", namespace=namespace)
+
+
+def test_public_content_identity_golden_vectors_match_the_runtime() -> None:
+    root = Path(__file__).parents[1]
+    document = json.loads(
+        (root / "examples" / "content_identity" / "golden-vectors.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    for vector in document["vectors"]:
+        assert canonical_json(vector["value"]).decode() == vector["canonical_json"]
+        assert fingerprint(vector["value"], namespace=vector["namespace"]) == vector[
+            "sha256"
+        ]
+
+    completed = subprocess.run(
+        [sys.executable, str(root / "examples" / "content_identity" / "verify_golden.py")],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert "verified 3" in completed.stdout
 
 
 def test_missing_and_non_artifact_paths_fail_closed(tmp_path: Path) -> None:
