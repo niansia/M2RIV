@@ -52,6 +52,8 @@ versions for portable JSON contracts. Pre-1.0 APIs may change with migration not
 
 ### Security
 
+- The development lock requires pytest 9.0.3 or newer to exclude the vulnerable
+  temporary-directory handling range reported by GitHub Dependabot
 - Remote observations default to ephemeral cache unless deployment identity is
   explicit
 - Credentials and secret-bearing config fields are excluded from persistent
