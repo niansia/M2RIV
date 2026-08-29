@@ -61,6 +61,13 @@ def test_ci_upgrades_vulnerable_packaging_bootstrap_before_audit() -> None:
         assert source.index(requirement) < audit_index
 
 
+def test_reproducible_build_outputs_stay_outside_the_source_tree() -> None:
+    source = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
+
+    assert '${RUNNER_TEMP}/m2riv-repro-' in source
+    assert "python -m build --outdir dist-a" not in source
+
+
 def test_checkout_never_persists_credentials() -> None:
     for workflow in WORKFLOW_FILES:
         source = workflow.read_text("utf-8")

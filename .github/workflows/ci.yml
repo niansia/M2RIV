@@ -130,11 +130,13 @@ jobs:
         shell: bash
         run: |
           export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
-          python -m build --outdir dist-a
-          python -m build --outdir dist-b
-          cmp dist-a/*.whl dist-b/*.whl
-          cmp dist-a/*.tar.gz dist-b/*.tar.gz
-          sha256sum dist-a/* dist-b/*
+          reproducibility_root="${RUNNER_TEMP}/m2riv-repro-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir -p "${reproducibility_root}/a" "${reproducibility_root}/b"
+          python -m build --outdir "${reproducibility_root}/a"
+          python -m build --outdir "${reproducibility_root}/b"
+          cmp "${reproducibility_root}"/a/*.whl "${reproducibility_root}"/b/*.whl
+          cmp "${reproducibility_root}"/a/*.tar.gz "${reproducibility_root}"/b/*.tar.gz
+          sha256sum "${reproducibility_root}"/a/* "${reproducibility_root}"/b/*
 
   onnx-demo:
     strategy:
