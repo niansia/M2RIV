@@ -10,7 +10,15 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
 authors = [{ name = "M2RIV contributors" }]
-keywords = ["machine-learning", "model-evaluation", "release-engineering", "mlops", "ai-safety"]
+keywords = [
+  "model-release-engineering",
+  "model-regression",
+  "model-artifacts",
+  "onnx",
+  "model-ci",
+  "ml-infrastructure",
+  "quantization",
+]
 classifiers = [
   "Development Status :: 2 - Pre-Alpha",
   "License :: OSI Approved :: Apache Software License",

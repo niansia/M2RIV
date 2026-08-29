@@ -1,6 +1,7 @@
 # RFC 0010: Deterministic evidence identity and numerical artifact diff
 
-- Status: Accepted
+- Decision status: Accepted
+- Implementation status: Implemented for MCR 1.2
 - Contract impact: Model Change Report 1.2; NumericalDiff 1.0
 
 ## Problem

@@ -8,14 +8,18 @@ safety-critical release.
 
 ## Reporting a vulnerability
 
-Do not open a public issue for a suspected vulnerability. Until a dedicated
-security address exists, contact the repository owner privately through the
-verified GitHub profile and include the affected version, reproduction steps,
-impact, and any suggested mitigation. Do not include real credentials, customer
-model outputs, or proprietary artifacts.
+Do not open a public issue for a suspected vulnerability. Use GitHub's private
+vulnerability reporting for this repository. If that control is unavailable,
+contact the repository owner privately through the verified GitHub profile and
+include the affected version, reproduction steps, impact, and any suggested
+mitigation. Do not include real credentials, customer model outputs, or
+proprietary artifacts.
 
-A dedicated monitored security contact and response SLA are release blockers for
-public v0.1. The project does not currently promise an embargo timeline or bounty.
+The response target is acknowledgement within 72 hours and an initial severity
+assessment within seven calendar days. Remediation and disclosure timing depend
+on impact and coordination needs; the project does not currently offer a bounty.
+Enabling private vulnerability reporting and confirming that it is monitored are
+owner-side release checklist items before public v0.1.
 
 ## Trust boundaries
 
@@ -67,6 +71,8 @@ gh attestation verify PATH/TO/ARTIFACT -R OWNER/REPOSITORY
 ```
 
 PyPI publishing is intentionally disabled until the package namespace and GitHub
-Trusted Publisher are configured. A generated SBOM or provenance attestation says
-where an artifact came from; it is not a claim that the artifact has no
-vulnerabilities.
+Trusted Publisher are configured and the explicit brand-clearance variable is set.
+The guarded workflow and remaining account-side steps are documented in the
+[public release checklist](docs/release-checklist.md). A generated SBOM or
+provenance attestation says where an artifact came from; it is not a claim that
+the artifact has no vulnerabilities.

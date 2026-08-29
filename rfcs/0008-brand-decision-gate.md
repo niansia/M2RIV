@@ -1,7 +1,12 @@
 # RFC 0008: Brand decision gate
 
-- Status: Provisional
+- Decision status: Provisional
+- Implementation status: Gate defined; owner clearance pending
 - Deadline: before public v0.1 namespace publication
+
+The dated engineering scan is recorded in
+[`docs/brand-preliminary-audit.md`](../docs/brand-preliminary-audit.md). It does
+not replace legal clearance or the owner decision required by this RFC.
 
 ## Decision
 

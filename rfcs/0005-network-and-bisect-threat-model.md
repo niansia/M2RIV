@@ -1,6 +1,7 @@
 # RFC 0005: Network adapters and regression-bisect threat model
 
-- Status: Draft
+- Decision status: Accepted
+- Implementation status: Implemented for v0.1
 - Audience: adapter, release-gate, and CI maintainers
 
 ## Context

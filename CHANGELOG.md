@@ -23,6 +23,13 @@ versions for portable JSON contracts. Pre-1.0 APIs may change with migration not
 - MCR 1.1 external evidence manifests and reusable content-addressed evidence sets
 - MCR 1.2 deterministic evidence IDs, exact run IDs, run-scoped metrics, and
   direct finding-to-evidence-set references
+- MCR 1.3 execution runtime/platform provenance and a standalone bundle verifier
+  that rehashes reports, manifests, sets, plans, and known supplemental evidence
+- Minimal external-producer PASS/WARN/BLOCK conformance fixtures and a reusable
+  GitHub Action that compares, verifies, uploads, then enforces the decision
+- Linux/Windows ONNX evidence jobs and platform-labeled numerical-diff examples
+- A brand-gated, protected-environment PyPI Trusted Publishing job plus public
+  release/security owner checklist
 - Bounded CPU-only ONNX per-tensor numerical diff with first-divergence reporting
 - A second CPU-only artifact axis that verifies an opset 17-to-18 migration
 - SHA-pinned CI plus tag builds with SHA-256 checksums, SPDX SBOM, and signed

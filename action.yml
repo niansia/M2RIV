@@ -1,0 +1,110 @@
+name: M2RIV model release gate
+description: Install M2RIV, compare recorded model outputs, verify the MCR, and upload evidence.
+
+inputs:
+  baseline:
+    description: Path to baseline recorded-output JSONL.
+    required: true
+  candidate:
+    description: Path to candidate recorded-output JSONL.
+    required: true
+  suite:
+    description: Path to the paired evaluation suite JSONL.
+    required: true
+  policy:
+    description: Path to the release policy YAML.
+    required: true
+  output:
+    description: Destination directory for the report bundle.
+    required: false
+    default: runs/m2riv-release
+  slice-key:
+    description: Optional single slice key to evaluate.
+    required: false
+    default: ""
+  resamples:
+    description: Paired bootstrap resample count.
+    required: false
+    default: "2000"
+  python-version:
+    description: Python version used to run M2RIV.
+    required: false
+    default: "3.12"
+  artifact-name:
+    description: Uploaded evidence artifact name.
+    required: false
+    default: model-change-report
+
+outputs:
+  exit-code:
+    description: M2RIV release decision code (0 pass, 2 block, 3 error, 4 disallowed warn).
+    value: ${{ steps.compare.outputs.exit-code }}
+  report:
+    description: Path to the generated machine-readable MCR.
+    value: ${{ inputs.output }}/m2riv-report.json
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      with:
+        python-version: ${{ inputs.python-version }}
+    - name: Install M2RIV
+      shell: bash
+      env:
+        M2RIV_ACTION_PATH: ${{ github.action_path }}
+      run: python -m pip install "$M2RIV_ACTION_PATH"
+    - name: Compare and gate candidate
+      id: compare
+      shell: bash
+      env:
+        M2RIV_BASELINE: ${{ inputs.baseline }}
+        M2RIV_CANDIDATE: ${{ inputs.candidate }}
+        M2RIV_SUITE: ${{ inputs.suite }}
+        M2RIV_POLICY: ${{ inputs.policy }}
+        M2RIV_OUTPUT: ${{ inputs.output }}
+        M2RIV_SLICE_KEY: ${{ inputs.slice-key }}
+        M2RIV_RESAMPLES: ${{ inputs.resamples }}
+      run: |
+        arguments=(
+          "$M2RIV_BASELINE" "$M2RIV_CANDIDATE"
+          --suite "$M2RIV_SUITE"
+          --policy "$M2RIV_POLICY"
+          --output "$M2RIV_OUTPUT"
+          --resamples "$M2RIV_RESAMPLES"
+        )
+        if [[ -n "$M2RIV_SLICE_KEY" ]]; then
+          arguments+=(--slice-key "$M2RIV_SLICE_KEY")
+        fi
+        set +e
+        m2riv compare "${arguments[@]}"
+        result=$?
+        set -e
+        echo "exit-code=$result" >> "$GITHUB_OUTPUT"
+    - name: Verify portable report identities
+      if: steps.compare.outputs.exit-code != '3'
+      shell: bash
+      env:
+        M2RIV_OUTPUT: ${{ inputs.output }}
+      run: m2riv mcr verify "$M2RIV_OUTPUT"
+    - name: Upload release evidence
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: |
+          ${{ inputs.output }}/m2riv-report.json
+          ${{ inputs.output }}/evidence-manifest.json
+          ${{ inputs.output }}/release-plan.json
+          ${{ inputs.output }}/summary.md
+          ${{ inputs.output }}/junit.xml
+          ${{ inputs.output }}/results.sarif
+        if-no-files-found: warn
+        retention-days: 30
+    - name: Enforce release decision
+      if: always()
+      shell: bash
+      env:
+        M2RIV_EXIT_CODE: ${{ steps.compare.outputs.exit-code }}
+      run: exit "${M2RIV_EXIT_CODE:-3}"

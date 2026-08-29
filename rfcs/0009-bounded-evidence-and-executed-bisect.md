@@ -1,6 +1,7 @@
 # RFC 0009: Bounded evidence and execution-driven bisect
 
-- Status: Accepted
+- Decision status: Accepted
+- Implementation status: Implemented for MCR 1.1 and retained in 1.2
 - Contract impact: Model Change Report 1.1
 
 ## Problem

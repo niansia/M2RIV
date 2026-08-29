@@ -1,7 +1,8 @@
 # RFC-0004: Purple-Team Threat Model and Fail-Closed Release Gates
 
-Status: Draft
-Target: v0.1
+- Decision status: Accepted
+- Implementation status: Implemented for v0.1
+- Target: v0.1
 
 ## Purpose
 

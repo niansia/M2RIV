@@ -1,7 +1,9 @@
 # RFC-0001: Project Scope and Category
 
-Status: Draft
-Target: v0.1
+- Decision status: Accepted
+- Implementation status: Implemented for v0.1
+- Target: v0.1
+
 ## Decision
 
 M2RIV defines the Model Release Engineering layer between model creation or

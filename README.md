@@ -56,8 +56,11 @@ The first foundation slice provides:
   never loads custom-op libraries;
 - monotonic, sparse-audit, and exhaustive checkpoint regression localization;
 - execution-driven bisect over recorded outputs or real CPU ONNX artifacts;
-- bounded MCR 1.2 reports with stable evidence IDs, distinct volatile run IDs,
-  deduplicated manifests, and finding-to-evidence-set links;
+- bounded MCR 1.3 reports with stable evidence IDs, distinct volatile run IDs,
+  deduplicated manifests, runtime/platform provenance, and finding-to-evidence-set
+  links;
+- a standalone `m2riv mcr verify` conformance boundary that rehashes reports,
+  manifests, sets, plans, and known supplemental artifacts from any producer;
 - artifact traversal and byte budgets that fail before unbounded hashing/parsing;
 - portable JSON, Markdown, JUnit, and SARIF release outputs;
 - SHA-pinned CI plus tagged wheel/sdist builds with checksums, SPDX SBOM, and
@@ -89,14 +92,26 @@ build-03-int8-calibration-scale-070    93.32–93.64%                78.72%  BLO
 First bad build: build-02-int8-calibration-scale-075
 ```
 
+The numerical diff makes the causal chain inspectable rather than stopping at
+the failing build (128 declared cases, FP16 baseline vs scale-0.75 INT8). The
+first divergence is stable while the exact CPU values are platform evidence:
+
+| Shared tensor | Linux x86-64 max/RMSE/cos | Windows x86-64 max/RMSE/cos |
+| --- | ---: | ---: |
+| `hidden_linear` *(first divergent)* | 3.8411 / 0.9126 / 0.997577 | 3.9343 / 0.9951 / 0.997173 |
+| `hidden` | 12.4455 / 2.9291 / 0.863517 | 12.7547 / 2.9930 / 0.854680 |
+| `output_linear` | 33.8709 / 7.5163 / 0.991185 | 34.0834 / 8.2349 / 0.990702 |
+| `logits` | 33.9308 / 7.5554 / 0.991056 | 34.1688 / 8.2708 / 0.990609 |
+
 The critical slice is declared from inputs—rare training digit 1 with normalized
 ink sum at least 18—not selected after seeing model failures. The complete
 [reproduction procedure](examples/onnx_quantization/README.md) explains the data,
 calibration mistake, policy, limitations, and generated evidence.
-The two-value build-03 overall range reflects a documented two-sample difference
-between ONNX Runtime CPU kernels on tested platforms; the rare slice, decision,
-and first-bad build are invariant. The generated demo README is the authoritative
-record for the machine on which it ran.
+The build-03 range is an observed portability result, not a root-cause claim:
+ONNX Runtime 1.29.0 produced 93.64% on Windows/x86-64 and 93.32% on
+Linux/x86-64. The rare slice, decision, and first-bad build were invariant. New
+MCR executions record OS, architecture, Python, framework, and framework version,
+and CI preserves both platform bundles so future differences remain auditable.
 
 ```console
 m2riv artifact diff \
@@ -111,7 +126,9 @@ m2riv artifact numerical-diff \
 m2riv bisect runs/onnx-quantization/checkpoints.jsonl --mode monotonic
 
 m2riv schema export ./schemas/v1
-# Exported 20 public schemas to schemas/v1
+# Exported 21 public schemas to schemas/v1
+
+m2riv mcr verify runs/onnx-quantization/reports/build-02-int8-calibration-scale-075
 ```
 
 The smaller [opset-upgrade example](examples/onnx_opset_upgrade/README.md) covers
@@ -137,6 +154,26 @@ the [recorded-output example](examples/recorded_compare/README.md).
 An MCR has two explicit identities. `id` addresses replay-stable evidence and
 excludes timestamps and run-scoped timing metrics; `run_id` addresses the exact
 execution, including timing, cache provenance, timestamp, and final verdict.
+The verifier accepts a bundle produced by M2RIV or another implementation; it
+does not execute the model or trust prose summaries.
+
+For a recorded-output gate in GitHub Actions, the repository also exposes a thin
+composite action:
+
+```yaml
+- uses: actions/checkout@REPLACE_WITH_IMMUTABLE_COMMIT
+  with:
+    persist-credentials: false
+- uses: M2RIV/m2riv@REPLACE_WITH_IMMUTABLE_COMMIT
+  with:
+    baseline: evidence/baseline.jsonl
+    candidate: evidence/candidate.jsonl
+    suite: evidence/suite.jsonl
+    policy: evidence/policy.yaml
+```
+
+It installs the checked-out M2RIV revision, compares and verifies the report,
+uploads the bounded release bundle, and then surfaces the fail-closed exit code.
 
 To compare provider-managed or self-hosted OpenAI-compatible endpoints without
 putting credentials in shell history:
@@ -216,6 +253,9 @@ metrics and execution backends without changing release semantics.
 See [ROADMAP.md](ROADMAP.md) for ecosystem milestones and
 [GOVERNANCE.md](GOVERNANCE.md) for the path from contributor to maintainer.
 Release-facing changes are tracked in [CHANGELOG.md](CHANGELOG.md).
+Public publication is governed by the owner-side
+[release checklist](docs/release-checklist.md); repository automation cannot
+self-approve brand clearance, PyPI trust, or security-notification ownership.
 
 ## Development
 

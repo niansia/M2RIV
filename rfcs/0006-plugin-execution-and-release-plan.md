@@ -1,6 +1,7 @@
 # RFC 0006: Explicit plugins, execution fabrics, and compiled release plans
 
-- Status: Implemented
+- Decision status: Accepted
+- Implementation status: Implemented for v0.1
 - Target: v0.1
 
 ## Decision

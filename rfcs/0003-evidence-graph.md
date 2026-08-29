@@ -1,7 +1,9 @@
 # RFC-0003: Evidence Graph and Claim Strength
 
-Status: Draft
-Target: v0.1
+- Decision status: Accepted
+- Implementation status: Implemented for MCR 1.3
+- Target: v0.1
+
 ## Motivation
 
 An evaluation score without provenance is not release evidence. A gate verdict

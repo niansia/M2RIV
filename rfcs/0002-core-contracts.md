@@ -1,7 +1,9 @@
 # RFC-0002: Core Contracts and Content Identity
 
-Status: Draft
-Target: v0.1
+- Decision status: Accepted
+- Implementation status: Implemented for v0.1
+- Target: v0.1
+
 ## Decision
 
 Public contracts are strict, immutable Pydantic models with a semantic schema

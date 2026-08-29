@@ -24,7 +24,7 @@ jobs:
       - run: python -m pip install -e ".[dev,onnx]"
       - run: ruff check .
       - run: mypy src
-      - run: pytest --cov=m2riv --cov-report=term-missing --cov-fail-under=90
+      - run: pytest --cov=m2riv --cov-report=term-missing --cov-fail-under=91
       - run: python -m pip check
       - if: matrix.python-version == '3.13'
         run: |
@@ -34,7 +34,10 @@ jobs:
         run: python -m pip wheel . --no-deps --wheel-dir wheelhouse
 
   onnx-demo:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -47,3 +50,13 @@ jobs:
       - run: python examples/onnx_quantization/run_demo.py --output runs/onnx-quantization
       - run: python tools/verify_onnx_demo.py runs/onnx-quantization
       - run: python examples/onnx_opset_upgrade/run_demo.py --output runs/onnx-opset-upgrade
+      - name: Upload platform-specific ONNX evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: onnx-release-evidence-${{ matrix.os }}
+          path: |
+            runs/onnx-quantization
+            runs/onnx-opset-upgrade
+          if-no-files-found: error
+          retention-days: 14

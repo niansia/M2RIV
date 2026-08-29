@@ -1,6 +1,7 @@
 # RFC 0007: Deployment artifact boundary
 
-- Status: Implemented
+- Decision status: Accepted
+- Implementation status: Implemented for v0.1
 - Target: v0.1
 
 ## Decision
