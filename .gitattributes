@@ -1,0 +1,8 @@
+* text=auto eol=lf
+
+*.onnx binary
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.zip binary

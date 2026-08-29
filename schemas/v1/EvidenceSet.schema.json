@@ -1,0 +1,33 @@
+{
+  "additionalProperties": false,
+  "description": "Ordered membership in a reusable set of content-addressed evidence.",
+  "properties": {
+    "count": {
+      "minimum": 1,
+      "title": "Count",
+      "type": "integer"
+    },
+    "id": {
+      "pattern": "^m2riv:sha256:[a-f0-9]{64}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "members": {
+      "items": {
+        "pattern": "^m2riv:sha256:[a-f0-9]{64}$",
+        "type": "string"
+      },
+      "maxItems": 1000000,
+      "minItems": 1,
+      "title": "Members",
+      "type": "array"
+    }
+  },
+  "required": [
+    "id",
+    "count",
+    "members"
+  ],
+  "title": "EvidenceSet",
+  "type": "object"
+}

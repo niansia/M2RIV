@@ -1,0 +1,147 @@
+{
+  "$defs": {
+    "GateStatus": {
+      "description": "Ordered release decision states.",
+      "enum": [
+        "pass",
+        "warn",
+        "block",
+        "error"
+      ],
+      "title": "GateStatus",
+      "type": "string"
+    },
+    "RuleDecision": {
+      "additionalProperties": false,
+      "description": "Auditable outcome of exactly one policy rule.",
+      "properties": {
+        "confidence_high": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence High"
+        },
+        "confidence_low": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence Low"
+        },
+        "effect": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Effect"
+        },
+        "margin": {
+          "title": "Margin",
+          "type": "number"
+        },
+        "metric": {
+          "minLength": 1,
+          "title": "Metric",
+          "type": "string"
+        },
+        "n_pairs": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "N Pairs"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "rule_id": {
+          "minLength": 1,
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/GateStatus"
+        }
+      },
+      "required": [
+        "rule_id",
+        "metric",
+        "status",
+        "reason",
+        "margin"
+      ],
+      "title": "RuleDecision",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Final release outcome with all constituent decisions retained.",
+  "properties": {
+    "critical_failures": {
+      "default": [],
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Critical Failures",
+      "type": "array"
+    },
+    "policy_id": {
+      "minLength": 1,
+      "title": "Policy Id",
+      "type": "string"
+    },
+    "rule_decisions": {
+      "items": {
+        "$ref": "#/$defs/RuleDecision"
+      },
+      "title": "Rule Decisions",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/GateStatus"
+    },
+    "summary": {
+      "minLength": 1,
+      "title": "Summary",
+      "type": "string"
+    }
+  },
+  "required": [
+    "policy_id",
+    "status",
+    "rule_decisions",
+    "summary"
+  ],
+  "title": "GateDecision",
+  "type": "object"
+}

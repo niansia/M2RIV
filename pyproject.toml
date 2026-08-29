@@ -1,0 +1,80 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "m2riv"
+version = "0.1.0a1"
+description = "Local-first Model Release Engineering: inspect every model change before it ships."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "M2RIV contributors" }]
+keywords = ["machine-learning", "model-evaluation", "release-engineering", "mlops", "ai-safety"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Typing :: Typed",
+]
+dependencies = [
+  "httpx>=0.27,<1",
+  "pydantic>=2.10,<3",
+  "PyYAML>=6.0.2,<7",
+  "typer>=0.15,<1",
+]
+
+[project.optional-dependencies]
+onnx = [
+  # NumPy 2.3+ publishes PEP 695 type aliases in its stubs. Mypy must parse
+  # dependencies using the project's Python 3.11 target even on newer runners.
+  "numpy>=1.26,<2.3",
+  "onnx>=1.17,<2",
+  "onnxruntime>=1.20,<2",
+]
+onnx-demo = [
+  # The hero demo is release evidence, not a floating compatibility probe.
+  # Keep its toolchain exact; the broader `onnx` extra retains supported ranges.
+  "numpy==2.2.6",
+  "onnx==1.22.0",
+  "onnxruntime==1.29.0",
+  "scikit-learn==1.9.0",
+]
+dev = [
+  "build>=1.2,<2",
+  "mypy>=1.14,<2",
+  "pytest>=8.3,<9",
+  "pytest-cov>=6,<7",
+  "ruff>=0.9,<1",
+  "types-PyYAML>=6.0.12,<7",
+]
+
+[project.scripts]
+m2riv = "m2riv.cli:app"
+
+[project.urls]
+Documentation = "https://github.com/M2RIV/m2riv"
+Issues = "https://github.com/M2RIV/m2riv/issues"
+Source = "https://github.com/M2RIV/m2riv"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/m2riv"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-config --strict-markers"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+packages = ["m2riv"]

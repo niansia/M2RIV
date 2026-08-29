@@ -1,0 +1,44 @@
+{
+  "additionalProperties": false,
+  "description": "A content-addressed evidence edge used by claims and decisions.",
+  "properties": {
+    "id": {
+      "pattern": "^m2riv:sha256:[a-f0-9]{64}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "kind": {
+      "minLength": 1,
+      "title": "Kind",
+      "type": "string"
+    },
+    "media_type": {
+      "default": "application/json",
+      "title": "Media Type",
+      "type": "string"
+    },
+    "redacted": {
+      "default": false,
+      "title": "Redacted",
+      "type": "boolean"
+    },
+    "uri": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Uri"
+    }
+  },
+  "required": [
+    "id",
+    "kind"
+  ],
+  "title": "EvidenceRef",
+  "type": "object"
+}

@@ -1,0 +1,268 @@
+{
+  "$defs": {
+    "ArtifactDigest": {
+      "additionalProperties": false,
+      "description": "Digest and metadata for a local artifact without location-dependent identity.",
+      "properties": {
+        "algorithm": {
+          "const": "sha256",
+          "default": "sha256",
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "digest": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "file_count": {
+          "default": 1,
+          "minimum": 1,
+          "title": "File Count",
+          "type": "integer"
+        },
+        "logical_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Logical Name"
+        },
+        "size_bytes": {
+          "minimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "digest",
+        "size_bytes"
+      ],
+      "title": "ArtifactDigest",
+      "type": "object"
+    },
+    "EvidenceAccess": {
+      "enum": [
+        "declared",
+        "outputs",
+        "logprobs",
+        "internals",
+        "artifacts"
+      ],
+      "title": "EvidenceAccess",
+      "type": "string"
+    },
+    "ModelFamily": {
+      "enum": [
+        "llm",
+        "vlm",
+        "cv",
+        "embedding",
+        "speech",
+        "custom"
+      ],
+      "title": "ModelFamily",
+      "type": "string"
+    },
+    "ModelRef": {
+      "additionalProperties": false,
+      "description": "A source reference. Resolution into a snapshot happens separately.",
+      "properties": {
+        "revision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        },
+        "uri": {
+          "minLength": 1,
+          "title": "Uri",
+          "type": "string"
+        }
+      },
+      "required": [
+        "uri"
+      ],
+      "title": "ModelRef",
+      "type": "object"
+    },
+    "RuntimeProfile": {
+      "additionalProperties": false,
+      "description": "Execution-relevant settings that participate in snapshot identity.",
+      "properties": {
+        "deterministic": {
+          "default": true,
+          "title": "Deterministic",
+          "type": "boolean"
+        },
+        "device": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Device"
+        },
+        "dtype": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dtype"
+        },
+        "framework": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Framework"
+        },
+        "parameters": {
+          "additionalProperties": true,
+          "title": "Parameters",
+          "type": "object"
+        },
+        "repetitions": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Repetitions",
+          "type": "integer"
+        },
+        "seed": {
+          "default": 0,
+          "title": "Seed",
+          "type": "integer"
+        }
+      },
+      "title": "RuntimeProfile",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A reproducible, comparable model state.",
+  "properties": {
+    "artifact_hashes": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ArtifactDigest"
+      },
+      "title": "Artifact Hashes",
+      "type": "array"
+    },
+    "capabilities": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Capabilities",
+      "type": "array",
+      "uniqueItems": true
+    },
+    "code_revision": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Code Revision"
+    },
+    "config_fingerprint": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Config Fingerprint",
+      "type": "string"
+    },
+    "data_revision": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Data Revision"
+    },
+    "evidence_access": {
+      "$ref": "#/$defs/EvidenceAccess",
+      "default": "declared"
+    },
+    "id": {
+      "pattern": "^m2riv:sha256:[a-f0-9]{64}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "labels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Labels",
+      "type": "object"
+    },
+    "model_family": {
+      "$ref": "#/$defs/ModelFamily",
+      "default": "custom"
+    },
+    "parent_snapshot": {
+      "anyOf": [
+        {
+          "pattern": "^m2riv:sha256:[a-f0-9]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Parent Snapshot"
+    },
+    "runtime_profile": {
+      "$ref": "#/$defs/RuntimeProfile"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/$defs/ModelRef"
+    }
+  },
+  "required": [
+    "id",
+    "source",
+    "config_fingerprint"
+  ],
+  "title": "ModelSnapshot",
+  "type": "object"
+}

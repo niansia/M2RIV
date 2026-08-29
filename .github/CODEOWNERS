@@ -1,0 +1,9 @@
+# Bootstrap ownership. RFCs can split these paths as reviewers are added.
+* @niansia
+
+/schemas/ @niansia
+/src/m2riv/core/ @niansia
+/src/m2riv/gate/ @niansia
+/src/m2riv/reports/ @niansia
+/rfcs/ @niansia
+/.github/workflows/ @niansia

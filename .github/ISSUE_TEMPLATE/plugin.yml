@@ -1,0 +1,39 @@
+name: Plugin or integration proposal
+description: Propose an adapter, paired metric, executor, or MCR integration
+title: "[Plugin]: "
+labels: ["plugin", "proposal"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Extension kind
+      options: [Adapter, Paired metric, Executor, MCR producer/consumer]
+    validations:
+      required: true
+  - type: textarea
+    id: user
+    attributes:
+      label: User and release workflow
+      description: Who needs this and which release decision does it enable?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence contract
+      description: Inputs, outputs, capabilities, units/direction, and limitations.
+    validations:
+      required: true
+  - type: textarea
+    id: identity
+    attributes:
+      label: Reproducibility and non-secret identity
+      description: What config/revision enters snapshot, manifest, executor, and cache identity?
+    validations:
+      required: true
+  - type: textarea
+    id: threats
+    attributes:
+      label: Trust boundary and resource limits
+    validations:
+      required: true

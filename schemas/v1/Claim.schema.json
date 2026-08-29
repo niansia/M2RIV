@@ -1,0 +1,111 @@
+{
+  "$defs": {
+    "ClaimStrength": {
+      "enum": [
+        "descriptive",
+        "observed",
+        "statistical",
+        "causal"
+      ],
+      "title": "ClaimStrength",
+      "type": "string"
+    },
+    "EvidenceRef": {
+      "additionalProperties": false,
+      "description": "A content-addressed evidence edge used by claims and decisions.",
+      "properties": {
+        "id": {
+          "pattern": "^m2riv:sha256:[a-f0-9]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "media_type": {
+          "default": "application/json",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "redacted": {
+          "default": false,
+          "title": "Redacted",
+          "type": "boolean"
+        },
+        "uri": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uri"
+        }
+      },
+      "required": [
+        "id",
+        "kind"
+      ],
+      "title": "EvidenceRef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A conclusion whose strength cannot exceed its linked evidence.",
+  "properties": {
+    "claim_type": {
+      "minLength": 1,
+      "title": "Claim Type",
+      "type": "string"
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/EvidenceRef"
+      },
+      "minItems": 1,
+      "title": "Evidence",
+      "type": "array"
+    },
+    "id": {
+      "pattern": "^m2riv:sha256:[a-f0-9]{64}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "limitations": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "statement": {
+      "minLength": 1,
+      "title": "Statement",
+      "type": "string"
+    },
+    "strength": {
+      "$ref": "#/$defs/ClaimStrength"
+    }
+  },
+  "required": [
+    "id",
+    "claim_type",
+    "statement",
+    "strength",
+    "evidence"
+  ],
+  "title": "Claim",
+  "type": "object"
+}

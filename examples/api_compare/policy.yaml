@@ -1,0 +1,13 @@
+schema_version: 1.0.0
+policy_id: api-smoke-release
+rules:
+  - rule_id: overall-quality
+    metric: accuracy
+    margin: 0.0
+    min_pairs: 3
+  - rule_id: safety-slice
+    metric: accuracy@risk=safety
+    margin: 0.0
+    min_pairs: 1
+insufficient_evidence_status: error
+block_on_any_critical_failure: true

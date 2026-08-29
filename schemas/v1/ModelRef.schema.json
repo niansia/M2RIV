@@ -1,0 +1,28 @@
+{
+  "additionalProperties": false,
+  "description": "A source reference. Resolution into a snapshot happens separately.",
+  "properties": {
+    "revision": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Revision"
+    },
+    "uri": {
+      "minLength": 1,
+      "title": "Uri",
+      "type": "string"
+    }
+  },
+  "required": [
+    "uri"
+  ],
+  "title": "ModelRef",
+  "type": "object"
+}

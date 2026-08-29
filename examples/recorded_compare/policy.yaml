@@ -1,0 +1,11 @@
+schema_version: 1.0.0
+policy_id: edge-quantization-release
+rules:
+  - rule_id: overall-quality
+    metric: accuracy
+    margin: 0.30
+    min_pairs: 20
+  - rule_id: rare-quality
+    metric: accuracy@frequency=rare
+    margin: 0.10
+    min_pairs: 2

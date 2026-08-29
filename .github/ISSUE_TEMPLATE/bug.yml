@@ -1,0 +1,32 @@
+name: Bug report
+description: Report incorrect release evidence, behavior, or compatibility
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include credentials or private model outputs. Use SECURITY.md for vulnerabilities.
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Observed and expected outcome
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Include sanitized suite/policy fragments and exact exit status.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: M2RIV and Python versions
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Execution environment
+      description: OS, adapter, executor, and relevant non-secret revisions.

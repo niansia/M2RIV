@@ -1,0 +1,56 @@
+name: Build release artifacts
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install the isolated build frontend
+        run: python -m pip install "build==1.6.0"
+      - name: Build wheel and source distribution
+        run: python -m build
+      - name: Verify wheel installation
+        run: |
+          python -m venv release-smoke
+          release-smoke/bin/python -m pip install dist/*.whl
+          release-smoke/bin/m2riv --help
+      - name: Generate SPDX SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          path: dist
+          format: spdx-json
+          output-file: dist/m2riv.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+      - name: Write SHA-256 checksums
+        run: cd dist && sha256sum *.whl *.tar.gz *.spdx.json > SHA256SUMS
+      - name: Attest release files
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
+        with:
+          subject-path: dist/*
+      - name: Upload release bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: m2riv-distributions-${{ github.ref_name }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30

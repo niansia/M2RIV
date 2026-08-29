@@ -1,0 +1,65 @@
+{
+  "$defs": {
+    "PluginKind": {
+      "enum": [
+        "adapter",
+        "executor",
+        "metric"
+      ],
+      "title": "PluginKind",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Non-secret identity and compatibility declaration for one plugin package.",
+  "properties": {
+    "api_version": {
+      "const": "0.1",
+      "default": "0.1",
+      "title": "Api Version",
+      "type": "string"
+    },
+    "capabilities": {
+      "items": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+        "type": "string"
+      },
+      "maxItems": 64,
+      "title": "Capabilities",
+      "type": "array",
+      "uniqueItems": true
+    },
+    "config_fingerprint": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Config Fingerprint",
+      "type": "string"
+    },
+    "kind": {
+      "$ref": "#/$defs/PluginKind"
+    },
+    "name": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+      "title": "Name",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "version": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9.+_-]{0,63}$",
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "version",
+    "kind",
+    "config_fingerprint"
+  ],
+  "title": "PluginManifest",
+  "type": "object"
+}

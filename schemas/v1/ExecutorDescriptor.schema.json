@@ -1,0 +1,38 @@
+{
+  "additionalProperties": false,
+  "description": "Non-secret executor identity that participates in cache safety.",
+  "properties": {
+    "capabilities": {
+      "items": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+        "type": "string"
+      },
+      "maxItems": 64,
+      "title": "Capabilities",
+      "type": "array",
+      "uniqueItems": true
+    },
+    "config_fingerprint": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Config Fingerprint",
+      "type": "string"
+    },
+    "executor_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+      "title": "Executor Id",
+      "type": "string"
+    },
+    "version": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9.+_-]{0,63}$",
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "executor_id",
+    "version",
+    "config_fingerprint"
+  ],
+  "title": "ExecutorDescriptor",
+  "type": "object"
+}
