@@ -4,9 +4,9 @@
 ## Evidence and verification
 
 - [ ] Deterministic tests added or updated
-- [ ] `ruff check .` passes
-- [ ] `mypy src` passes
-- [ ] `pytest` passes
+- [ ] `uv run --frozen ruff check .` passes
+- [ ] `uv run --frozen mypy src` passes
+- [ ] `uv run --frozen pytest` passes
 - [ ] Public schema output checked when contracts changed
 
 ## Compatibility and security

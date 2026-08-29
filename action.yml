@@ -57,7 +57,7 @@ runs:
       run: |
         python -m pip install --require-hashes \
           -r "$M2RIV_ACTION_PATH/action-requirements.lock"
-        python -m pip install --no-deps "$M2RIV_ACTION_PATH"
+        python -m pip install --no-deps --no-build-isolation "$M2RIV_ACTION_PATH"
     - name: Compare and gate candidate
       id: compare
       shell: bash

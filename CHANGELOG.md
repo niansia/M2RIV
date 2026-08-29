@@ -61,8 +61,8 @@ versions for portable JSON contracts. Pre-1.0 APIs may change with migration not
   target-runner workflow
 - An indexed regression corpus that distinguishes CI verification, target-only
   verification, and independent reproduction
-- Blueprint v3.0, a release-evidence technical report, design-partner playbook,
-  brand recall study, and reproducible PDF build
+- A public release-evidence architecture diagram and reproducible case study
+- A source-first quickstart, concise repository entry page, and citation metadata
 - Three new public schemas for backend evidence and producer/consumer conformance,
   bringing the exported public surface to 24 contracts
 - Five target/provenance schemas plus expanded verification contracts, bringing
@@ -70,6 +70,12 @@ versions for portable JSON contracts. Pre-1.0 APIs may change with migration not
 
 ### Changed
 
+- CI and release builds now install from the frozen `uv.lock` rather than
+  resolving development and build dependencies from floating ranges
+- Release builds disable shared dependency caches, and Dependabot updates use a
+  seven-day cooldown to reduce cache-poisoning and just-published-package risk
+- The exact build backend is hash-locked and preinstalled; package and composite
+  action builds disable network-resolved build isolation
 - The pre-alpha portable envelope is now MCR 0.4.0: content IDs and hash domains
   use the brand-neutral `mcr:` namespace, the canonical report filename is
   `mcr-report.json`, and normative schemas live in `schemas/mcr-0.4`

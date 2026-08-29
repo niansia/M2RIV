@@ -52,13 +52,24 @@ def test_release_build_has_provenance_sbom_and_gated_trusted_publish() -> None:
     assert "secrets." not in source
 
 
-def test_ci_upgrades_vulnerable_packaging_bootstrap_before_audit() -> None:
+def test_ci_installs_the_frozen_lock_before_audit() -> None:
     source = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
 
     audit_index = source.index("python -m pip_audit --local --skip-editable")
-    for requirement in ('"pip>=26.2"', '"setuptools>=83"'):
-        assert requirement in source
-        assert source.index(requirement) < audit_index
+    sync_command = "uv sync --frozen --extra dev --extra onnx"
+    assert "astral-sh/setup-uv@" in source
+    assert 'version: "0.11.18"' in source
+    assert sync_command in source
+    assert source.index(sync_command) < audit_index
+
+    lock = (ROOT / "uv.lock").read_text(encoding="utf-8")
+    pip_match = re.search(r'name = "pip"\nversion = "(\d+)\.(\d+)\.', lock)
+    assert pip_match is not None
+    assert tuple(map(int, pip_match.groups())) >= (26, 2)
+
+    setuptools_match = re.search(r'name = "setuptools"\nversion = "(\d+)\.(\d+)\.', lock)
+    if setuptools_match is not None:
+        assert tuple(map(int, setuptools_match.groups())) >= (83, 0)
 
 
 def test_reproducible_build_outputs_stay_outside_the_source_tree() -> None:
@@ -94,8 +105,10 @@ def test_reusable_action_verifies_and_uploads_before_enforcing_decision() -> Non
     assert "final_code=3" in source
     assert "--require-hashes" in source
     assert "--no-deps" in source
+    assert "--no-build-isolation" in source
     dependency_lock = (ROOT / "action-requirements.lock").read_text("utf-8")
     assert "--hash=sha256:" in dependency_lock
+    assert "hatchling==1.32.0" in dependency_lock
     assert "${{ inputs.baseline }}" not in next(
         step["run"] for step in steps if step["name"] == "Compare and gate candidate"
     )
@@ -107,3 +120,14 @@ def test_ci_executes_the_local_composite_action_and_checks_its_outputs() -> None
     assert "steps.gate.outputs.exit-code" in source
     assert 'test "$M2RIV_ACTION_EXIT_CODE" = "2"' in source
     assert "m2riv mcr verify runs/action-smoke" in source
+
+
+def test_release_build_backend_is_exact_and_preinstalled() -> None:
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    release = (WORKFLOWS / "release.yml").read_text(encoding="utf-8")
+    ci = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
+
+    assert 'requires = ["hatchling==1.32.0"]' in pyproject
+    assert "--group action-build" in release
+    assert "python -m build --no-isolation" in release
+    assert "python -m build --no-isolation" in ci

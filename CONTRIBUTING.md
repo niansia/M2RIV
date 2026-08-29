@@ -8,14 +8,17 @@ Participation is governed by the [Community Code of Conduct](CODE_OF_CONDUCT.md)
 
 For code changes:
 
-1. Add or update deterministic tests.
-2. Keep unit tests offline and free of model downloads.
-3. Run `ruff check .`, `mypy src`, and `pytest`.
-4. Do not add telemetry, remote execution, or untrusted-code loading by default.
-5. Treat public schemas, report formats, and plugin contracts as compatibility
+1. Install the locked development environment with
+   `uv sync --frozen --extra dev --extra onnx`.
+2. Add or update deterministic tests.
+3. Keep unit tests offline and free of model downloads.
+4. Run `uv run --frozen ruff check .`, `uv run --frozen mypy src`, and
+   `uv run --frozen pytest`.
+5. Do not add telemetry, remote execution, or untrusted-code loading by default.
+6. Treat public schemas, report formats, and plugin contracts as compatibility
    boundaries.
-6. Run MCR conformance and cross-language identity checks for protocol changes.
-7. Add migration and protocol-changelog entries for any breaking public change.
+7. Run MCR conformance and cross-language identity checks for protocol changes.
+8. Add migration and protocol-changelog entries for any breaking public change.
 
 See [SUPPORT.md](SUPPORT.md) for issue routing,
 [docs/protocol-governance.md](docs/protocol-governance.md) for MCR changes, and
