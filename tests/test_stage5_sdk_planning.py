@@ -570,7 +570,7 @@ def test_metric_plugin_failure_is_secret_free_and_report_links_plan(tmp_path: Pa
             "metrics": (ExactMatchMetric(),),
             "additional_evidence": (
                 EvidenceRef(
-                    id="m2riv:sha256:" + "1" * 64,
+                    id="mcr:sha256:" + "1" * 64,
                     kind="artifact-diff",
                     uri="artifact-diff.json",
                 ),
@@ -603,12 +603,12 @@ def test_metric_plugin_failure_is_secret_free_and_report_links_plan(tmp_path: Pa
                 "metrics": (ExactMatchMetric(),),
                 "additional_evidence": (
                     EvidenceRef(
-                        id="m2riv:sha256:" + "2" * 64,
+                        id="mcr:sha256:" + "2" * 64,
                         kind="artifact-diff",
                         uri="first.json",
                     ),
                     EvidenceRef(
-                        id="m2riv:sha256:" + "2" * 64,
+                        id="mcr:sha256:" + "2" * 64,
                         kind="artifact-diff",
                         uri="conflicting.json",
                     ),
@@ -632,7 +632,7 @@ def test_metric_plugin_failure_is_secret_free_and_report_links_plan(tmp_path: Pa
     }
 
     mismatched_report = passing.report.model_copy(
-        update={"release_plan_id": "m2riv:sha256:" + "0" * 64}
+        update={"release_plan_id": "mcr:sha256:" + "0" * 64}
     )
     with pytest.raises(ValueError, match="identity does not match"):
         write_report_bundle(
@@ -676,7 +676,7 @@ rules:
 
     assert result.exit_code == 0
     document = json.loads(result.stdout)
-    assert document["id"].startswith("m2riv:sha256:")
+    assert document["id"].startswith("mcr:sha256:")
     assert document["bindings"][0]["metric_id"] == "accuracy@risk=rare"
     assert document["plugins"][0]["name"] == "m2riv.builtin.metrics"
     assert document["plugins"][0]["kind"] == "metric"

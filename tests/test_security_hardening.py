@@ -31,7 +31,7 @@ from m2riv.reports.models import MCRDecision, MCRStatus, create_report
 
 
 def _cache_record() -> tuple[CacheKey, Observation]:
-    snapshot_id = f"m2riv:sha256:{'1' * 64}"
+    snapshot_id = f"mcr:sha256:{'1' * 64}"
     case = EvalCase(case_id="security-case", input="request")
     profile = RuntimeProfile(seed=17)
     output = "blocked-output"
@@ -60,8 +60,8 @@ def _cache_record() -> tuple[CacheKey, Observation]:
 
 def _minimal_report():
     return create_report(
-        baseline_snapshot_id=f"m2riv:sha256:{'2' * 64}",
-        candidate_snapshot_id=f"m2riv:sha256:{'3' * 64}",
+        baseline_snapshot_id=f"mcr:sha256:{'2' * 64}",
+        candidate_snapshot_id=f"mcr:sha256:{'3' * 64}",
         metrics=(),
         decision=MCRDecision(status=MCRStatus.PASS, allowed=True),
     )
@@ -170,7 +170,7 @@ class _ForgingAdapter:
         digest = fingerprint(output, namespace="observation-output")
         return tuple(
             Observation(
-                id=f"m2riv:sha256:{'f' * 64}",
+                id=f"mcr:sha256:{'f' * 64}",
                 snapshot_id=self.snapshot.id,
                 case_id=case.case_id,
                 seed=self.reported_seed,
@@ -200,7 +200,7 @@ def test_runner_owns_observation_identity_and_rejects_forged_seed(tmp_path: Path
         baseline_adapter_fingerprint="forging-v1",
         candidate_adapter_fingerprint="candidate-v1",
     )
-    assert run.cases[0].baseline.id != f"m2riv:sha256:{'f' * 64}"
+    assert run.cases[0].baseline.id != f"mcr:sha256:{'f' * 64}"
 
     with pytest.raises(RunnerContractError, match="wrong seed"):
         PairedRunner(ObservationCache(tmp_path / "wrong-seed-cache")).run(
@@ -286,7 +286,7 @@ def test_mcr_verifier_rejects_duplicate_keys_and_labels_trust_scope(tmp_path: Pa
     assert verified.trust_scope == "self-consistency-only"
 
     original = bundle.json_path.read_text("utf-8")
-    duplicate = original.replace("{", '{"schema_version":"1.3.0",', 1)
+    duplicate = original.replace("{", '{"schema_version":"0.4.0",', 1)
     bundle.json_path.write_text(duplicate, encoding="utf-8")
     with pytest.raises(MCRVerificationError, match="not valid UTF-8 JSON"):
         verify_report_bundle(tmp_path)
@@ -294,14 +294,14 @@ def test_mcr_verifier_rejects_duplicate_keys_and_labels_trust_scope(tmp_path: Pa
 
 def test_strict_verification_rejects_unavailable_linked_content(tmp_path: Path) -> None:
     report = create_report(
-        baseline_snapshot_id=f"m2riv:sha256:{'4' * 64}",
-        candidate_snapshot_id=f"m2riv:sha256:{'5' * 64}",
-        release_plan_id=f"m2riv:sha256:{'6' * 64}",
+        baseline_snapshot_id=f"mcr:sha256:{'4' * 64}",
+        candidate_snapshot_id=f"mcr:sha256:{'5' * 64}",
+        release_plan_id=f"mcr:sha256:{'6' * 64}",
         metrics=(),
         decision=MCRDecision(status=MCRStatus.PASS, allowed=True),
     )
     write_report_bundle(report, tmp_path)
-    assert verify_report_bundle(tmp_path).verification_complete is False
+    assert verify_report_bundle(tmp_path).bundle_verification_complete is False
     with pytest.raises(MCRVerificationError, match="strict verification"):
         verify_report_bundle(tmp_path, require_complete=True)
 
@@ -321,7 +321,7 @@ def test_report_writer_rejects_symlink_destination_and_target(tmp_path: Path) ->
     destination.mkdir()
     outside_file = outside / "outside.json"
     outside_file.write_text("untouched", encoding="utf-8")
-    (destination / "m2riv-report.json").symlink_to(outside_file)
+    (destination / "mcr-report.json").symlink_to(outside_file)
     with pytest.raises(ValueError, match="regular file"):
         write_report_bundle(_minimal_report(), destination)
     assert outside_file.read_text("utf-8") == "untouched"

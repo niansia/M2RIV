@@ -1,4 +1,4 @@
-// Verify the portable M2RIV v1 content-identity profile using Node stdlib only.
+// Verify the portable MCR v1 content-identity profile using Node stdlib only.
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
@@ -119,7 +119,7 @@ for (const vector of document.vectors) {
   if (payload !== vector.canonical_json) {
     throw new Error(`canonical JSON mismatch: ${vector.name}`);
   }
-  const domain = Buffer.from(`m2riv:${vector.namespace}:v1`, "utf8");
+  const domain = Buffer.from(`mcr:${vector.namespace}:v1`, "utf8");
   const digest = createHash("sha256")
     .update(domain)
     .update(Buffer.from([0]))
@@ -130,7 +130,7 @@ for (const vector of document.vectors) {
   }
 }
 
-console.log(`verified ${document.vectors.length} M2RIV v1 identity vectors`);
+console.log(`verified ${document.vectors.length} MCR v1 identity vectors`);
 
 for (const vector of floatDocument.vectors) {
   const bytes = Buffer.from(vector.bits, "hex");
@@ -139,7 +139,7 @@ for (const vector of floatDocument.vectors) {
     throw new Error(`float canonical JSON mismatch: ${vector.bits}`);
   }
   const digest = createHash("sha256")
-    .update(Buffer.from("m2riv:float-spelling-corpus:v1", "utf8"))
+    .update(Buffer.from("mcr:float-spelling-corpus:v1", "utf8"))
     .update(Buffer.from([0]))
     .update(Buffer.from(payload, "utf8"))
     .digest("hex");

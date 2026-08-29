@@ -1,4 +1,4 @@
-"""Generate the public M2RIV v1 identity conformance vectors."""
+"""Generate the public MCR v1 identity conformance vectors."""
 
 from __future__ import annotations
 
@@ -54,7 +54,7 @@ def _vector(
     source = typed_value if typed_value is not None else value
     materialized = materialize_typed_value(source)
     canonical = _canonical_json(materialized)
-    domain = f"m2riv:{namespace}:v1".encode()
+    domain = f"mcr:{namespace}:v1".encode()
     result: dict[str, Any] = {"name": name, "namespace": namespace}
     result["typed_value" if typed_value is not None else "value"] = source
     result["canonical_json"] = canonical.decode()
@@ -238,7 +238,7 @@ def build_float_document() -> dict[str, Any]:
         value = struct.unpack(">d", bits.to_bytes(8, "big"))[0]
         payload = {"value": value}
         canonical = _canonical_json(payload)
-        domain = b"m2riv:float-spelling-corpus:v1"
+        domain = b"mcr:float-spelling-corpus:v1"
         vectors.append(
             {
                 "bits": f"{bits:016x}",

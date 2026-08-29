@@ -289,7 +289,7 @@ def build_blueprint(path: Path) -> None:
         PageBreak(),
         _p("已完成的 kernel", styles["h1"]),
         _metrics(
-            [("24", "public schemas"), ("3", "decision profiles"), ("629", "GPU holdout cases"), ("4", "corpus entries")],
+            [("29", "public schemas"), ("4+4", "positive/negative profiles"), ("629", "GPU holdout cases"), ("4", "corpus entries")],
             styles,
         ),
         Spacer(1, 5 * mm),
@@ -297,8 +297,8 @@ def build_blueprint(path: Path) -> None:
             [
                 ["Layer", "What exists now", "Trust boundary"],
                 ["Evidence kernel", "snapshots, manifests, stable/run identities, plans", "content integrity ≠ authorship"],
-                ["MCR 1.3", "JSON/Markdown/JUnit/SARIF, strict verifier", "recognized local bundle only"],
-                ["Conformance", "producer + consumer PASS/WARN/BLOCK profiles", "interoperability ≠ model safety"],
+                ["MCR 0.4", "evidence/report/run IDs + target root", "self-consistency ≠ authorship"],
+                ["Conformance", "PASS/WARN/BLOCK/ERROR + four negative vectors", "interoperability ≠ model safety"],
                 ["Cross-language", "Python/Node/Rust vectors + Python<->Rust MCR", "repository-owned evidence"],
                 ["Integrations", "Polygraphy producer + MLflow consumer", "reference, not vendor endorsement"],
                 ["Security", "bounded parsing, HMAC cache, traversal/secret defenses", "isolated CI still required"],
@@ -362,7 +362,7 @@ def build_blueprint(path: Path) -> None:
         ),
         _p("品牌 gate", styles["h2"]),
         _p(
-            "M2RIV 仍是 pre-alpha working name。公開 v0.1 前完成 10–20 人 unaided spoken recall/spelling test、近似名稱與商標檢查，以及 m2riv:sha256 namespace migration 決策。品牌不應拖延驗證，但也不能由 CI 自動清除。",
+            "M2RIV 仍是 pre-alpha working name。公開 v0.1 前完成 10–20 人 unaided spoken recall/spelling test、近似名稱與商標檢查。RFC 0015 已把 wire namespace 解耦為 mcr:sha256；品牌不應拖延驗證，但也不能由 CI 自動清除。",
             styles["body"],
         ),
         _p(
@@ -393,11 +393,11 @@ def build_report(path: Path) -> None:
         ),
         _p("Abstract", styles["h1"]),
         _p(
-            "Deployable model releases cross optimizer, compiler, runtime, hardware, registry, and CI boundaries. Native tools can answer local questions while organizations still lack a portable object binding exact artifacts, evidence cohort, statistical interpretation, release policy, and first bad build. This report specifies MCR 1.3 and evaluates it with CPU ONNX cases, cross-language conformance, reference Polygraphy/MLflow integrations, and a live ModelOpt→TensorRT target execution.",
+            "Deployable model releases cross optimizer, compiler, runtime, hardware, registry, and CI boundaries. Native tools can answer local questions while organizations still lack a portable object binding exact artifacts, evidence cohort, statistical interpretation, release policy, and first bad build. This report specifies MCR 0.4 and evaluates it with CPU ONNX cases, cross-language conformance, reference Polygraphy/MLflow integrations, and a live ModelOpt→TensorRT target execution.",
             styles["body"],
         ),
         _metrics(
-            [("24", "public contracts"), ("629×4", "GPU comparisons"), ("100%", "declared backend matches"), ("build-02", "first bad")],
+            [("29", "public contracts"), ("629×4", "GPU comparisons"), ("100%", "declared backend matches"), ("build-02", "first bad")],
             styles,
         ),
         _p("Claim discipline", styles["h2"]),
@@ -419,7 +419,7 @@ def build_report(path: Path) -> None:
         ),
         _p("MCR contract", styles["h2"]),
         _p(
-            "The envelope binds baseline/candidate snapshot IDs, executor/runtime provenance, paired metrics with direction and uncertainty, release policy, explicit authorization, evidence-set and supplemental references, a stable evidence ID, a volatile run ID, and optional ordered-build localization.",
+            "The envelope binds baseline/candidate snapshot IDs, executor/runtime provenance, paired metrics with direction and uncertainty, release policy, explicit authorization, evidence-set and supplemental references, a stable evidence ID, a decision-bound report ID, a volatile run ID, and optional ordered-build localization.",
             styles["body"],
         ),
         _p("Integrity is not authenticity", styles["h2"]),
@@ -429,7 +429,7 @@ def build_report(path: Path) -> None:
         ),
         _p("Conformance", styles["h2"]),
         _p(
-            "Producer fixtures cover PASS, WARN, and BLOCK. Consumer receipts must preserve report IDs and statuses and may authorize only PASS. Python/Node/Rust identity vectors and Python<->Rust MCR interop test language neutrality. Repository ownership is disclosed and does not count as adoption.",
+            "Producer fixtures cover fixed PASS, WARN, BLOCK, and ERROR vectors plus four mandatory negative cases. Consumer receipts preserve evidence/report IDs and statuses and may authorize only PASS. Python/Node/Rust identity vectors and Python<->Rust MCR interop test language neutrality. Repository ownership is disclosed and does not count as adoption.",
             styles["body"],
         ),
         PageBreak(),
@@ -470,7 +470,7 @@ def build_report(path: Path) -> None:
         ),
         _p("Execution chain", styles["h2"]),
         _p(
-            "Reviewed weights → equivalent PyTorch Conv1d graph → ModelOpt 0.46 INT8 artifacts → TensorRT engines → Polygraphy sequential ONNX Runtime/TensorRT runners → per-output parity evidence → MCR quality gate → monotonic bisect.",
+            "Reviewed weights → equivalent PyTorch Conv1d graph → ModelOpt 0.46 INT8 artifacts → TensorRT engines → Polygraphy sequential ONNX Runtime/TensorRT runners → retained native output and exit code → Comparator-native per-output evidence → MCR quality gate → target evidence root → monotonic bisect.",
             styles["body"],
         ),
         _table(
@@ -544,7 +544,7 @@ def build_report(path: Path) -> None:
             styles["small"],
         ),
         _p(
-            "Conclusion<br/><b>MCR's claim is narrow and testable:</b> deployable model changes should carry portable, reviewable release evidence across tool boundaries. The reference implementation now demonstrates the complete path from artifact and native backend oracle to strict bundle verification and first-bad localization.",
+            "Conclusion<br/><b>MCR's claim is narrow and testable:</b> deployable model changes should carry portable, reviewable release evidence across tool boundaries. The reference implementation now demonstrates the complete path from artifact and retained native backend oracle to strict bundle/target-root verification and first-bad localization.",
             styles["callout"],
         ),
     ]

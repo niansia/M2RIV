@@ -56,14 +56,14 @@ def verify(destination: Path) -> None:
         verification = verify_report_bundle(report_directory)
         if not verification.valid:
             raise ValueError(f"{checkpoint} MCR bundle failed integrity verification")
-        report_path = report_directory / "m2riv-report.json"
+        report_path = report_directory / "mcr-report.json"
         if report_path.stat().st_size > MAX_MCR_BYTES:
             raise ValueError(f"{checkpoint} MCR exceeds {MAX_MCR_BYTES} bytes")
         report = _object(report_path)
         manifest = _object(report_directory / "evidence-manifest.json")
         reference = report.get("evidence_manifest")
-        if report.get("schema_version") != "1.3.0":
-            raise ValueError(f"{checkpoint} is not an MCR 1.3 report")
+        if report.get("schema_version") != "0.4.0":
+            raise ValueError(f"{checkpoint} is not an MCR 0.4 report")
         if report.get("decision", {}).get("status") != expected_status:
             raise ValueError(f"{checkpoint} has the wrong release status")
         if not isinstance(reference, dict) or reference.get("id") != manifest.get("id"):
@@ -117,7 +117,7 @@ def verify(destination: Path) -> None:
     numerical_diff = _object(root / "reports" / FIRST_BAD / "numerical-diff.json")
     if numerical_diff.get("first_divergent_tensor") != "hidden_linear":
         raise ValueError("numerical diff did not locate the first shared activation drift")
-    first_bad_report = _object(root / "reports" / FIRST_BAD / "m2riv-report.json")
+    first_bad_report = _object(root / "reports" / FIRST_BAD / "mcr-report.json")
     linked_kinds = {item.get("kind") for item in first_bad_report.get("evidence", [])}
     if "numerical-diff" not in linked_kinds:
         raise ValueError("first bad MCR does not link its numerical diff")

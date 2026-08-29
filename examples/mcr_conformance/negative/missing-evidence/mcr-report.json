@@ -1,0 +1,82 @@
+{
+  "schema_version": "0.4.0",
+  "id": "mcr:sha256:6c18d0cbb05cb8b00191c3f4b2e43b1dfc8f64056cbf4daa963d92dc4748538e",
+  "evidence_id": "mcr:sha256:75280f8fbdca99f8842c2651139045a68ec751b771a4e2dd814fe6695c8573d8",
+  "run_id": "mcr:sha256:2c0146e61a1bc41cd433dd9d845fd003a12cc56b880052c814167c7c3ccb1c7f",
+  "created_at": "2026-08-29T00:00:00Z",
+  "baseline_snapshot_id": "mcr:sha256:9e1fbc7be08e54bfa4f7831030f0919bf8985adeddce672ce530f19abfd4c10a",
+  "candidate_snapshot_id": "mcr:sha256:34ad08c68f5a337aea77e44d4917c8ff01150e37c94f750fee8f3c5458a2fe3c",
+  "release_plan_id": null,
+  "executions": [
+    {
+      "role": "candidate",
+      "executor_id": "example.external-producer",
+      "executor_version": "1.0",
+      "config_fingerprint": "e624b0ae57fc493e7477549fc9eaf7c70092c5dcd988aba441461c40e84cc04c",
+      "runtime_profile": {
+        "seed": 0,
+        "deterministic": true,
+        "repetitions": 1,
+        "framework": "fixture-runtime",
+        "framework_version": "1.0",
+        "device": "cpu",
+        "dtype": null,
+        "operating_system": "portable-fixture",
+        "architecture": "generic",
+        "python_version": "3.11+",
+        "parameters": {}
+      },
+      "capabilities": [
+        "paired-observations"
+      ],
+      "requested_cases": 10,
+      "returned_observations": 10,
+      "cache_hits": 0
+    }
+  ],
+  "metrics": [
+    {
+      "metric_id": "accuracy",
+      "scope": "overall",
+      "unit": "score",
+      "direction": "higher_is_better",
+      "baseline_value": 0.9,
+      "candidate_value": 0.9,
+      "delta": 0.0,
+      "confidence_level": null,
+      "interval_lower": null,
+      "interval_upper": null,
+      "effect_size": null,
+      "sample_size": 10,
+      "evidence_set_id": null,
+      "identity_scope": "evidence"
+    }
+  ],
+  "decision": {
+    "status": "PASS",
+    "allowed": true,
+    "findings": [
+      {
+        "rule_id": "accuracy-floor",
+        "status": "PASS",
+        "message": "external producer fixture: PASS",
+        "metric_id": "accuracy",
+        "evidence": [],
+        "evidence_set_id": null
+      }
+    ]
+  },
+  "evidence_manifest": null,
+  "evidence": [
+    {
+      "id": "mcr:sha256:528c470b41a4ff18e10a727ac582e7b5527b7575697528cbca0737c47dde9d74",
+      "kind": "artifact-diff",
+      "media_type": "application/json",
+      "uri": "missing-artifact-diff.json",
+      "redacted": false
+    }
+  ],
+  "limitations": [
+    "Minimal external-producer conformance fixture; no model was run."
+  ]
+}

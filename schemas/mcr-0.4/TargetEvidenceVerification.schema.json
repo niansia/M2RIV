@@ -1,0 +1,56 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "first_bad_build": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "First Bad Build"
+    },
+    "schema_version": {
+      "const": "0.1.0",
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_commit": {
+      "title": "Source Commit",
+      "type": "string"
+    },
+    "target_evidence_id": {
+      "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+      "title": "Target Evidence Id",
+      "type": "string"
+    },
+    "valid": {
+      "const": true,
+      "default": true,
+      "title": "Valid",
+      "type": "boolean"
+    },
+    "verified_file_count": {
+      "minimum": 1,
+      "title": "Verified File Count",
+      "type": "integer"
+    },
+    "verified_report_count": {
+      "minimum": 1,
+      "title": "Verified Report Count",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "target_evidence_id",
+    "verified_file_count",
+    "verified_report_count",
+    "source_commit"
+  ],
+  "title": "TargetEvidenceVerification",
+  "type": "object"
+}

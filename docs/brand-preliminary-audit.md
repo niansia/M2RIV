@@ -22,8 +22,11 @@ Before public v0.1, the owner must either:
 
 1. obtain an appropriate professional clearance and reserve the coordinated
    GitHub/PyPI/domain namespaces; or
-2. choose a replacement and execute the migration in RFC-0008 before third-party
-   MCR producers depend on `m2riv:sha256:`.
+2. choose a replacement and execute the product/package/CLI migration in RFC-0008.
+
+RFC 0015 has already decoupled the portable protocol from the provisional product
+name: MCR content IDs use `mcr:sha256:`. A future product rename therefore does
+not rewrite valid protocol identities.
 
 The release workflow is deliberately gated by repository variable
 `M2RIV_BRAND_CLEARED=true`; this file alone is not authorization to set it.

@@ -22,7 +22,7 @@ def canonical_json(value: Any) -> bytes:
 
 
 def fingerprint(value: Any, namespace: str) -> str:
-    domain = f"m2riv:{namespace}:v1".encode()
+    domain = f"mcr:{namespace}:v1".encode()
     return hashlib.sha256(domain + b"\0" + canonical_json(value)).hexdigest()
 
 
@@ -33,11 +33,11 @@ def identified(
     if exclude_schema:
         excluded.add("schema_version")
     payload = {key: item for key, item in value.items() if key not in excluded}
-    return value | {"id": f"m2riv:sha256:{fingerprint(payload, namespace)}"}
+    return value | {"id": f"mcr:sha256:{fingerprint(payload, namespace)}"}
 
 
 def content_id(label: str) -> str:
-    return f"m2riv:sha256:{fingerprint(label, 'independent-fixture')}"
+    return f"mcr:sha256:{fingerprint(label, 'independent-fixture')}"
 
 
 def evidence_ref(identifier: str, kind: str, uri: str | None = None) -> dict[str, Any]:
@@ -60,7 +60,7 @@ def build_bundle() -> dict[str, dict[str, Any]]:
         "count": 2,
         "members": [item["id"] for item in observations],
     }
-    evidence_set["id"] = "m2riv:sha256:" + fingerprint(
+    evidence_set["id"] = "mcr:sha256:" + fingerprint(
         {"members": evidence_set["members"]}, "evidence-set"
     )
     manifest_payload = {
@@ -70,14 +70,14 @@ def build_bundle() -> dict[str, dict[str, Any]]:
     }
     manifest = {
         "schema_version": "1.0.0",
-        "id": "m2riv:sha256:" + fingerprint(manifest_payload, "evidence-manifest"),
+        "id": "mcr:sha256:" + fingerprint(manifest_payload, "evidence-manifest"),
         "evidence": observations,
         "sets": [evidence_set],
     }
     manifest_ref = {
         "id": manifest["id"],
         "uri": "evidence-manifest.json",
-        "media_type": "application/vnd.m2riv.evidence-manifest+json",
+        "media_type": "application/vnd.model-change-report.evidence-manifest+json",
         "evidence_count": 2,
         "set_count": 1,
     }
@@ -232,7 +232,7 @@ def build_bundle() -> dict[str, dict[str, Any]]:
     baseline_id = content_id("baseline-snapshot")
     candidate_id = content_id("candidate-snapshot")
     evidence_payload = {
-        "schema_version": "1.3.0",
+        "schema_version": "0.4.0",
         "baseline_snapshot_id": baseline_id,
         "candidate_snapshot_id": candidate_id,
         "release_plan_id": plan["id"],
@@ -248,10 +248,18 @@ def build_bundle() -> dict[str, dict[str, Any]]:
         "evidence_manifest": manifest_ref,
         "evidence": supplemental,
     }
-    report_id = "m2riv:sha256:" + fingerprint(evidence_payload, "model-change-evidence")
+    evidence_id = "mcr:sha256:" + fingerprint(evidence_payload, "model-change-evidence")
+    report_payload = {
+        "schema_version": "0.4.0",
+        "evidence_id": evidence_id,
+        "release_plan_id": plan["id"],
+        "decision": decision,
+    }
+    report_id = "mcr:sha256:" + fingerprint(report_payload, "model-change-report")
     run_payload = {
-        "schema_version": "1.3.0",
-        "evidence_id": report_id,
+        "schema_version": "0.4.0",
+        "report_id": report_id,
+        "evidence_id": evidence_id,
         "created_at": created_at,
         "baseline_snapshot_id": baseline_id,
         "candidate_snapshot_id": candidate_id,
@@ -264,9 +272,10 @@ def build_bundle() -> dict[str, dict[str, Any]]:
         "limitations": ["Conformance evidence only; no model was executed."],
     }
     report = {
-        "schema_version": "1.3.0",
+        "schema_version": "0.4.0",
         "id": report_id,
-        "run_id": "m2riv:sha256:" + fingerprint(run_payload, "model-change-run"),
+        "evidence_id": evidence_id,
+        "run_id": "mcr:sha256:" + fingerprint(run_payload, "model-change-run"),
         "created_at": created_at,
         "baseline_snapshot_id": baseline_id,
         "candidate_snapshot_id": candidate_id,
@@ -279,7 +288,7 @@ def build_bundle() -> dict[str, dict[str, Any]]:
         "limitations": ["Conformance evidence only; no model was executed."],
     }
     return {
-        "m2riv-report.json": report,
+        "mcr-report.json": report,
         "evidence-manifest.json": manifest,
         "release-plan.json": plan,
         "artifact-diff.json": artifact_diff,

@@ -63,6 +63,7 @@ from m2riv.reports import (
     verify_report_bundle,
     write_report_bundle,
 )
+from m2riv.target import verify_target_evidence_manifest
 
 app = typer.Typer(
     name="m2riv",
@@ -112,11 +113,24 @@ def mcr_verify_command(
     typer.echo(result.model_dump_json(indent=2))
 
 
+@mcr_app.command("verify-target")
+def mcr_verify_target_command(
+    source: Annotated[Path, typer.Argument(exists=True, readable=True)],
+) -> None:
+    """Verify a target evidence root, every retained file, and every MCR bundle."""
+    try:
+        result = verify_target_evidence_manifest(source)
+    except (OSError, MCRVerificationError) as error:
+        typer.echo(json.dumps({"valid": False, "error": str(error)}, indent=2))
+        raise typer.Exit(code=3) from error
+    typer.echo(result.model_dump_json(indent=2))
+
+
 @conformance_app.command("producer")
 def conformance_producer_command(
     source: Annotated[Path, typer.Argument(exists=True, file_okay=False, readable=True)],
 ) -> None:
-    """Verify an independent producer's normative PASS/WARN/BLOCK fixture suite."""
+    """Verify fixed four-state and must-reject producer conformance vectors."""
     try:
         result = verify_producer_conformance(source)
     except (OSError, MCRConformanceError) as error:
@@ -135,7 +149,7 @@ def conformance_consumer_command(
             exists=True,
             file_okay=False,
             readable=True,
-            help="Normative PASS/WARN/BLOCK producer fixture directory.",
+            help="Normative PASS/WARN/BLOCK/ERROR producer fixture directory.",
         ),
     ] = Path("examples/mcr_conformance"),
 ) -> None:
@@ -632,7 +646,7 @@ def demo(
 
 @schema_app.command("export")
 def schema_export(
-    destination: Annotated[Path, typer.Argument()] = Path("schemas/v1"),
+    destination: Annotated[Path, typer.Argument()] = Path("schemas/mcr-0.4"),
 ) -> None:
     """Export versioned JSON Schemas for cross-language consumers."""
     paths = export_schemas(destination)

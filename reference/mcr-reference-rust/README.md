@@ -1,6 +1,6 @@
 # MCR reference Rust
 
-This crate is an independent, deliberately small MCR 1.3 producer and verifier.
+This crate is an independent, deliberately small MCR 0.4 producer and verifier.
 It does not import or invoke the Python `m2riv` package. Its scope is the protocol
 boundary, not model execution:
 
@@ -18,7 +18,8 @@ cargo run --manifest-path reference/mcr-reference-rust/Cargo.toml -- \
 
 The producer expands all MCR defaults and performs the schema-aware float
 conversion required by identity algorithm v1. The verifier recomputes the stable
-report ID and volatile run ID, normalizes typed UTC datetimes, restores MCR
+evidence ID, decision-bound report ID, and volatile run ID, normalizes typed UTC
+datetimes, restores MCR
 defaults, sorts set-valued execution capabilities, and enforces fail-closed
 PASS/BLOCK semantics.
 

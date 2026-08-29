@@ -20,7 +20,9 @@ from pydantic import (
 
 SCHEMA_VERSION: Literal["1.0.0"] = "1.0.0"
 Digest = Annotated[str, StringConstraints(pattern=r"^[a-f0-9]{64}$")]
-ContentId = Annotated[str, StringConstraints(pattern=r"^m2riv:sha256:[a-f0-9]{64}$")]
+# Content identity belongs to the MCR protocol, not to the current reference
+# implementation or its provisional brand.
+ContentId = Annotated[str, StringConstraints(pattern=r"^mcr:sha256:[a-f0-9]{64}$")]
 SafePluginName = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")]
 SafePluginVersion = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9][A-Za-z0-9.+_-]{0,63}$")]
 SafePluginCapability = Annotated[

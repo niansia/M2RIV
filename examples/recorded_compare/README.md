@@ -18,7 +18,7 @@ Expected exit code: `2` (`BLOCK`). Generated artifacts:
 
 - `release-plan.json` - content-addressed policy/suite/metric/statistical preflight;
 - `evidence-manifest.json` - deduplicated content-addressed case evidence;
-- `m2riv-report.json` - canonical Model Change Report;
+- `mcr-report.json` - canonical Model Change Report;
 - `summary.md` - human review artifact and GitHub Step Summary format;
 - `junit.xml` - test UI integration;
 - `results.sarif` - code scanning integration.

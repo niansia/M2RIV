@@ -2,7 +2,7 @@
 
 - Decision status: Accepted
 - Implementation status: Implemented for identity algorithm v1
-- Contract impact: MCR content IDs and every `m2riv:sha256:` reference
+- Contract impact: MCR content IDs and every `mcr:sha256:` reference
 
 ## Problem
 
@@ -36,9 +36,9 @@ Identity algorithm `v1` is frozen as follows.
    non-integral finite binary64 values whose shortest spelling agrees with the
    published vectors. Integral-valued floats require a schema-aware formatter.
 4. The fingerprint input is the UTF-8 domain separator
-   `m2riv:<namespace>:v1`, one NUL byte, then the canonical JSON bytes. Namespace
+   `mcr:<namespace>:v1`, one NUL byte, then the canonical JSON bytes. Namespace
    strings are non-empty and contain no NUL. The result is lowercase SHA-256 hex.
-   Contract IDs prefix that digest with `m2riv:sha256:`.
+   Contract IDs prefix that digest with `mcr:sha256:`.
 
 Schema-version fields participate whenever the identity payload includes them.
 Unknown fields are rejected by public contracts; the generic fingerprint helper
@@ -66,16 +66,18 @@ evidence-set, release-plan, artifact-diff, and numerical-diff namespaces.
 
 The Rust reference additionally produces a minimal MCR that the Python verifier
 accepts and recomputes IDs for a Python-produced MCR. This closes implementation
-interoperability for the exercised MCR 1.3 profile; it does not prove that every
+interoperability for the exercised MCR 0.4 profile; it does not prove that every
 possible binary64 spelling is portable or remove the schema-aware formatter
 requirement.
 
 ## Compatibility
 
-This RFC documents and freezes the existing v1 algorithm; it does not change
-current IDs. A future canonicalization change must use a new domain version and
-publish migration vectors. RFC 8785 is not adopted retroactively because its
-number and string rules would change existing content addresses.
+RFC 0015 moved the pre-alpha product-branded domain and content-ID prefix to the
+protocol-owned `mcr:` namespace. The typed canonicalization algorithm remains v1,
+but this namespace correction intentionally changes legacy IDs. A future
+canonicalization change must use a new domain version and publish migration
+vectors. RFC 8785 is not adopted because its number and string rules would change
+the current content addresses.
 
 Before an MCR 2.0/public identity v2 freeze, maintainers MUST compare this v1
 cost against a type-explicit or non-floating identity profile. Identity-bearing

@@ -20,17 +20,25 @@ import numpy as np
 
 from m2riv.adapters import RecordedAdapter
 from m2riv.bisect import BisectMode, BisectStatus, bisect_regression
-from m2riv.core.identity import build_local_snapshot
-from m2riv.core.models import EvidenceRef, ModelFamily, RuntimeProfile
+from m2riv.core.identity import build_local_snapshot, hash_artifact
+from m2riv.core.models import ArtifactDigest, EvidenceRef, ModelFamily, RuntimeProfile
 from m2riv.engine import ObservationCache
 from m2riv.evidence import (
     BackendCaseComparison,
-    BackendComparisonEvidence,
+    FileDigestBinding,
     create_backend_comparison_evidence,
+    create_build_provenance_evidence,
+    create_snapshot_artifact_manifest,
+    create_tool_native_evidence,
 )
 from m2riv.io import load_policy, load_suite
 from m2riv.pipeline import ReleaseComparison, compare_exact_match
 from m2riv.reports import verify_report_bundle, write_report_bundle
+from m2riv.target import (
+    create_target_evidence_manifest,
+    verify_target_evidence_manifest,
+    write_target_evidence_manifest,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA_LOADER = Path(__file__).with_name("data_loader.py")
@@ -43,6 +51,26 @@ BUILD_SPECS = (
     ("build-02-modelopt-int8-scale-065", "build-02-modelopt-int8-scale-065.onnx", True, "int8"),
     ("build-03-modelopt-int8-scale-060", "build-03-modelopt-int8-scale-060.onnx", True, "int8"),
 )
+
+
+def _git_commit() -> str:
+    value = os.environ.get("GITHUB_SHA", "").strip().lower()
+    if len(value) in {40, 64} and all(character in "0123456789abcdef" for character in value):
+        return value
+    git = shutil.which("git")
+    if git is None:
+        raise RuntimeError("git is required to bind target evidence to a source commit")
+    completed = subprocess.run(  # noqa: S603 - resolved local Git executable, fixed argv.
+        [git, "rev-parse", "HEAD"],
+        check=False,
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+    )
+    value = completed.stdout.strip().lower()
+    if completed.returncode != 0 or len(value) not in {40, 64}:
+        raise RuntimeError("an exact source commit is required for target evidence")
+    return value
 
 
 def _preflight(polygraphy_command: str) -> dict[str, Any]:
@@ -169,8 +197,10 @@ def _run_polygraphy(
 def _result_rows(
     results_path: Path,
     cases: tuple[Any, ...],
+    polygraphy_exit: int,
 ) -> tuple[list[dict[str, Any]], tuple[BackendCaseComparison, ...], str, str]:
-    from polygraphy.comparator import RunResults
+    from polygraphy.comparator import Comparator, CompareFunc, RunResults
+    from polygraphy.logger import G_LOGGER
 
     results = RunResults.load(str(results_path))
     names = list(results.keys())
@@ -180,20 +210,34 @@ def _result_rows(
     trt_rows = results[trt_name]
     if len(onnx_rows) != len(cases) or len(trt_rows) != len(cases):
         raise RuntimeError("Polygraphy did not return the declared case cohort")
+    selected = RunResults([(onnx_name, onnx_rows), (trt_name, trt_rows)])
+    previous_severity = G_LOGGER.module_severity
+    try:
+        # The CLI already emitted the human-facing comparison. Re-evaluate the
+        # retained native results quietly so the structured evidence is derived
+        # from Polygraphy's own comparator instead of a hand-rolled NumPy check.
+        G_LOGGER.module_severity = G_LOGGER.CRITICAL
+        accuracy_results = Comparator.compare_accuracy(
+            selected,
+            compare_func=CompareFunc.simple(
+                atol=ABSOLUTE_TOLERANCE,
+                rtol=RELATIVE_TOLERANCE,
+            ),
+        )
+    finally:
+        G_LOGGER.module_severity = previous_severity
+    if len(accuracy_results) != 1:
+        raise RuntimeError("Polygraphy returned an unexpected comparator result count")
+    accuracy = accuracy_results[0]
+    pair = (onnx_name, trt_name)
+    if pair not in accuracy or len(accuracy[pair]) != len(cases):
+        raise RuntimeError("Polygraphy comparator did not return the declared case cohort")
     recorded: list[dict[str, Any]] = []
     comparisons: list[BackendCaseComparison] = []
-    for case, onnx_row, trt_row in zip(cases, onnx_rows, trt_rows, strict=True):
-        matches = {
-            name: bool(
-                np.allclose(
-                    np.asarray(onnx_row[name]),
-                    np.asarray(trt_row[name]),
-                    atol=ABSOLUTE_TOLERANCE,
-                    rtol=RELATIVE_TOLERANCE,
-                )
-            )
-            for name in onnx_row
-        }
+    for case, onnx_row, trt_row, output_results in zip(
+        cases, onnx_rows, trt_rows, accuracy[pair], strict=True
+    ):
+        matches = {str(name): bool(result) for name, result in output_results.items()}
         logits = np.asarray(trt_row["logits"])
         recorded.append(
             {
@@ -211,6 +255,12 @@ def _result_rows(
                 candidate_latency_ms=float(trt_row.runtime * 1000),
             )
         )
+    all_matched = all(all(item.output_matches.values()) for item in comparisons)
+    expected_exit = 0 if all_matched else 1
+    if polygraphy_exit != expected_exit:
+        raise RuntimeError(
+            "Polygraphy CLI exit code disagrees with Comparator.compare_accuracy verdict"
+        )
     return recorded, tuple(comparisons), onnx_name, trt_name
 
 
@@ -222,43 +272,74 @@ def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
     )
 
 
-def _write_evidence(path: Path, evidence: BackendComparisonEvidence) -> None:
+def _write_evidence(path: Path, evidence: Any) -> None:
     path.write_text(evidence.model_dump_json(indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
 def _release_comparison(
     *,
-    build_name: str,
-    baseline_snapshot: Any,
-    candidate_snapshot: Any,
-    baseline_records: Path,
-    candidate_records: Path,
+    baseline: dict[str, Any],
+    candidate: dict[str, Any],
     cases: tuple[Any, ...],
-    baseline_evidence: BackendComparisonEvidence,
-    candidate_evidence: BackendComparisonEvidence,
     destination: Path,
     profile: RuntimeProfile,
 ) -> ReleaseComparison:
     destination.mkdir(parents=True, exist_ok=True)
-    evidence_items = {baseline_evidence.id: ("backend-comparison-baseline.json", baseline_evidence)}
-    evidence_items.setdefault(
-        candidate_evidence.id,
-        ("backend-comparison-candidate.json", candidate_evidence),
-    )
+    evidence_items: dict[str, tuple[str, str, Any]] = {}
+    retained_files: dict[str, Path] = {}
+    for role, item in (("baseline", baseline), ("candidate", candidate)):
+        native_filename = f"{role}-tool-native-evidence.json"
+        raw_filename = f"{role}-polygraphy-run-results.json"
+        native = item["native"].model_copy(
+            update={
+                "body": item["native"].body.model_copy(update={"uri": raw_filename})
+            }
+        )
+        onnx_filename = f"{role}-onnx-artifact.onnx"
+        engine_filename = f"{role}-tensorrt-engine.engine"
+        onnx_manifest = item["onnx_manifest"].model_copy(
+            update={
+                "artifacts": tuple(
+                    binding.model_copy(update={"uri": onnx_filename})
+                    for binding in item["onnx_manifest"].artifacts
+                )
+            }
+        )
+        engine_manifest = item["engine_manifest"].model_copy(
+            update={
+                "artifacts": tuple(
+                    binding.model_copy(update={"uri": engine_filename})
+                    for binding in item["engine_manifest"].artifacts
+                )
+            }
+        )
+        descriptors = (
+            ("backend-comparison", f"{role}-backend-comparison.json", item["evidence"]),
+            ("tool-native-evidence", native_filename, native),
+            ("snapshot-artifact-manifest", f"{role}-onnx-snapshot.json", onnx_manifest),
+            ("snapshot-artifact-manifest", f"{role}-engine-snapshot.json", engine_manifest),
+            ("build-provenance", f"{role}-artifact-build.json", item["artifact_build"]),
+            ("build-provenance", f"{role}-tensorrt-build.json", item["tensorrt_build"]),
+        )
+        for kind, filename, evidence in descriptors:
+            evidence_items.setdefault(evidence.id, (kind, filename, evidence))
+        retained_files.setdefault(raw_filename, item["raw_results"])
+        retained_files.setdefault(onnx_filename, item["onnx_path"])
+        retained_files.setdefault(engine_filename, item["engine_path"])
     references = tuple(
-        EvidenceRef(id=identifier, kind="backend-comparison", uri=filename)
-        for identifier, (filename, _) in evidence_items.items()
+        EvidenceRef(id=identifier, kind=kind, uri=filename)
+        for identifier, (kind, filename, _) in evidence_items.items()
     )
     comparison = compare_exact_match(
-        baseline=RecordedAdapter.from_jsonl(baseline_records, baseline_snapshot),
-        candidate=RecordedAdapter.from_jsonl(candidate_records, candidate_snapshot),
+        baseline=RecordedAdapter.from_jsonl(baseline["records"], baseline["snapshot"]),
+        candidate=RecordedAdapter.from_jsonl(candidate["records"], candidate["snapshot"]),
         cases=cases,
         policy=load_policy(POLICY),
         cache=ObservationCache(destination / ".cache"),
         profile=profile,
         slice_keys=("risk",),
-        baseline_adapter_fingerprint=f"polygraphy-tensorrt:{baseline_snapshot.id}",
-        candidate_adapter_fingerprint=f"polygraphy-tensorrt:{candidate_snapshot.id}",
+        baseline_adapter_fingerprint=f"polygraphy-tensorrt:{baseline['snapshot'].id}",
+        candidate_adapter_fingerprint=f"polygraphy-tensorrt:{candidate['snapshot'].id}",
         additional_evidence=references,
         resamples=4_000,
     )
@@ -268,8 +349,10 @@ def _release_comparison(
         release_plan=comparison.plan,
         evidence_manifest=comparison.evidence_manifest,
     )
-    for filename, evidence in evidence_items.values():
+    for _, filename, evidence in evidence_items.values():
         _write_evidence(destination / filename, evidence)
+    for filename, source in retained_files.items():
+        shutil.copy2(source, destination / filename)
     verify_report_bundle(destination, require_complete=True)
     return comparison
 
@@ -304,6 +387,30 @@ def main() -> None:
         for directory in (artifact_output, result_output, recorded_output, report_output):
             directory.mkdir(exist_ok=True)
 
+        build_input_path = arguments.artifacts / "artifact-build-input.json"
+        if not build_input_path.is_file():
+            raise ValueError("artifact builder did not retain artifact-build-input.json")
+        build_input = json.loads(build_input_path.read_text(encoding="utf-8"))
+        if build_input.get("schema_version") != "0.1.0":
+            raise ValueError("artifact build input uses an unsupported schema")
+        build_inputs = {item["build_name"]: item for item in build_input["builds"]}
+        if set(build_inputs) != {item[0] for item in BUILD_SPECS}:
+            raise ValueError("artifact build input does not cover the declared build sequence")
+        source_commit = _git_commit()
+        if build_input.get("source_commit") not in {None, source_commit}:
+            raise ValueError("artifact build input was produced from a different source commit")
+        fixture_artifact = ArtifactDigest(
+            digest=build_input["source_fixture_sha256"],
+            size_bytes=build_input["source_fixture_size_bytes"],
+            logical_name="digits-mlp-fp32.onnx",
+        )
+        source_model_digest = hash_artifact(
+            arguments.artifacts / "build-00-pytorch-fp32.onnx"
+        )
+        shutil.copy2(build_input_path, arguments.output / "artifact-build-input.json")
+        shutil.copy2(arguments.suite, arguments.output / "suite.jsonl")
+        shutil.copy2(POLICY, arguments.output / "policy.yaml")
+
         prepared: list[dict[str, Any]] = []
         with tempfile.TemporaryDirectory(prefix="m2riv-nvidia-") as temporary:
             work = Path(temporary)
@@ -329,7 +436,9 @@ def main() -> None:
                 shutil.copy2(source, onnx_target)
                 shutil.copy2(engine, engine_target)
                 shutil.copy2(raw_results, raw_target)
-                rows, backend_rows, onnx_runner, trt_runner = _result_rows(raw_target, cases)
+                rows, backend_rows, onnx_runner, trt_runner = _result_rows(
+                    raw_target, cases, polygraphy_exit
+                )
                 records = recorded_output / f"{build_name}.jsonl"
                 _write_jsonl(records, rows)
                 runtime = RuntimeProfile(
@@ -372,9 +481,23 @@ def main() -> None:
                     execution_config={"adapter": "polygraphy-onnxrt-oracle-v1"},
                     labels={"build": build_name, "role": "oracle"},
                 )
+                native_evidence = create_tool_native_evidence(
+                    raw_target,
+                    uri="polygraphy-run-results.json",
+                    producer_name="nvidia.polygraphy",
+                    producer_version=receipt["polygraphy_version"],
+                    media_type="application/vnd.nvidia.polygraphy.run-results+json",
+                    purpose="ONNX Runtime and TensorRT comparator-native parity evidence",
+                    exit_code=polygraphy_exit,
+                    runner_names=(onnx_runner, trt_runner),
+                )
                 backend_evidence = create_backend_comparison_evidence(
                     comparator_name="nvidia.polygraphy",
                     comparator_version=receipt["polygraphy_version"],
+                    comparator_exit_code=polygraphy_exit,
+                    baseline_runner=onnx_runner,
+                    candidate_runner=trt_runner,
+                    tool_native_evidence_id=native_evidence.id,
                     baseline_snapshot_id=onnx_snapshot.id,
                     candidate_snapshot_id=engine_snapshot.id,
                     absolute_tolerance=ABSOLUTE_TOLERANCE,
@@ -397,12 +520,97 @@ def main() -> None:
                         ),
                     ),
                 )
+                onnx_digest = hash_artifact(onnx_target)
+                engine_digest = hash_artifact(engine_target)
+                onnx_manifest = create_snapshot_artifact_manifest(
+                    onnx_snapshot,
+                    (
+                        FileDigestBinding(
+                            uri=onnx_target.name,
+                            sha256=onnx_digest.digest,
+                            size_bytes=onnx_digest.size_bytes,
+                            logical_name=onnx_digest.logical_name or onnx_target.name,
+                        ),
+                    ),
+                )
+                engine_manifest = create_snapshot_artifact_manifest(
+                    engine_snapshot,
+                    (
+                        FileDigestBinding(
+                            uri=engine_target.name,
+                            sha256=engine_digest.digest,
+                            size_bytes=engine_digest.size_bytes,
+                            logical_name=engine_digest.logical_name or engine_target.name,
+                        ),
+                    ),
+                )
+                build_definition = build_inputs[build_name]
+                if build_definition["artifact_sha256"] != onnx_digest.digest:
+                    raise RuntimeError(
+                        "retained ONNX artifact differs from its build input manifest"
+                    )
+                artifact_build = create_build_provenance_evidence(
+                    build_name=build_name,
+                    builder_name=build_definition["builder"],
+                    builder_version=build_definition["builder_version"],
+                    source_commit=source_commit,
+                    input_artifacts=(
+                        (
+                            fixture_artifact
+                            if build_name.startswith("build-00")
+                            else source_model_digest
+                        ),
+                    ),
+                    output_artifacts=(onnx_digest,),
+                    output_snapshot_id=onnx_snapshot.id,
+                    parameters={
+                        **build_definition["parameters"],
+                        "build_environment_versions": build_input["versions"],
+                    },
+                    calibration_cohort_digest=(
+                        build_input["calibration_cohort_sha256"]
+                        if build_definition["builder"] == "nvidia-modelopt"
+                        else None
+                    ),
+                )
+                tensorrt_build = create_build_provenance_evidence(
+                    build_name=f"{build_name}-tensorrt",
+                    builder_name="nvidia-tensorrt",
+                    builder_version=receipt["tensorrt_version"],
+                    source_commit=source_commit,
+                    input_artifacts=(onnx_digest,),
+                    output_artifacts=(engine_digest,),
+                    output_snapshot_id=engine_snapshot.id,
+                    parent_build_id=artifact_build.id,
+                    parameters={
+                        "fp16": True,
+                        "int8": int8,
+                        "warmups": arguments.warmups,
+                        "case_count": len(cases),
+                        "absolute_tolerance": ABSOLUTE_TOLERANCE,
+                        "relative_tolerance": RELATIVE_TOLERANCE,
+                    },
+                    limitations=(
+                        (
+                            "TensorRT tactic selection is target-specific and the engine is "
+                            "not portable."
+                        ),
+                    ),
+                )
                 prepared.append(
                     {
                         "name": build_name,
                         "records": records,
                         "snapshot": engine_snapshot,
                         "evidence": backend_evidence,
+                        "native": native_evidence,
+                        "onnx_manifest": onnx_manifest,
+                        "engine_manifest": engine_manifest,
+                        "artifact_build": artifact_build,
+                        "tensorrt_build": tensorrt_build,
+                        "onnx_path": onnx_target,
+                        "engine_path": engine_target,
+                        "raw_results": raw_target,
                         "runtime": runtime,
                         "onnx_runner": onnx_runner,
                         "trt_runner": trt_runner,
@@ -415,14 +623,9 @@ def main() -> None:
         summary: list[dict[str, Any]] = []
         for item in prepared:
             comparison = _release_comparison(
-                build_name=item["name"],
-                baseline_snapshot=baseline["snapshot"],
-                candidate_snapshot=item["snapshot"],
-                baseline_records=baseline["records"],
-                candidate_records=item["records"],
+                baseline=baseline,
+                candidate=item,
                 cases=cases,
-                baseline_evidence=baseline["evidence"],
-                candidate_evidence=item["evidence"],
                 destination=report_output / item["name"],
                 profile=item["runtime"],
             )
@@ -474,10 +677,50 @@ def main() -> None:
                 else None
             ),
         }
-        (arguments.output / "gpu-receipt.json").write_text(
+        gpu_receipt_path = arguments.output / "gpu-receipt.json"
+        gpu_receipt_path.write_text(
             json.dumps(final_receipt, indent=2) + "\n", encoding="utf-8", newline="\n"
         )
-        print(json.dumps(final_receipt, indent=2))
+        target_profile = RuntimeProfile(
+            framework="TensorRT",
+            framework_version=receipt["tensorrt_version"],
+            device=receipt["gpu_name"],
+            operating_system=receipt["operating_system"],
+            architecture=receipt["architecture"],
+            python_version=receipt["python_version"],
+            parameters={
+                "driver_version": receipt["driver_version"],
+                "gpu_memory_mib": receipt["gpu_memory_mib"],
+            },
+        )
+        target_manifest = create_target_evidence_manifest(
+            root=arguments.output,
+            source_commit=source_commit,
+            target_profile=target_profile,
+            tool_versions={
+                "polygraphy": receipt["polygraphy_version"],
+                "tensorrt": receipt["tensorrt_version"],
+                **build_input["versions"],
+            },
+            report_builds=tuple(
+                (item["name"], f"reports/{item['name']}") for item in prepared
+            ),
+            first_bad_build=final_receipt["first_bad_build"],
+        )
+        write_target_evidence_manifest(
+            target_manifest, arguments.output / "target-evidence-manifest.json"
+        )
+        target_verification = verify_target_evidence_manifest(arguments.output)
+        print(
+            json.dumps(
+                {
+                    **final_receipt,
+                    "target_evidence_id": target_verification.target_evidence_id,
+                    "verified_file_count": target_verification.verified_file_count,
+                },
+                indent=2,
+            )
+        )
     except (OSError, RuntimeError, ValueError, StopIteration) as error:
         if arguments.preflight and arguments.allow_missing:
             print(json.dumps({"ready": False, "reason": str(error)}, indent=2))

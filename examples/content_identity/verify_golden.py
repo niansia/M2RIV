@@ -1,4 +1,4 @@
-"""Verify the public M2RIV v1 content-identity vectors using only stdlib."""
+"""Verify the public MCR v1 content-identity vectors using only stdlib."""
 
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ def canonical_json(value: Any) -> bytes:
 
 
 def fingerprint(value: Any, namespace: str) -> str:
-    domain = f"m2riv:{namespace}:v1".encode()
+    domain = f"mcr:{namespace}:v1".encode()
     return hashlib.sha256(domain + b"\0" + canonical_json(value)).hexdigest()
 
 
@@ -55,7 +55,7 @@ def main() -> None:
             raise SystemExit(f"canonical JSON mismatch: {vector['name']}")
         if fingerprint(value, vector["namespace"]) != vector["sha256"]:
             raise SystemExit(f"fingerprint mismatch: {vector['name']}")
-    print(f"verified {len(document['vectors'])} M2RIV v1 identity vectors")
+    print(f"verified {len(document['vectors'])} MCR v1 identity vectors")
 
     float_document = json.loads(FLOAT_VECTORS.read_text(encoding="utf-8"))
     for vector in float_document["vectors"]:

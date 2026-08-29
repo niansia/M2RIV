@@ -265,7 +265,7 @@ def compile_release_plan(
     }
     plan_digest = fingerprint(payload, namespace="release-plan")
     return CompiledReleasePlan(
-        id=f"m2riv:sha256:{plan_digest}",
+        id=f"mcr:sha256:{plan_digest}",
         policy_id=policy.policy_id,
         policy_fingerprint=policy_fingerprint,
         suite_fingerprint=suite_fingerprint,

@@ -1,7 +1,7 @@
 # RFC-0003: Evidence Graph and Claim Strength
 
 - Decision status: Accepted
-- Implementation status: Implemented for MCR 1.3
+- Implementation status: Implemented; identity semantics current in MCR 0.4
 - Target: v0.1
 
 ## Motivation

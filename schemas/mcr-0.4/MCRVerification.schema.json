@@ -1,0 +1,186 @@
+{
+  "$defs": {
+    "EvidenceBodyCoverage": {
+      "additionalProperties": false,
+      "description": "Mutually exclusive coverage classes for every declared evidence body.",
+      "properties": {
+        "coverage": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Coverage",
+          "type": "number"
+        },
+        "declared": {
+          "minimum": 0,
+          "title": "Declared",
+          "type": "integer"
+        },
+        "redacted": {
+          "minimum": 0,
+          "title": "Redacted",
+          "type": "integer"
+        },
+        "remote": {
+          "minimum": 0,
+          "title": "Remote",
+          "type": "integer"
+        },
+        "unavailable": {
+          "minimum": 0,
+          "title": "Unavailable",
+          "type": "integer"
+        },
+        "unrecognized_local": {
+          "minimum": 0,
+          "title": "Unrecognized Local",
+          "type": "integer"
+        },
+        "verified_opaque": {
+          "minimum": 0,
+          "title": "Verified Opaque",
+          "type": "integer"
+        },
+        "verified_structured": {
+          "minimum": 0,
+          "title": "Verified Structured",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "declared",
+        "verified_structured",
+        "verified_opaque",
+        "unavailable",
+        "remote",
+        "redacted",
+        "unrecognized_local",
+        "coverage"
+      ],
+      "title": "EvidenceBodyCoverage",
+      "type": "object"
+    },
+    "MCRStatus": {
+      "enum": [
+        "PASS",
+        "WARN",
+        "BLOCK",
+        "ERROR"
+      ],
+      "title": "MCRStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Machine-readable result from verifying one MCR bundle.",
+  "properties": {
+    "authenticity_verified": {
+      "default": false,
+      "title": "Authenticity Verified",
+      "type": "boolean"
+    },
+    "bundle_component_count": {
+      "minimum": 1,
+      "title": "Bundle Component Count",
+      "type": "integer"
+    },
+    "bundle_verification_complete": {
+      "title": "Bundle Verification Complete",
+      "type": "boolean"
+    },
+    "checks": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 128,
+      "minItems": 1,
+      "title": "Checks",
+      "type": "array"
+    },
+    "decision_status": {
+      "$ref": "#/$defs/MCRStatus"
+    },
+    "evidence_body_coverage": {
+      "$ref": "#/$defs/EvidenceBodyCoverage"
+    },
+    "evidence_id": {
+      "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+      "title": "Evidence Id",
+      "type": "string"
+    },
+    "integrity_valid": {
+      "default": true,
+      "title": "Integrity Valid",
+      "type": "boolean"
+    },
+    "metric_recomputable": {
+      "title": "Metric Recomputable",
+      "type": "boolean"
+    },
+    "observation_bodies_verified": {
+      "title": "Observation Bodies Verified",
+      "type": "boolean"
+    },
+    "report_id": {
+      "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+      "title": "Report Id",
+      "type": "string"
+    },
+    "run_id": {
+      "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "0.2.0",
+      "default": "0.2.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "trust_scope": {
+      "const": "self-consistency-only",
+      "default": "self-consistency-only",
+      "title": "Trust Scope",
+      "type": "string"
+    },
+    "valid": {
+      "default": true,
+      "title": "Valid",
+      "type": "boolean"
+    },
+    "verification_scope": {
+      "const": "report-and-local-bundle",
+      "default": "report-and-local-bundle",
+      "title": "Verification Scope",
+      "type": "string"
+    },
+    "verified_bundle_component_count": {
+      "minimum": 1,
+      "title": "Verified Bundle Component Count",
+      "type": "integer"
+    },
+    "warnings": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 128,
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "bundle_verification_complete",
+    "bundle_component_count",
+    "verified_bundle_component_count",
+    "evidence_body_coverage",
+    "metric_recomputable",
+    "observation_bodies_verified",
+    "report_id",
+    "evidence_id",
+    "run_id",
+    "decision_status",
+    "checks"
+  ],
+  "title": "MCRVerification",
+  "type": "object"
+}

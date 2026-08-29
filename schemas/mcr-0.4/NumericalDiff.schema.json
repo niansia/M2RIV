@@ -1,0 +1,181 @@
+{
+  "$defs": {
+    "TensorNumericalDiff": {
+      "additionalProperties": false,
+      "description": "Aggregated drift for one tensor shared by two executed ONNX graphs.",
+      "properties": {
+        "baseline_dtype": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/+-]{0,255}$",
+          "title": "Baseline Dtype",
+          "type": "string"
+        },
+        "candidate_dtype": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/+-]{0,255}$",
+          "title": "Candidate Dtype",
+          "type": "string"
+        },
+        "cosine_similarity": {
+          "maximum": 1,
+          "minimum": -1,
+          "title": "Cosine Similarity",
+          "type": "number"
+        },
+        "element_count": {
+          "minimum": 1,
+          "title": "Element Count",
+          "type": "integer"
+        },
+        "max_abs_error": {
+          "minimum": 0,
+          "title": "Max Abs Error",
+          "type": "number"
+        },
+        "max_relative_error": {
+          "minimum": 0,
+          "title": "Max Relative Error",
+          "type": "number"
+        },
+        "mean_abs_error": {
+          "minimum": 0,
+          "title": "Mean Abs Error",
+          "type": "number"
+        },
+        "name": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "rmse": {
+          "minimum": 0,
+          "title": "Rmse",
+          "type": "number"
+        },
+        "shape": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "integer"
+              },
+              "maxItems": 32,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shape"
+        },
+        "within_tolerance": {
+          "title": "Within Tolerance",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "baseline_dtype",
+        "candidate_dtype",
+        "element_count",
+        "max_abs_error",
+        "mean_abs_error",
+        "rmse",
+        "max_relative_error",
+        "cosine_similarity",
+        "within_tolerance"
+      ],
+      "title": "TensorNumericalDiff",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Execution-derived per-tensor drift between two self-contained ONNX models.",
+  "properties": {
+    "absolute_tolerance": {
+      "minimum": 0,
+      "title": "Absolute Tolerance",
+      "type": "number"
+    },
+    "baseline_only_tensors": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 4096,
+      "title": "Baseline Only Tensors",
+      "type": "array"
+    },
+    "baseline_profile_id": {
+      "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+      "title": "Baseline Profile Id",
+      "type": "string"
+    },
+    "candidate_only_tensors": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 4096,
+      "title": "Candidate Only Tensors",
+      "type": "array"
+    },
+    "candidate_profile_id": {
+      "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+      "title": "Candidate Profile Id",
+      "type": "string"
+    },
+    "case_count": {
+      "minimum": 1,
+      "title": "Case Count",
+      "type": "integer"
+    },
+    "first_divergent_tensor": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "First Divergent Tensor"
+    },
+    "id": {
+      "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "relative_tolerance": {
+      "minimum": 0,
+      "title": "Relative Tolerance",
+      "type": "number"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "tensors": {
+      "items": {
+        "$ref": "#/$defs/TensorNumericalDiff"
+      },
+      "maxItems": 4096,
+      "minItems": 1,
+      "title": "Tensors",
+      "type": "array"
+    }
+  },
+  "required": [
+    "id",
+    "baseline_profile_id",
+    "candidate_profile_id",
+    "case_count",
+    "absolute_tolerance",
+    "relative_tolerance",
+    "tensors"
+  ],
+  "title": "NumericalDiff",
+  "type": "object"
+}

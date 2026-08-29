@@ -47,7 +47,7 @@ runner = CliRunner()
 
 
 def _content_id(label: str) -> str:
-    return f"m2riv:sha256:{fingerprint(label, namespace='stage4-adversarial')}"
+    return f"mcr:sha256:{fingerprint(label, namespace='stage4-adversarial')}"
 
 
 def _hostile_report(message: str, *, rule_id: str = "hostile-rule"):

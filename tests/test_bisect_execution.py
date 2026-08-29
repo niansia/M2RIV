@@ -103,7 +103,7 @@ def test_bisect_run_executes_selected_artifacts_and_finds_boundary(tmp_path: Pat
     assert json.loads((output / "bisect-result.json").read_text("utf-8")) == payload
 
     blocking_directory = output / "checkpoints" / "000002"
-    report = json.loads((blocking_directory / "m2riv-report.json").read_text("utf-8"))
+    report = json.loads((blocking_directory / "mcr-report.json").read_text("utf-8"))
     evidence_manifest = json.loads(
         (blocking_directory / "evidence-manifest.json").read_text("utf-8")
     )
@@ -111,7 +111,7 @@ def test_bisect_run_executes_selected_artifacts_and_finds_boundary(tmp_path: Pat
     assert all("evidence" not in metric for metric in report["metrics"])
     assert all(metric["evidence_set_id"] for metric in report["metrics"])
     assert len(evidence_manifest["sets"]) < len(report["metrics"])
-    assert (blocking_directory / "m2riv-report.json").stat().st_size < 30_000
+    assert (blocking_directory / "mcr-report.json").stat().st_size < 30_000
 
 
 def test_artifact_manifest_rejects_commands_and_missing_paths(tmp_path: Path) -> None:

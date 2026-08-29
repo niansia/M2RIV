@@ -19,7 +19,12 @@ from m2riv.core.models import (
     RunManifest,
     RuntimeProfile,
 )
-from m2riv.evidence import BackendComparisonEvidence
+from m2riv.evidence import (
+    BackendComparisonEvidence,
+    BuildProvenanceEvidence,
+    SnapshotArtifactManifest,
+    ToolNativeEvidence,
+)
 from m2riv.execution import ExecutorDescriptor
 from m2riv.gate import GateDecision, GatePolicy
 from m2riv.planning import CompiledReleasePlan
@@ -31,6 +36,7 @@ from m2riv.reports.models import (
     ModelChangeReport,
 )
 from m2riv.reports.verify import MCRVerification
+from m2riv.target import TargetEvidenceManifest, TargetEvidenceVerification
 
 PUBLIC_CONTRACTS: tuple[type[BaseModel], ...] = (
     ModelRef,
@@ -57,6 +63,11 @@ PUBLIC_CONTRACTS: tuple[type[BaseModel], ...] = (
     ConsumerConformanceReceipt,
     MCRConformanceResult,
     BackendComparisonEvidence,
+    ToolNativeEvidence,
+    SnapshotArtifactManifest,
+    BuildProvenanceEvidence,
+    TargetEvidenceManifest,
+    TargetEvidenceVerification,
 )
 
 

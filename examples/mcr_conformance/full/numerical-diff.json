@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0.0",
-  "id": "m2riv:sha256:63619275a1dc315b54fa8d2ad61915d94ea06756fe7dbf70abbfeccac0b0f78d",
-  "baseline_profile_id": "m2riv:sha256:15fa2d040d13a08a197aa268e5a1a992f440fcaa7266e630b03d5254019a4516",
-  "candidate_profile_id": "m2riv:sha256:14697e5b0efbae4406d5e8c09fd776dea4cb9eb425a8bf63a67de6d2c0a2e8d7",
+  "id": "mcr:sha256:297ed8da3483233d6e152b63b03160e19c965e24fd35863c394de9aab3707fe7",
+  "baseline_profile_id": "mcr:sha256:e3b031ecf6d746521e368a34d5d4cb892b58a575c8876814d8609dd19915cdac",
+  "candidate_profile_id": "mcr:sha256:8fbe3dbcc24079ec63939d38bb94440a11b3ff32ca476da540caba06f14beeb7",
   "case_count": 2,
   "absolute_tolerance": 0.001,
   "relative_tolerance": 0.001,

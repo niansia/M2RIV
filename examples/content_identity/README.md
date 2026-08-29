@@ -1,7 +1,7 @@
 # Content-identity conformance
 
 `golden-vectors.json` freezes 20 canonical JSON byte strings and SHA-256
-fingerprints for the M2RIV v1 identity algorithm. The suite covers binary64
+fingerprints for the MCR v1 identity algorithm. The suite covers binary64
 edge cases, integer/float distinction, Unicode scalar ordering, typed datetimes,
 paths, sets, escaping, null/default handling, and large integers.
 `float-vectors.json` adds 1,024 exact finite binary64 spellings selected from

@@ -102,7 +102,7 @@ compiler toolchains, and CI providers to produce or consume MCR independently of
 the M2RIV CLI. MCR is therefore the primary abstraction; the CLI is its reference
 implementation and may evolve or be replaced without invalidating the protocol.
 
-MCR schema 1.3 keeps per-observation references out of repeated metric records.
+MCR schema 0.4 keeps per-observation references out of repeated metric records.
 Metrics point to content-addressed `EvidenceSet` objects in an external
 `EvidenceManifest`; the MCR contains only the manifest identity and bounded
 supplemental evidence such as an artifact diff. Bundle persistence verifies every
@@ -117,16 +117,26 @@ is surfaced as an explicit warning rather than silently treated as verified.
 deliberately labeled `self-consistency-only`: without an external producer signature
 or transparency record it cannot establish who created the internally valid bundle.
 
-`m2riv conformance producer` adds a normative PASS/WARN/BLOCK producer profile.
+`m2riv conformance producer` adds normative fixed PASS/WARN/BLOCK/ERROR vectors
+and mandatory negative fixtures.
 `m2riv conformance consumer` verifies a deterministic consumer receipt and proves
-that WARN/BLOCK remain non-authorizing. These checks establish interoperability,
+that WARN/BLOCK/ERROR remain non-authorizing. These checks establish interoperability,
 not model safety or vendor endorsement. The compatibility matrix records dry-run,
 fixture, and live-runtime evidence separately.
 
-The report `id` is a deterministic evidence identity over snapshots, release plan,
+The report `evidence_id` is a deterministic identity over snapshots, release plan,
 stable metrics, finding evidence links, manifest, and supplemental artifacts.
-Timestamp and run-scoped metrics such as wall-clock latency are intentionally
-excluded. `run_id` covers the complete measured execution. Findings point directly
+The report `id` additionally binds the complete decision, preventing PASS and
+BLOCK from sharing a report identity. Timestamp and run-scoped metrics such as
+wall-clock latency are intentionally excluded from `evidence_id`; `run_id` covers
+the complete measured execution. Findings point directly
 to evidence sets, so a consumer never sees an unexplained `BLOCK`. Each execution
 also carries the snapshot runtime profile, including framework/runtime version and
 host platform fields when the adapter can establish them.
+
+Target runs add a second root above individual bundles. Opaque tool-native output
+is hashed before its structured interpretation, snapshot manifests bind identities
+to retained ONNX/engine bytes, build provenance binds inputs and calibration
+parameters, and `TargetEvidenceManifest` covers every retained target byte plus
+every strict report identity. This root detects omissions and archive tampering;
+producer authenticity remains an external attestation concern.

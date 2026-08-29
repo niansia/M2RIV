@@ -1,0 +1,95 @@
+{
+  "schema_version": "0.4.0",
+  "id": "mcr:sha256:e4400f7874abb8b340f471f6d8427fd27bca3cd37131e0e7a574364fcd50a48e",
+  "evidence_id": "mcr:sha256:bfd1f9fccd74ed393d1a4169763a623c749128ea2bb54bf98f1c7519ad485123",
+  "run_id": "mcr:sha256:a15cfece5cfbf886e3e70bba7a02002d9c80f5027a759aab6151713c96ae7129",
+  "created_at": "2026-08-29T00:00:00+00:00",
+  "baseline_snapshot_id": "mcr:sha256:b8390ab243021f2db76f3bb5c046ab4854904694af4e12307db9f4a27949e1ef",
+  "candidate_snapshot_id": "mcr:sha256:9ee8131af5959875b2ab6ab8d0e881651ff42b65c2c3279830d5d961769e3c24",
+  "release_plan_id": "mcr:sha256:26fb14bbf0372e2f98d83e652efebc23906fedc1b4c0d1404c909fc3693bc777",
+  "executions": [
+    {
+      "role": "candidate",
+      "executor_id": "example.independent-producer",
+      "executor_version": "1.0",
+      "config_fingerprint": "4444444444444444444444444444444444444444444444444444444444444444",
+      "runtime_profile": {
+        "seed": 17,
+        "deterministic": true,
+        "repetitions": 1,
+        "framework": "independent-runtime",
+        "framework_version": "1.0",
+        "device": "cpu",
+        "dtype": "float32",
+        "operating_system": "portable-fixture",
+        "architecture": "generic",
+        "python_version": "3.11+",
+        "parameters": {}
+      },
+      "capabilities": [
+        "paired-observations"
+      ],
+      "requested_cases": 2,
+      "returned_observations": 2,
+      "cache_hits": 0
+    }
+  ],
+  "metrics": [
+    {
+      "metric_id": "accuracy",
+      "scope": "overall",
+      "unit": "score",
+      "direction": "higher_is_better",
+      "baseline_value": 1.0,
+      "candidate_value": 0.5,
+      "delta": -0.5,
+      "confidence_level": null,
+      "interval_lower": null,
+      "interval_upper": null,
+      "effect_size": null,
+      "sample_size": 2,
+      "evidence_set_id": "mcr:sha256:5e97b40d0ac562cfa13603911b37d0048de53c29c8bb8c297736ca86cad62688",
+      "identity_scope": "evidence"
+    }
+  ],
+  "decision": {
+    "status": "BLOCK",
+    "allowed": false,
+    "findings": [
+      {
+        "rule_id": "accuracy-floor",
+        "status": "BLOCK",
+        "message": "independent fixture crosses the declared accuracy floor",
+        "metric_id": "accuracy",
+        "evidence": [],
+        "evidence_set_id": "mcr:sha256:5e97b40d0ac562cfa13603911b37d0048de53c29c8bb8c297736ca86cad62688"
+      }
+    ]
+  },
+  "evidence_manifest": {
+    "id": "mcr:sha256:1ebe54a3f13c64cf3481a9a6e15a3d029e212b02e233bb21e231fbd7a5b42229",
+    "uri": "evidence-manifest.json",
+    "media_type": "application/vnd.model-change-report.evidence-manifest+json",
+    "evidence_count": 2,
+    "set_count": 1
+  },
+  "evidence": [
+    {
+      "id": "mcr:sha256:bf10da3a977e6a67bf77b0a7366306f358580629733e903dbe46cdb74c690587",
+      "kind": "artifact-diff",
+      "media_type": "application/json",
+      "uri": "artifact-diff.json",
+      "redacted": false
+    },
+    {
+      "id": "mcr:sha256:297ed8da3483233d6e152b63b03160e19c965e24fd35863c394de9aab3707fe7",
+      "kind": "numerical-diff",
+      "media_type": "application/json",
+      "uri": "numerical-diff.json",
+      "redacted": false
+    }
+  ],
+  "limitations": [
+    "Conformance evidence only; no model was executed."
+  ]
+}

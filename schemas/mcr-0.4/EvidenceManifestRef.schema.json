@@ -1,0 +1,41 @@
+{
+  "additionalProperties": false,
+  "description": "Bounded MCR pointer to an external evidence manifest.",
+  "properties": {
+    "evidence_count": {
+      "minimum": 1,
+      "title": "Evidence Count",
+      "type": "integer"
+    },
+    "id": {
+      "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "media_type": {
+      "const": "application/vnd.model-change-report.evidence-manifest+json",
+      "default": "application/vnd.model-change-report.evidence-manifest+json",
+      "title": "Media Type",
+      "type": "string"
+    },
+    "set_count": {
+      "minimum": 1,
+      "title": "Set Count",
+      "type": "integer"
+    },
+    "uri": {
+      "default": "evidence-manifest.json",
+      "maxLength": 2048,
+      "minLength": 1,
+      "title": "Uri",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "evidence_count",
+    "set_count"
+  ],
+  "title": "EvidenceManifestRef",
+  "type": "object"
+}

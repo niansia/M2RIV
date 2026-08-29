@@ -454,7 +454,7 @@ class OpenAICompatibleAdapter:
             "source_mutability": "provider-managed",
         }
         self._snapshot = ModelSnapshot(
-            id=f"m2riv:sha256:{snapshot_digest}",
+            id=f"mcr:sha256:{snapshot_digest}",
             source=ModelRef(
                 uri=f"openai-compatible:{self._endpoint}",
                 revision=self._deployment_revision,

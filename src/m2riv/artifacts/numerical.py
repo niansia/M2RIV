@@ -315,4 +315,4 @@ def compare_onnx_numerics(
         "first_divergent_tensor": first_divergent,
     }
     identifier = fingerprint(payload, namespace="onnx-numerical-diff")
-    return NumericalDiff(id=f"m2riv:sha256:{identifier}", **payload)
+    return NumericalDiff(id=f"mcr:sha256:{identifier}", **payload)

@@ -57,13 +57,19 @@ def _from_polygraphy(
     available = set(results.keys())
     if baseline_runner not in available or candidate_runner not in available:
         raise ValueError(f"requested runners are unavailable; found: {sorted(available)}")
-    selected = RunResults()
-    selected.update({baseline_runner: results[baseline_runner]})
-    selected.update({candidate_runner: results[candidate_runner]})
-    comparisons = Comparator.compare_accuracy(
+    selected = RunResults(
+        [
+            (baseline_runner, results[baseline_runner]),
+            (candidate_runner, results[candidate_runner]),
+        ]
+    )
+    comparison_results = Comparator.compare_accuracy(
         selected,
         compare_func=CompareFunc.simple(atol=absolute_tolerance, rtol=relative_tolerance),
     )
+    if len(comparison_results) != 1:
+        raise ValueError("Polygraphy returned an unexpected comparator result count")
+    comparisons = comparison_results[0]
     pair = (baseline_runner, candidate_runner)
     if pair not in comparisons:
         raise ValueError("Polygraphy did not produce the requested runner-pair comparison")

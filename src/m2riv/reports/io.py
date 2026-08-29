@@ -110,7 +110,11 @@ def write_report_bundle(
         limitations=report.limitations,
         created_at=report.created_at,
     )
-    if canonical_report.id != report.id or canonical_report.run_id != report.run_id:
+    if (
+        canonical_report.id != report.id
+        or canonical_report.evidence_id != report.evidence_id
+        or canonical_report.run_id != report.run_id
+    ):
         raise ValueError("MCR identity does not match its contents")
     if release_plan is not None and report.release_plan_id != release_plan.id:
         raise ValueError("release plan identity does not match the MCR reference")
@@ -152,7 +156,7 @@ def write_report_bundle(
         _atomic_write_text(
             evidence_manifest_path, evidence_manifest.model_dump_json(indent=2) + "\n"
         )
-    json_path = destination / "m2riv-report.json"
+    json_path = destination / "mcr-report.json"
     markdown_path = destination / "summary.md"
     junit_path = destination / "junit.xml"
     sarif_path = destination / "results.sarif"

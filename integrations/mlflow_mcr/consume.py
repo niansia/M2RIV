@@ -25,14 +25,14 @@ def _canonical_json(value: Any) -> bytes:
 
 def _fingerprint(value: Any, *, namespace: str) -> str:
     digest = hashlib.sha256()
-    digest.update(f"m2riv:{namespace}:v1".encode())
+    digest.update(f"mcr:{namespace}:v1".encode())
     digest.update(b"\x00")
     digest.update(_canonical_json(value))
     return digest.hexdigest()
 
 
 def _load_report(source: Path) -> dict[str, Any]:
-    path = source / "m2riv-report.json" if source.is_dir() else source
+    path = source / "mcr-report.json" if source.is_dir() else source
     if path.stat().st_size > MAX_REPORT_BYTES:
         raise ValueError("MCR report exceeds the consumer size limit")
     payload = json.loads(path.read_text(encoding="utf-8"))
@@ -52,7 +52,7 @@ def _verify(source: Path, command: str) -> dict[str, Any]:
     if completed.returncode != 0:
         raise ValueError(f"MCR verification failed: {completed.stdout.strip()}")
     result = json.loads(completed.stdout)
-    if not result.get("valid") or not result.get("verification_complete"):
+    if not result.get("valid") or not result.get("bundle_verification_complete"):
         raise ValueError("MCR verifier did not establish complete local self-consistency")
     return result
 
@@ -60,12 +60,17 @@ def _verify(source: Path, command: str) -> dict[str, Any]:
 def _log_plan(report: dict[str, Any], verification: dict[str, Any], source: Path) -> dict[str, Any]:
     tags = {
         "mcr.report_id": report["id"],
+        "mcr.evidence_id": report["evidence_id"],
         "mcr.run_id": report["run_id"],
         "mcr.schema_version": report["schema_version"],
         "mcr.decision_status": report["decision"]["status"],
         "mcr.release_allowed": str(report["decision"]["allowed"]).lower(),
         "mcr.verification_scope": verification["trust_scope"],
         "mcr.authenticity_verified": str(verification["authenticity_verified"]).lower(),
+        "mcr.evidence_body_coverage": str(
+            verification["evidence_body_coverage"]["coverage"]
+        ),
+        "mcr.metric_recomputable": str(verification["metric_recomputable"]).lower(),
     }
     metrics: dict[str, float] = {}
     for metric in report.get("metrics", []):
@@ -78,26 +83,27 @@ def _log_plan(report: dict[str, Any], verification: dict[str, Any], source: Path
 
 def _emit_receipt(fixtures: Path, output: Path) -> None:
     profiles = []
-    for name in ("pass", "warn", "block"):
+    for name in ("pass", "warn", "block", "error"):
         report = _load_report(fixtures / name)
         status = report["decision"]["status"]
         profiles.append(
             {
                 "profile": name,
                 "report_id": report["id"],
+                "evidence_id": report["evidence_id"],
                 "decision_status": status,
                 "release_authorized": status == "PASS",
             }
         )
     payload = {
-        "schema_version": "1.0.0",
+        "schema_version": "0.2.0",
         "implementation_name": "m2riv.mlflow-consumer",
         "implementation_version": "1.0.0",
         "profiles": profiles,
     }
     receipt = {
         "schema_version": payload["schema_version"],
-        "id": f"m2riv:sha256:{_fingerprint(payload, namespace='mcr-consumer-receipt')}",
+        "id": f"mcr:sha256:{_fingerprint(payload, namespace='mcr-consumer-receipt')}",
         "implementation_name": payload["implementation_name"],
         "implementation_version": payload["implementation_version"],
         "profiles": profiles,

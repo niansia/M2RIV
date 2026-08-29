@@ -12,7 +12,7 @@ from m2riv.core.models import EvalCase, Observation, RetentionMode, RuntimeProfi
 
 
 def _content_id(label: str) -> str:
-    return f"m2riv:sha256:{fingerprint(label, namespace='adversarial-test')}"
+    return f"mcr:sha256:{fingerprint(label, namespace='adversarial-test')}"
 
 
 def _observation(**overrides: object) -> Observation:

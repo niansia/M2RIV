@@ -21,7 +21,7 @@ from m2riv.core.models import (
 
 
 def content_id(label: str) -> str:
-    return f"m2riv:sha256:{fingerprint(label, namespace='test')}"
+    return f"mcr:sha256:{fingerprint(label, namespace='test')}"
 
 
 @pytest.mark.parametrize(

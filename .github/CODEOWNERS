@@ -5,5 +5,8 @@
 /src/m2riv/core/ @niansia
 /src/m2riv/gate/ @niansia
 /src/m2riv/reports/ @niansia
+/src/m2riv/evidence.py @niansia
+/src/m2riv/target.py @niansia
 /rfcs/ @niansia
+/docs/mcr-*.md @niansia
 /.github/workflows/ @niansia

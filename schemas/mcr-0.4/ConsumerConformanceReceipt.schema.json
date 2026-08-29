@@ -1,0 +1,98 @@
+{
+  "$defs": {
+    "ConformanceProfile": {
+      "additionalProperties": false,
+      "description": "One normative four-state interoperability observation.",
+      "properties": {
+        "decision_status": {
+          "$ref": "#/$defs/MCRStatus"
+        },
+        "evidence_id": {
+          "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "profile": {
+          "enum": [
+            "pass",
+            "warn",
+            "block",
+            "error"
+          ],
+          "title": "Profile",
+          "type": "string"
+        },
+        "release_authorized": {
+          "title": "Release Authorized",
+          "type": "boolean"
+        },
+        "report_id": {
+          "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+          "title": "Report Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "profile",
+        "report_id",
+        "evidence_id",
+        "decision_status",
+        "release_authorized"
+      ],
+      "title": "ConformanceProfile",
+      "type": "object"
+    },
+    "MCRStatus": {
+      "enum": [
+        "PASS",
+        "WARN",
+        "BLOCK",
+        "ERROR"
+      ],
+      "title": "MCRStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Portable receipt emitted by an MCR consumer over the normative fixtures.",
+  "properties": {
+    "id": {
+      "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "implementation_name": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+      "title": "Implementation Name",
+      "type": "string"
+    },
+    "implementation_version": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9.+_-]{0,63}$",
+      "title": "Implementation Version",
+      "type": "string"
+    },
+    "profiles": {
+      "items": {
+        "$ref": "#/$defs/ConformanceProfile"
+      },
+      "maxItems": 4,
+      "minItems": 4,
+      "title": "Profiles",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "0.2.0",
+      "default": "0.2.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "implementation_name",
+    "implementation_version",
+    "profiles"
+  ],
+  "title": "ConsumerConformanceReceipt",
+  "type": "object"
+}

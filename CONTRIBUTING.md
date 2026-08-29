@@ -14,6 +14,13 @@ For code changes:
 4. Do not add telemetry, remote execution, or untrusted-code loading by default.
 5. Treat public schemas, report formats, and plugin contracts as compatibility
    boundaries.
+6. Run MCR conformance and cross-language identity checks for protocol changes.
+7. Add migration and protocol-changelog entries for any breaking public change.
+
+See [SUPPORT.md](SUPPORT.md) for issue routing,
+[docs/protocol-governance.md](docs/protocol-governance.md) for MCR changes, and
+[docs/external-reproduction-guide.md](docs/external-reproduction-guide.md) for
+corpus or GPU evidence.
 
 Plugin contributions must also document their trust boundary, non-secret config
 identity, capabilities, resource limits, failure semantics, and which evidence

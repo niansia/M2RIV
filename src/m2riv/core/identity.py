@@ -73,7 +73,7 @@ def fingerprint(value: Any, *, namespace: str) -> str:
     if not namespace or "\x00" in namespace:
         raise ValueError("namespace must be non-empty and contain no NUL bytes")
     digest = hashlib.sha256()
-    digest.update(f"m2riv:{namespace}:v1".encode())
+    digest.update(f"mcr:{namespace}:v1".encode())
     digest.update(b"\x00")
     digest.update(canonical_json(value))
     return digest.hexdigest()
@@ -102,7 +102,7 @@ def observation_content_id(
         },
         namespace="observation",
     )
-    return f"m2riv:sha256:{digest}"
+    return f"mcr:sha256:{digest}"
 
 
 def _hash_file(path: Path, *, max_bytes: int) -> tuple[str, int]:
@@ -327,7 +327,7 @@ def build_snapshot_from_artifact_digest(
     }
     snapshot_digest = fingerprint(identity_payload, namespace="model-snapshot")
     return ModelSnapshot(
-        id=f"m2riv:sha256:{snapshot_digest}",
+        id=f"mcr:sha256:{snapshot_digest}",
         source=ModelRef(uri=source_uri),
         model_family=model_family,
         artifact_hashes=(artifact_digest,),

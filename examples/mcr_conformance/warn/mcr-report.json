@@ -1,0 +1,74 @@
+{
+  "schema_version": "0.4.0",
+  "id": "mcr:sha256:57ccd1c93c1764fbc1e3d94a2504bab3b7ca959dbfb1b63c42d1119cd9419a62",
+  "evidence_id": "mcr:sha256:bedfab7eb1e857372afe199935c703294dc8764704f7e1d1ebfd9af2e035beb8",
+  "run_id": "mcr:sha256:657ddeb92089594a2706393484bf3b30e4c3461977fdca852a49a62eb4c70f4a",
+  "created_at": "2026-08-29T00:00:00Z",
+  "baseline_snapshot_id": "mcr:sha256:9e1fbc7be08e54bfa4f7831030f0919bf8985adeddce672ce530f19abfd4c10a",
+  "candidate_snapshot_id": "mcr:sha256:301a0928f995e42a9f5b13b4309f1c1769907bcfbc5d51d6845f9b7a28b7deb8",
+  "release_plan_id": null,
+  "executions": [
+    {
+      "role": "candidate",
+      "executor_id": "example.external-producer",
+      "executor_version": "1.0",
+      "config_fingerprint": "e624b0ae57fc493e7477549fc9eaf7c70092c5dcd988aba441461c40e84cc04c",
+      "runtime_profile": {
+        "seed": 0,
+        "deterministic": true,
+        "repetitions": 1,
+        "framework": "fixture-runtime",
+        "framework_version": "1.0",
+        "device": "cpu",
+        "dtype": null,
+        "operating_system": "portable-fixture",
+        "architecture": "generic",
+        "python_version": "3.11+",
+        "parameters": {}
+      },
+      "capabilities": [
+        "paired-observations"
+      ],
+      "requested_cases": 10,
+      "returned_observations": 10,
+      "cache_hits": 0
+    }
+  ],
+  "metrics": [
+    {
+      "metric_id": "accuracy",
+      "scope": "overall",
+      "unit": "score",
+      "direction": "higher_is_better",
+      "baseline_value": 0.9,
+      "candidate_value": 0.88,
+      "delta": -0.02,
+      "confidence_level": null,
+      "interval_lower": null,
+      "interval_upper": null,
+      "effect_size": null,
+      "sample_size": 10,
+      "evidence_set_id": null,
+      "identity_scope": "evidence"
+    }
+  ],
+  "decision": {
+    "status": "WARN",
+    "allowed": false,
+    "findings": [
+      {
+        "rule_id": "accuracy-floor",
+        "status": "WARN",
+        "message": "external producer fixture: WARN",
+        "metric_id": "accuracy",
+        "evidence": [],
+        "evidence_set_id": null
+      }
+    ]
+  },
+  "evidence_manifest": null,
+  "evidence": [],
+  "limitations": [
+    "Minimal external-producer conformance fixture; no model was run."
+  ]
+}

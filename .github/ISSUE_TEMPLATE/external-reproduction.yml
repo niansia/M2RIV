@@ -1,0 +1,44 @@
+name: External reproduction
+description: Submit an independently executed corpus or target-GPU result
+title: "[Reproduction]: "
+labels: ["reproduction", "evidence"]
+body:
+  - type: input
+    id: source
+    attributes:
+      label: Source commit
+    validations:
+      required: true
+  - type: input
+    id: target
+    attributes:
+      label: Hardware, runtime, and driver
+    validations:
+      required: true
+  - type: input
+    id: root
+    attributes:
+      label: Target evidence ID and archive SHA-256
+    validations:
+      required: true
+  - type: textarea
+    id: commands
+    attributes:
+      label: Commands and verification results
+    validations:
+      required: true
+  - type: textarea
+    id: deviations
+    attributes:
+      label: Deviations, unavailable fields, and limitations
+    validations:
+      required: true
+  - type: checkboxes
+    id: independence
+    attributes:
+      label: Independence
+      options:
+        - label: I controlled the execution environment and did not reuse the project's generated evidence archive.
+          required: true
+        - label: No credentials, proprietary artifacts, or private model outputs are attached.
+          required: true

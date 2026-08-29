@@ -1,0 +1,168 @@
+{
+  "$defs": {
+    "ArtifactDigest": {
+      "additionalProperties": false,
+      "description": "Digest and metadata for a local artifact without location-dependent identity.",
+      "properties": {
+        "algorithm": {
+          "const": "sha256",
+          "default": "sha256",
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "digest": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "file_count": {
+          "default": 1,
+          "minimum": 1,
+          "title": "File Count",
+          "type": "integer"
+        },
+        "logical_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Logical Name"
+        },
+        "size_bytes": {
+          "minimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "digest",
+        "size_bytes"
+      ],
+      "title": "ArtifactDigest",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Content-addressed build recipe and artifact transition evidence.",
+  "properties": {
+    "build_name": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Build Name",
+      "type": "string"
+    },
+    "builder_name": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+      "title": "Builder Name",
+      "type": "string"
+    },
+    "builder_version": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9.+_-]{0,63}$",
+      "title": "Builder Version",
+      "type": "string"
+    },
+    "calibration_cohort_digest": {
+      "anyOf": [
+        {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Calibration Cohort Digest"
+    },
+    "id": {
+      "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "input_artifacts": {
+      "items": {
+        "$ref": "#/$defs/ArtifactDigest"
+      },
+      "maxItems": 128,
+      "minItems": 1,
+      "title": "Input Artifacts",
+      "type": "array"
+    },
+    "limitations": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 64,
+      "title": "Limitations",
+      "type": "array"
+    },
+    "output_artifacts": {
+      "items": {
+        "$ref": "#/$defs/ArtifactDigest"
+      },
+      "maxItems": 128,
+      "minItems": 1,
+      "title": "Output Artifacts",
+      "type": "array"
+    },
+    "output_snapshot_id": {
+      "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+      "title": "Output Snapshot Id",
+      "type": "string"
+    },
+    "parameters": {
+      "additionalProperties": true,
+      "title": "Parameters",
+      "type": "object"
+    },
+    "parent_build_id": {
+      "anyOf": [
+        {
+          "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Parent Build Id"
+    },
+    "schema_version": {
+      "const": "0.1.0",
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_commit": {
+      "anyOf": [
+        {
+          "pattern": "^[a-f0-9]{40,64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Commit"
+    }
+  },
+  "required": [
+    "id",
+    "build_name",
+    "builder_name",
+    "builder_version",
+    "input_artifacts",
+    "output_artifacts",
+    "output_snapshot_id"
+  ],
+  "title": "BuildProvenanceEvidence",
+  "type": "object"
+}

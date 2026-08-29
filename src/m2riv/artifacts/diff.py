@@ -125,7 +125,7 @@ def compare_artifacts(baseline: ArtifactProfile, candidate: ArtifactProfile) -> 
     }
     diff_id = fingerprint(payload, namespace="artifact-diff")
     return ArtifactDiff(
-        id=f"m2riv:sha256:{diff_id}",
+        id=f"mcr:sha256:{diff_id}",
         baseline_profile_id=baseline.id,
         candidate_profile_id=candidate.id,
         artifact_changed=baseline.artifact.digest != candidate.artifact.digest,

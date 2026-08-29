@@ -386,7 +386,7 @@ def inspect_artifact(
     }
     profile_id = fingerprint(payload, namespace="artifact-profile")
     return ArtifactProfile(
-        id=f"m2riv:sha256:{profile_id}",
+        id=f"mcr:sha256:{profile_id}",
         format=artifact_format,
         artifact=artifact,
         components=components,

@@ -24,7 +24,11 @@ documentation, and examples. The gate requires:
    search, model hubs, and relevant domains;
 3. professional trademark review in intended markets;
 4. a written comparison against at least three cleared alternatives;
-5. an explicit migration decision for the `m2riv:sha256:` protocol namespace.
+5. confirmation that product renaming does not alter the protocol-owned
+   `mcr:sha256:` namespace adopted by RFC 0015.
+
+The protocol-namespace portion of this gate is complete. Product/package/CLI
+branding still requires the owner clearance above.
 
 Stars, public integrations, or a stable MCR consumer must not be accumulated under
 a name that has not passed this gate. The current decision avoids replacing one

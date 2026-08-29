@@ -1,0 +1,269 @@
+{
+  "$defs": {
+    "FileDigestBinding": {
+      "additionalProperties": false,
+      "description": "Portable location plus digest for one retained regular file.",
+      "properties": {
+        "logical_name": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Logical Name",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "size_bytes": {
+          "minimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        },
+        "uri": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Uri",
+          "type": "string"
+        }
+      },
+      "required": [
+        "uri",
+        "sha256",
+        "size_bytes",
+        "logical_name"
+      ],
+      "title": "FileDigestBinding",
+      "type": "object"
+    },
+    "RuntimeProfile": {
+      "additionalProperties": false,
+      "description": "Execution-relevant settings that participate in snapshot identity.",
+      "properties": {
+        "architecture": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Architecture"
+        },
+        "deterministic": {
+          "default": true,
+          "title": "Deterministic",
+          "type": "boolean"
+        },
+        "device": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Device"
+        },
+        "dtype": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dtype"
+        },
+        "framework": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Framework"
+        },
+        "framework_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Framework Version"
+        },
+        "operating_system": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Operating System"
+        },
+        "parameters": {
+          "additionalProperties": true,
+          "title": "Parameters",
+          "type": "object"
+        },
+        "python_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Python Version"
+        },
+        "repetitions": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Repetitions",
+          "type": "integer"
+        },
+        "seed": {
+          "default": 0,
+          "title": "Seed",
+          "type": "integer"
+        }
+      },
+      "title": "RuntimeProfile",
+      "type": "object"
+    },
+    "TargetReportBinding": {
+      "additionalProperties": false,
+      "description": "One strictly verified MCR bundle retained below the target root.",
+      "properties": {
+        "build_name": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Build Name",
+          "type": "string"
+        },
+        "directory": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Directory",
+          "type": "string"
+        },
+        "evidence_id": {
+          "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "report_id": {
+          "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+          "title": "Report Id",
+          "type": "string"
+        },
+        "run_id": {
+          "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+          "title": "Run Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "build_name",
+        "directory",
+        "report_id",
+        "evidence_id",
+        "run_id"
+      ],
+      "title": "TargetReportBinding",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One root identity covering every retained target evidence byte.",
+  "properties": {
+    "files": {
+      "items": {
+        "$ref": "#/$defs/FileDigestBinding"
+      },
+      "maxItems": 100000,
+      "minItems": 1,
+      "title": "Files",
+      "type": "array"
+    },
+    "first_bad_build": {
+      "anyOf": [
+        {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "First Bad Build"
+    },
+    "id": {
+      "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "reports": {
+      "items": {
+        "$ref": "#/$defs/TargetReportBinding"
+      },
+      "maxItems": 10000,
+      "minItems": 1,
+      "title": "Reports",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "0.1.0",
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_commit": {
+      "pattern": "^[a-f0-9]{40,64}$",
+      "title": "Source Commit",
+      "type": "string"
+    },
+    "target_profile": {
+      "$ref": "#/$defs/RuntimeProfile"
+    },
+    "tool_versions": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "maxProperties": 128,
+      "minProperties": 1,
+      "title": "Tool Versions",
+      "type": "object"
+    }
+  },
+  "required": [
+    "id",
+    "source_commit",
+    "target_profile",
+    "tool_versions",
+    "files",
+    "reports"
+  ],
+  "title": "TargetEvidenceManifest",
+  "type": "object"
+}

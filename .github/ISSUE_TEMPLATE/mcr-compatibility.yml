@@ -1,0 +1,40 @@
+name: MCR compatibility report
+description: Report a producer, consumer, schema, or identity interoperability issue
+title: "[MCR compatibility]: "
+labels: ["compatibility", "mcr"]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include private evidence or vulnerability details.
+  - type: input
+    id: implementation
+    attributes:
+      label: Implementation and revision
+    validations:
+      required: true
+  - type: input
+    id: mcr_version
+    attributes:
+      label: Exact MCR version
+    validations:
+      required: true
+  - type: dropdown
+    id: role
+    attributes:
+      label: Role
+      options: [Producer, Consumer, Verifier, Identity implementation]
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Sanitized command and output
+      description: Include exit code and smallest public fixture or receipt.
+    validations:
+      required: true
+  - type: textarea
+    id: mismatch
+    attributes:
+      label: Expected and observed semantics
+    validations:
+      required: true

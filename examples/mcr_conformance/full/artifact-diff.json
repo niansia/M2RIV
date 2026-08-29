@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0.0",
-  "id": "m2riv:sha256:dfc326d36dadabd58a5fdfe615355f05e7fa5d22946ed64fb334bdd548d7be03",
-  "baseline_profile_id": "m2riv:sha256:15fa2d040d13a08a197aa268e5a1a992f440fcaa7266e630b03d5254019a4516",
-  "candidate_profile_id": "m2riv:sha256:14697e5b0efbae4406d5e8c09fd776dea4cb9eb425a8bf63a67de6d2c0a2e8d7",
+  "id": "mcr:sha256:bf10da3a977e6a67bf77b0a7366306f358580629733e903dbe46cdb74c690587",
+  "baseline_profile_id": "mcr:sha256:e3b031ecf6d746521e368a34d5d4cb892b58a575c8876814d8609dd19915cdac",
+  "candidate_profile_id": "mcr:sha256:8fbe3dbcc24079ec63939d38bb94440a11b3ff32ca476da540caba06f14beeb7",
   "artifact_changed": true,
   "format_changed": false,
   "size_delta_bytes": -128,

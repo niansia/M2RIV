@@ -1,0 +1,123 @@
+{
+  "$defs": {
+    "FileDigestBinding": {
+      "additionalProperties": false,
+      "description": "Portable location plus digest for one retained regular file.",
+      "properties": {
+        "logical_name": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Logical Name",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "size_bytes": {
+          "minimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        },
+        "uri": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Uri",
+          "type": "string"
+        }
+      },
+      "required": [
+        "uri",
+        "sha256",
+        "size_bytes",
+        "logical_name"
+      ],
+      "title": "FileDigestBinding",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Opaque vendor/tool evidence retained byte-for-byte and content-bound.",
+  "properties": {
+    "body": {
+      "$ref": "#/$defs/FileDigestBinding"
+    },
+    "exit_code": {
+      "anyOf": [
+        {
+          "maximum": 255,
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Exit Code"
+    },
+    "id": {
+      "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "limitations": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 64,
+      "title": "Limitations",
+      "type": "array"
+    },
+    "media_type": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Media Type",
+      "type": "string"
+    },
+    "producer_name": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+      "title": "Producer Name",
+      "type": "string"
+    },
+    "producer_version": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9.+_-]{0,63}$",
+      "title": "Producer Version",
+      "type": "string"
+    },
+    "purpose": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Purpose",
+      "type": "string"
+    },
+    "runner_names": {
+      "default": [],
+      "items": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$",
+        "type": "string"
+      },
+      "maxItems": 32,
+      "title": "Runner Names",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "0.1.0",
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "producer_name",
+    "producer_version",
+    "media_type",
+    "purpose",
+    "body"
+  ],
+  "title": "ToolNativeEvidence",
+  "type": "object"
+}

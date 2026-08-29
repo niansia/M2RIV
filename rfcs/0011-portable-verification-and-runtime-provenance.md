@@ -1,8 +1,8 @@
 # RFC 0011: Portable MCR verification and runtime provenance
 
 - Decision status: Accepted
-- Implementation status: Implemented for MCR 1.3
-- Contract impact: Model Change Report 1.3; MCRVerification 1.2
+- Implementation status: Implemented; verification semantics extended by RFC 0015
+- Contract impact: Historical MCR 1.3; current MCR 0.4 and MCRVerification 0.2
 
 ## Problem
 
@@ -12,7 +12,7 @@ without the report exposing enough host/runtime information to compare runs.
 
 ## Decision
 
-MCR 1.3 adds an optional `runtime_profile` to each baseline/candidate execution.
+MCR adds an optional `runtime_profile` to each baseline/candidate execution.
 Adapters record framework/runtime version, operating system, architecture, Python
 version, device, and dtype when those values can be established. These fields are
 run provenance and participate in `run_id`; snapshot construction may also include
@@ -21,7 +21,7 @@ them when the runtime is part of the executable model state.
 `m2riv mcr verify` is a producer-neutral, inference-free verifier. It validates
 the strict report contract and recomputes:
 
-1. stable evidence `id` and volatile `run_id`;
+1. stable `evidence_id`, decision-bound report `id`, and volatile `run_id`;
 2. evidence-manifest and evidence-set identities;
 3. every metric/finding set reference;
 4. a present compiled release-plan identity; and
@@ -31,15 +31,12 @@ Remote, redacted, missing optional, or unknown supplemental bodies are never
 silently promoted to verified content. Verifiable omissions produce warnings;
 identity or contract mismatches fail the bundle.
 
-MCRVerification 1.1 separates integrity from completeness. `integrity_valid`
-states that every check actually performed succeeded; `verification_complete`
-states that the report and every referenced local bundle component were rehashed
-without warnings. Verified and unverified supplemental-evidence counts make a
-partial result machine-visible instead of requiring consumers to infer it from
-warning prose. The verification scope is explicitly `report-and-local-bundle`;
-the verifier does not fetch remote evidence or execute a model.
+MCRVerification 0.2 separates integrity, local bundle completeness, evidence-body
+coverage, observation-body verification, and metric recomputability. A partial
+result is machine-visible instead of inferred from warning prose. The verifier
+does not fetch remote evidence or execute a model.
 
-MCRVerification 1.2 makes the trust boundary machine-readable. A locally valid
+A locally valid
 bundle reports `trust_scope: self-consistency-only` and
 `authenticity_verified: false`. Recomputing unkeyed content identities proves that
 the bundle is internally self-consistent; it does not prove who produced it or
@@ -48,7 +45,5 @@ completeness warning fatal, but it does not change this authenticity boundary.
 
 ## Compatibility
 
-The runtime profile field is optional, so an MCR 1.2 producer can migrate without
-inventing provenance. The schema minor version changes because strict consumers
-must explicitly accept the new execution field. MCR 1.2 remains a historical
-contract; the current CLI emits MCR 1.3.
+Legacy 1.2/1.3 bundles remain historical contracts. Current tooling emits MCR 0.4
+and requires regeneration under the migration procedure in RFC 0015.

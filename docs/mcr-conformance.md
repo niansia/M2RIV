@@ -1,28 +1,36 @@
 # MCR conformance suite
 
-Conformance is an executable interoperability claim, not a logo or a claim that
-a model is safe. The normative suite contains exact `PASS`, `WARN`, and `BLOCK`
-profiles plus a full cross-language identity bundle.
+Conformance is an executable interoperability claim, not a logo, authenticity
+claim, or proof that a model is safe. MCR 0.4 replaces arbitrary self-consistent
+fixtures with fixed semantic/content vectors and mandatory rejection tests.
 
 ## Producer profile
 
-An implementation emits the three fixture directories. The command verifies
-each MCR strictly, recomputes every available identity, checks the expected
-decision, and requires complete local evidence:
+The normative suite contains exact `PASS`, `WARN`, `BLOCK`, and `ERROR` reports.
+The command verifies each fixture strictly, recomputes report/evidence/run IDs,
+compares the entire normalized report to the fixed vector, and requires all four
+decision states:
 
 ```console
 m2riv conformance producer examples/mcr_conformance
 ```
 
-Success means the producer can emit structurally and semantically compatible
-MCR 1.3 evidence for the normative profiles. It does not prove inference,
-authenticity, performance, or security beyond those fixtures.
+The same profile MUST reject four negative fixtures:
+
+- `tampered-id`: content changed without the corresponding identity;
+- `missing-evidence`: a required body is absent;
+- `unknown-version`: the envelope version is unsupported;
+- `decision-mismatch`: the decision no longer matches the normative vector.
+
+Success means the producer interoperates with the exercised MCR 0.4 profile. It
+does not prove inference, producer identity, security beyond the fixtures, or live
+execution against an external runtime.
 
 ## Consumer profile
 
-A consumer reads the same fixtures and emits a
-`ConsumerConformanceReceipt`. Each observation preserves the report ID and
-decision. Only PASS may set `release_authorized: true`.
+A consumer reads all four normative fixtures and emits a deterministic
+`ConsumerConformanceReceipt`. Every observation preserves profile, report ID,
+evidence ID, decision, and authorization. Only PASS may authorize release.
 
 ```console
 python integrations/mlflow_mcr/consume.py --emit-conformance-receipt \
@@ -32,13 +40,13 @@ m2riv conformance consumer integrations/mlflow_mcr/consumer-receipt.json \
 ```
 
 The verifier rehashes the receipt and independently verifies the referenced
-fixture semantics. A consumer that maps WARN or BLOCK to authorized fails.
+fixture semantics. A consumer that authorizes WARN, BLOCK, or ERROR fails.
 
-## Full identity profile
+## Full identity and cross-language profile
 
-The standard-library-only independent producer covers report/run identity,
-release plan, evidence manifest/set, artifact diff, and numerical diff without
-importing M2RIV:
+The standard-library-only independent producer covers report/evidence/run
+identity, release plan, evidence manifest/set, artifact diff, and numerical diff
+without importing M2RIV:
 
 ```console
 python examples/independent_producer/generate_bundle.py --check
@@ -55,10 +63,8 @@ cargo run --manifest-path reference/mcr-reference-rust/Cargo.toml -- \
   verify examples/mcr_conformance/full
 ```
 
-The final four commands form the two-way Python/Rust interoperability gate.
-The Rust verifier currently covers report/run identity and decision consistency;
+The Rust verifier covers report/evidence/run identity and decision consistency;
 the Python strict verifier remains the complete local-bundle verifier.
-
 Certification policy is described in
-[`mcr-certification.md`](mcr-certification.md). Until a neutral governance body
-exists, results are reproducible self-attestations, not endorsements.
+[`mcr-certification.md`](mcr-certification.md). Until neutral governance exists,
+results are reproducible self-attestations, not endorsements.

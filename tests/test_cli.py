@@ -35,7 +35,7 @@ def test_schema_export(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     generated = sorted(destination.glob("*.schema.json"))
-    assert len(generated) == 24
+    assert len(generated) == 29
     assert any(path.name == "ModelSnapshot.schema.json" for path in generated)
     assert any(path.name == "CompiledReleasePlan.schema.json" for path in generated)
     assert any(path.name == "PluginManifest.schema.json" for path in generated)
@@ -46,7 +46,7 @@ def test_schema_export(tmp_path: Path) -> None:
     assert any(path.name == "ConsumerConformanceReceipt.schema.json" for path in generated)
     assert any(path.name == "MCRConformanceResult.schema.json" for path in generated)
     assert any(path.name == "BackendComparisonEvidence.schema.json" for path in generated)
-    committed = sorted(Path("schemas/v1").glob("*.schema.json"))
+    committed = sorted(Path("schemas/mcr-0.4").glob("*.schema.json"))
     assert [path.name for path in committed] == [path.name for path in generated]
     for expected, actual in zip(committed, generated, strict=True):
         assert actual.read_text(encoding="utf-8") == expected.read_text(encoding="utf-8")
@@ -54,8 +54,8 @@ def test_schema_export(tmp_path: Path) -> None:
 
 def test_mcr_verify_command_returns_machine_readable_result(tmp_path: Path) -> None:
     report = create_report(
-        baseline_snapshot_id=f"m2riv:sha256:{fingerprint('b', namespace='cli-test')}",
-        candidate_snapshot_id=f"m2riv:sha256:{fingerprint('c', namespace='cli-test')}",
+        baseline_snapshot_id=f"mcr:sha256:{fingerprint('b', namespace='cli-test')}",
+        candidate_snapshot_id=f"mcr:sha256:{fingerprint('c', namespace='cli-test')}",
         metrics=(),
         decision=MCRDecision(status=MCRStatus.PASS, allowed=True),
     )
@@ -69,7 +69,7 @@ def test_mcr_verify_command_returns_machine_readable_result(tmp_path: Path) -> N
 
 
 def test_mcr_verify_command_fails_closed_on_tampering(tmp_path: Path) -> None:
-    invalid = tmp_path / "m2riv-report.json"
+    invalid = tmp_path / "mcr-report.json"
     invalid.write_text("{}", encoding="utf-8")
     result = runner.invoke(app, ["mcr", "verify", str(invalid)])
     assert result.exit_code == 3
@@ -87,6 +87,7 @@ def test_producer_and_consumer_conformance_commands(tmp_path: Path) -> None:
         ("pass", "PASS", True),
         ("warn", "WARN", False),
         ("block", "BLOCK", False),
+        ("error", "ERROR", False),
     ):
         verified = runner.invoke(app, ["mcr", "verify", str(fixture_root / name)])
         payload = json.loads(verified.stdout)
@@ -94,6 +95,7 @@ def test_producer_and_consumer_conformance_commands(tmp_path: Path) -> None:
             ConformanceProfile(
                 profile=name,
                 report_id=payload["report_id"],
+                evidence_id=payload["evidence_id"],
                 decision_status=status,
                 release_authorized=authorized,
             )
@@ -117,7 +119,7 @@ def test_producer_and_consumer_conformance_commands(tmp_path: Path) -> None:
     )
     assert consumer.exit_code == 0
     assert '"subject": "consumer"' in consumer.stdout
-    assert '"warn-and-block-fail-closed"' in consumer.stdout
+    assert '"warn-block-error-fail-closed"' in consumer.stdout
 
 
 def test_artifact_commands_report_invalid_inputs(tmp_path: Path) -> None:

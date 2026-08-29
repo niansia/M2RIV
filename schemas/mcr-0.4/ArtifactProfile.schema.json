@@ -1,0 +1,332 @@
+{
+  "$defs": {
+    "ArtifactComponent": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "relative_path": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Relative Path",
+          "type": "string"
+        },
+        "role": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/+-]{0,255}$",
+          "title": "Role",
+          "type": "string"
+        },
+        "size_bytes": {
+          "minimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "role",
+        "relative_path",
+        "digest",
+        "size_bytes"
+      ],
+      "title": "ArtifactComponent",
+      "type": "object"
+    },
+    "ArtifactDigest": {
+      "additionalProperties": false,
+      "description": "Digest and metadata for a local artifact without location-dependent identity.",
+      "properties": {
+        "algorithm": {
+          "const": "sha256",
+          "default": "sha256",
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "digest": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "file_count": {
+          "default": 1,
+          "minimum": 1,
+          "title": "File Count",
+          "type": "integer"
+        },
+        "logical_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Logical Name"
+        },
+        "size_bytes": {
+          "minimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "digest",
+        "size_bytes"
+      ],
+      "title": "ArtifactDigest",
+      "type": "object"
+    },
+    "ArtifactFormat": {
+      "enum": [
+        "onnx",
+        "directory",
+        "file"
+      ],
+      "title": "ArtifactFormat",
+      "type": "string"
+    },
+    "OnnxCount": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "minimum": 0,
+          "title": "Count",
+          "type": "integer"
+        },
+        "name": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/+-]{0,255}$",
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "count"
+      ],
+      "title": "OnnxCount",
+      "type": "object"
+    },
+    "OnnxGraphSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "initializer_count": {
+          "minimum": 0,
+          "title": "Initializer Count",
+          "type": "integer"
+        },
+        "initializer_dtype_counts": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/OnnxCount"
+          },
+          "maxItems": 128,
+          "title": "Initializer Dtype Counts",
+          "type": "array"
+        },
+        "inputs": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/OnnxTensorSpec"
+          },
+          "maxItems": 256,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "ir_version": {
+          "minimum": 0,
+          "title": "Ir Version",
+          "type": "integer"
+        },
+        "metadata_fingerprint": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Metadata Fingerprint",
+          "type": "string"
+        },
+        "model_version": {
+          "minimum": 0,
+          "title": "Model Version",
+          "type": "integer"
+        },
+        "node_count": {
+          "minimum": 0,
+          "title": "Node Count",
+          "type": "integer"
+        },
+        "operator_counts": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/OnnxCount"
+          },
+          "maxItems": 4096,
+          "title": "Operator Counts",
+          "type": "array"
+        },
+        "opsets": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/OnnxOpset"
+          },
+          "maxItems": 64,
+          "title": "Opsets",
+          "type": "array"
+        },
+        "outputs": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/OnnxTensorSpec"
+          },
+          "maxItems": 256,
+          "title": "Outputs",
+          "type": "array"
+        },
+        "parameter_count": {
+          "minimum": 0,
+          "title": "Parameter Count",
+          "type": "integer"
+        },
+        "producer_name": {
+          "default": "",
+          "maxLength": 256,
+          "title": "Producer Name",
+          "type": "string"
+        },
+        "producer_version": {
+          "default": "",
+          "maxLength": 128,
+          "title": "Producer Version",
+          "type": "string"
+        },
+        "quantization_format": {
+          "default": "none",
+          "enum": [
+            "none",
+            "qdq",
+            "qoperator",
+            "mixed"
+          ],
+          "title": "Quantization Format",
+          "type": "string"
+        },
+        "uses_external_data": {
+          "default": false,
+          "title": "Uses External Data",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ir_version",
+        "model_version",
+        "node_count",
+        "initializer_count",
+        "parameter_count",
+        "metadata_fingerprint"
+      ],
+      "title": "OnnxGraphSummary",
+      "type": "object"
+    },
+    "OnnxOpset": {
+      "additionalProperties": false,
+      "properties": {
+        "domain": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/+-]{0,255}$",
+          "title": "Domain",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "domain",
+        "version"
+      ],
+      "title": "OnnxOpset",
+      "type": "object"
+    },
+    "OnnxTensorSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "element_type": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/+-]{0,255}$",
+          "title": "Element Type",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "shape": {
+          "default": [],
+          "items": {
+            "pattern": "^[A-Za-z0-9_?][A-Za-z0-9._?+-]{0,127}$",
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Shape",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "element_type"
+      ],
+      "title": "OnnxTensorSpec",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "artifact": {
+      "$ref": "#/$defs/ArtifactDigest"
+    },
+    "components": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ArtifactComponent"
+      },
+      "maxItems": 128,
+      "title": "Components",
+      "type": "array"
+    },
+    "format": {
+      "$ref": "#/$defs/ArtifactFormat"
+    },
+    "id": {
+      "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "onnx": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/OnnxGraphSummary"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "format",
+    "artifact"
+  ],
+  "title": "ArtifactProfile",
+  "type": "object"
+}

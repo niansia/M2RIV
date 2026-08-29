@@ -4,7 +4,7 @@
 
 Status: M2RIV technical report, revision 2026-08-29
 
-Scope: MCR 1.3 protocol candidate and M2RIV reference implementation
+Scope: MCR 0.4 protocol candidate and M2RIV reference implementation
 
 ## Abstract
 
@@ -13,8 +13,9 @@ and CI boundaries. Native tools can produce excellent local answers while still
 leaving organizations without a portable object that binds the exact artifacts,
 evidence cohort, statistical interpretation, release policy, and first bad build.
 M2RIV proposes the Model Change Report (MCR) as that vendor-neutral evidence
-envelope. The reference implementation separates replay-stable evidence identity
-from volatile run identity, requires fail-closed PASS/WARN/BLOCK/ERROR semantics,
+envelope. The reference implementation separates replay-stable evidence identity,
+decision-bound report identity, and volatile run identity; requires fail-closed
+PASS/WARN/BLOCK/ERROR semantics;
 and supports producer and consumer conformance without importing M2RIV Python.
 
 This report evaluates the approach with a CPU ONNX quantization regression, an
@@ -51,22 +52,23 @@ An MCR binds:
 - paired metrics, direction, sample size, uncertainty, and slice scope;
 - a versioned release policy and explicit release authorization;
 - content-addressed evidence-set and supplemental-evidence references;
-- a stable evidence `id` and a distinct volatile `run_id`;
+- a replay-stable `evidence_id`, decision-bound report `id`, and volatile `run_id`;
 - a bounded release plan and, when applicable, ordered-build localization.
 
 `m2riv mcr verify --strict` rehashes every recognized local component and rejects
-missing, traversing, symlinked, or identity-inconsistent evidence. A valid result
-means internal integrity and complete recognized coverage. It does not mean the
-producer is authentic. The verifier therefore reports `authenticity_verified:
-false` and `trust_scope: self-consistency-only` unless an external trust mechanism
-is supplied.
+missing, traversing, symlinked, or identity-inconsistent evidence. It separately
+reports bundle completeness, evidence-body coverage, observation verification,
+and metric recomputability. A valid result means internal integrity; it does not
+mean the producer is authentic. The verifier therefore reports
+`authenticity_verified: false` and `trust_scope: self-consistency-only`.
 
 ## 3. Conformance
 
-The normative producer profile contains PASS, WARN, and BLOCK bundles. A producer
-must preserve every decision and pass strict bundle verification. A consumer
-receipt must preserve report identity and decision status, and must authorize only
-PASS; WARN and BLOCK remain fail-closed. The suite is available through:
+The normative producer profile contains fixed PASS, WARN, BLOCK, and ERROR bundles
+plus four mandatory negative fixtures. A producer must match every semantic vector
+and reject tampered identity, missing evidence, unknown version, and decision
+mismatch. A consumer receipt preserves evidence/report identity and decision
+status, and authorizes only PASS; WARN, BLOCK, and ERROR remain fail-closed.
 
 ```console
 m2riv conformance producer examples/mcr_conformance
@@ -119,8 +121,10 @@ The reviewed fixed MLP weights are exported through a mathematically equivalent
 PyTorch Conv1d graph. ModelOpt 0.46 quantizes the Conv operators. The orchestrator
 then builds target-specific TensorRT engines and asks Polygraphy to run ONNX
 Runtime and TensorRT sequentially for every case. Polygraphy remains the backend
-comparison oracle; M2RIV packages its per-output results as content-addressed
-supplemental evidence and applies release policy to the TensorRT observations.
+comparison oracle. M2RIV retains the opaque native RunResults and exit code,
+derives its structured per-output verdict through Polygraphy's own Comparator API,
+binds ONNX/engine bytes and build inputs, then applies release policy to the
+TensorRT observations.
 
 ### 6.2 Results
 
@@ -132,10 +136,11 @@ supplemental evidence and applies release policy to the TensorRT observations.
 | ModelOpt INT8 scale 0.60 | 92.85% | 74.47% | 629/629 | BLOCK |
 
 Monotonic localization returned first bad index 2, `build-02-modelopt-int8-
-scale-065`. Four strict MCR verifications succeeded; every supplemental
-`BackendComparisonEvidence` identity was recomputed, with zero unknown local
-references. The generated compact receipt SHA-256 is
-`c3d70a68e5b9e544313808fe4832255791a9e38e135e691cf6f102ff6779490c`.
+scale-065`. Four strict MCR verifications succeeded. Every structured backend
+claim links a verified native body and matching exit code; snapshot/build evidence
+binds retained artifact bytes, source revision, calibration cohort, and tool
+versions. A target evidence manifest covers every retained file and strict report.
+The exact target-root and archive digests are published with the compact receipt.
 
 The recorded single-case runner timings are retained as run evidence, but this
 short execution does not establish a performance ranking. Windows/WDDM did not

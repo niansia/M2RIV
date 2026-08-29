@@ -5,6 +5,11 @@ from __future__ import annotations
 import argparse
 import base64
 import hashlib
+import importlib.metadata
+import json
+import os
+import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -63,6 +68,28 @@ def _export_source(fixture: Path, output: Path) -> None:
     )
 
 
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        while chunk := stream.read(1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _source_commit() -> str | None:
+    candidate = os.environ.get("GITHUB_SHA")
+    if candidate and len(candidate) in {40, 64}:
+        return candidate.lower()
+    git = shutil.which("git")
+    if git is None:
+        return None
+    completed = subprocess.run(  # noqa: S603 - resolved local Git executable, fixed argv.
+        [git, "rev-parse", "HEAD"], check=False, capture_output=True, text=True
+    )
+    value = completed.stdout.strip().lower()
+    return value if completed.returncode == 0 and len(value) in {40, 64} else None
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--fixture", type=Path, required=True)
@@ -82,6 +109,15 @@ def main() -> None:
         random_state=SEED,
         stratify=labels,
     )
+    cohort = np.ascontiguousarray(train_x[:128])
+    cohort_digest = hashlib.sha256(
+        b"mcr:nvidia-calibration-cohort:v1\x00"
+        + str(cohort.shape).encode("ascii")
+        + b"\x00"
+        + cohort.dtype.str.encode("ascii")
+        + b"\x00"
+        + cohort.tobytes()
+    ).hexdigest()
     builds = (
         ("build-01-modelopt-int8-balanced.onnx", 1.0),
         ("build-02-modelopt-int8-scale-065.onnx", 0.65),
@@ -100,6 +136,55 @@ def main() -> None:
             high_precision_dtype="fp32",
             log_level="WARNING",
         )
+    versions = {
+        name: importlib.metadata.version(name)
+        for name in ("nvidia-modelopt", "numpy", "onnx", "scikit-learn", "torch")
+    }
+    manifest = {
+        "schema_version": "0.1.0",
+        "source_commit": _source_commit(),
+        "source_fixture_sha256": FIXTURE_SHA256,
+        "source_fixture_size_bytes": len(
+            base64.b64decode(
+                "".join(arguments.fixture.read_text(encoding="ascii").split())
+            )
+        ),
+        "calibration_cohort_sha256": cohort_digest,
+        "calibration_case_count": 128,
+        "versions": versions,
+        "builds": [
+            {
+                "build_name": "build-00-pytorch-fp16",
+                "artifact": source.name,
+                "artifact_sha256": _sha256(source),
+                "builder": "pytorch",
+                "builder_version": versions["torch"],
+                "parameters": {"export_opset": 17, "execution_precision": "fp16"},
+            },
+            *[
+                {
+                    "build_name": name.removesuffix(".onnx"),
+                    "artifact": name,
+                    "artifact_sha256": _sha256(arguments.output / name),
+                    "builder": "nvidia-modelopt",
+                    "builder_version": versions["nvidia-modelopt"],
+                    "parameters": {
+                        "quantize_mode": "int8",
+                        "calibration_method": "max",
+                        "calibration_input_scale": scale,
+                        "calibration_case_count": 128,
+                        "op_types_to_quantize": ["Conv"],
+                        "export_opset": 17,
+                        "high_precision_dtype": "fp32",
+                    },
+                }
+                for name, scale in builds
+            ],
+        ],
+    }
+    (arguments.output / "artifact-build-input.json").write_text(
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8", newline="\n"
+    )
     print(arguments.output)
 
 

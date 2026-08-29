@@ -34,11 +34,11 @@ def main() -> None:
         bundle = Path(temporary) / "rust-bundle"
         _cargo("produce", str(SIMPLE_EVIDENCE), str(bundle))
         python_result = verify_report_bundle(bundle, require_complete=True)
-        if not python_result.integrity_valid or not python_result.verification_complete:
+        if not python_result.integrity_valid or not python_result.bundle_verification_complete:
             raise RuntimeError("Python did not completely verify the Rust-produced MCR")
         _cargo("verify", str(bundle))
 
-        report_path = bundle / "m2riv-report.json"
+        report_path = bundle / "mcr-report.json"
         original = json.loads(report_path.read_text(encoding="utf-8"))
 
         utc_z = original | {"created_at": original["created_at"].replace("+00:00", "Z")}

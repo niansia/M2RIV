@@ -385,7 +385,7 @@ def build_correction(target: Path) -> None:
             ),
             _p("輸出", styles["h2"]),
             _p(
-                "每個 build 產生 artifact-diff.json、release-plan.json、m2riv-report.json、summary.md、junit.xml、results.sarif；"
+                "每個 build 產生 artifact-diff.json、release-plan.json、mcr-report.json、summary.md、junit.xml、results.sarif；"
                 "序列另產生 checkpoints.jsonl 與 bisect-result.json。所有 artifact 與 evidence identity 都可離線重算。",
                 styles["body"],
             ),
@@ -426,7 +426,7 @@ def build_correction(target: Path) -> None:
             _p("名稱決策", styles["h2"]),
             _p(
                 "M2RIV 降級為 pre-alpha working name。撤回『第一次看到即可自然念對』的宣稱。公開 v0.1 前必須完成 10 人 unaided spoken-name test、"
-                "GitHub / PyPI / package / domain near-match search、專業 trademark review、三個 cleared alternatives 比較，以及 m2riv:sha256 protocol namespace migration decision。",
+                "GitHub / PyPI / package / domain near-match search、專業 trademark review、三個 cleared alternatives 比較；protocol namespace 已由 RFC 0015 解耦為 mcr:sha256。",
                 styles["body"],
             ),
             _p(

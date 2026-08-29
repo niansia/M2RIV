@@ -7,6 +7,12 @@ versions for portable JSON contracts. Pre-1.0 APIs may change with migration not
 
 ### Added
 
+- MCR 0.4 fixed PASS/WARN/BLOCK/ERROR vectors and negative conformance fixtures
+- Tool-native opaque evidence, snapshot-to-artifact bindings, build provenance,
+  and a complete target evidence manifest
+- Separate bundle completeness, evidence-body coverage, observation verification,
+  and metric recomputability results
+
 - Strict content-addressed model/evidence contracts and exported JSON Schemas
 - Paired runner, atomic cache, bootstrap/McNemar evidence, and four-state gates
 - MCR JSON, Markdown, JUnit, SARIF, and compiled release-plan bundles
@@ -59,8 +65,16 @@ versions for portable JSON contracts. Pre-1.0 APIs may change with migration not
   brand recall study, and reproducible PDF build
 - Three new public schemas for backend evidence and producer/consumer conformance,
   bringing the exported public surface to 24 contracts
+- Five target/provenance schemas plus expanded verification contracts, bringing
+  the exported public surface to 29 contracts
 
 ### Changed
+
+- The pre-alpha portable envelope is now MCR 0.4.0: content IDs and hash domains
+  use the brand-neutral `mcr:` namespace, the canonical report filename is
+  `mcr-report.json`, and normative schemas live in `schemas/mcr-0.4`
+- MCR now separates replay-stable `evidence_id`, decision-bound report `id`, and
+  exact execution `run_id`; opposite verdicts cannot share a report identity
 
 - NumPy in the ONNX extras is capped below 2.3 so Python 3.11-targeted mypy can
   parse dependency stubs on every CI matrix runner

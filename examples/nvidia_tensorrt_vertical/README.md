@@ -55,10 +55,27 @@ Every build retains:
 
 - source ONNX and target-specific TensorRT engine;
 - complete Polygraphy `RunResults` for ONNX Runtime and TensorRT;
-- content-addressed `BackendComparisonEvidence` with per-output parity;
+- opaque `ToolNativeEvidence` binding those exact bytes, runner names, and the
+  Polygraphy CLI exit code;
+- content-addressed `BackendComparisonEvidence` derived through Polygraphy's own
+  `Comparator.compare_accuracy`, with per-output parity and a native-evidence link;
+- snapshot manifests binding model/engine identities to retained bytes and build
+  provenance binding source commit, tool versions, build parameters, calibration
+  cohort, input artifact, and output snapshot;
 - exact GPU, driver, TensorRT, Polygraphy, OS, Python, warmup, and case cohort;
 - paired quality and latency MCR, strict verifier result, and release status;
-- final monotonic bisect result.
+- final monotonic bisect result;
+- `target-evidence-manifest.json`, one root over every retained file and report.
+
+Verify the archive root rather than checking only individual reports:
+
+```console
+m2riv mcr verify-target runs/nvidia/live
+```
+
+The command rejects a changed, missing, or extra retained file. It proves content
+self-consistency, not authorship; publish the archive through a trusted CI
+attestation when producer identity matters.
 
 On Windows/WDDM, NVML may not expose process memory. In that case
 `peak_vram_mib` is null and the limitation is explicit; it is never replaced by

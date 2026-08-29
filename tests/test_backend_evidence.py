@@ -10,8 +10,8 @@ from m2riv.evidence import (
     create_backend_comparison_evidence,
 )
 
-SNAPSHOT_A = "m2riv:sha256:" + "a" * 64
-SNAPSHOT_B = "m2riv:sha256:" + "b" * 64
+SNAPSHOT_A = "mcr:sha256:" + "a" * 64
+SNAPSHOT_B = "mcr:sha256:" + "b" * 64
 
 
 def _evidence() -> BackendComparisonEvidence:
@@ -32,6 +32,10 @@ def _evidence() -> BackendComparisonEvidence:
     return create_backend_comparison_evidence(
         comparator_name="nvidia.polygraphy",
         comparator_version="0.53.4",
+        comparator_exit_code=1,
+        baseline_runner="onnxrt-runner",
+        candidate_runner="trt-runner",
+        tool_native_evidence_id="mcr:sha256:" + "c" * 64,
         baseline_snapshot_id=SNAPSHOT_A,
         candidate_snapshot_id=SNAPSHOT_B,
         absolute_tolerance=0.05,

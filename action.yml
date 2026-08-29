@@ -41,7 +41,7 @@ outputs:
     value: ${{ steps.final.outputs.exit-code }}
   report:
     description: Path to the generated machine-readable MCR.
-    value: ${{ inputs.output }}/m2riv-report.json
+    value: ${{ inputs.output }}/mcr-report.json
 
 runs:
   using: composite
@@ -116,7 +116,7 @@ runs:
       with:
         name: ${{ inputs.artifact-name }}
         path: |
-          ${{ inputs.output }}/m2riv-report.json
+          ${{ inputs.output }}/mcr-report.json
           ${{ inputs.output }}/evidence-manifest.json
           ${{ inputs.output }}/release-plan.json
           ${{ inputs.output }}/summary.md

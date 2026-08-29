@@ -135,5 +135,5 @@ Stars and downloads are useful reach measures, not category-ownership measures.
 
 Public v0.1 still requires brand clearance, repository security controls, tagged
 artifact provenance, schema drift checks, conformance fixtures, and an honest
-compatibility matrix. The name may change; the `m2riv:sha256:` protocol namespace
-requires an explicit migration decision before a rename.
+compatibility matrix. The product name may change without rewriting protocol
+identities because RFC 0015 moved the wire namespace to `mcr:sha256:`.

@@ -64,13 +64,15 @@ The first foundation slice provides:
   never loads custom-op libraries;
 - monotonic, sparse-audit, and exhaustive checkpoint regression localization;
 - execution-driven bisect over recorded outputs or real CPU ONNX artifacts;
-- bounded MCR 1.3 reports with stable evidence IDs, distinct volatile run IDs,
-  deduplicated manifests, runtime/platform provenance, and finding-to-evidence-set
-  links;
+- bounded MCR 0.4 reports with distinct evidence, decision/report, and volatile
+  run identities; deduplicated manifests; runtime/platform provenance; and
+  finding-to-evidence-set links;
 - a standalone `m2riv mcr verify` conformance boundary that rehashes reports,
   manifests, sets, plans, and known supplemental artifacts from any producer;
-- first-class `m2riv conformance producer` and `consumer` profiles that preserve
-  PASS/WARN/BLOCK and require WARN/BLOCK to remain fail-closed;
+- first-class `m2riv conformance producer` and `consumer` profiles with fixed
+  PASS/WARN/BLOCK/ERROR vectors and mandatory negative fixtures;
+- opaque tool-native evidence, snapshot-to-byte bindings, build provenance, and
+  a target evidence root that detects missing, modified, or unlisted retained files;
 - explicit verifier completeness/coverage fields plus a full bundle emitted by a
   standard-library-only independent producer;
 - external Polygraphy producer and MLflow consumer references outside the core
@@ -92,7 +94,9 @@ The public surface is specification-first:
 - [producer and consumer conformance](docs/mcr-conformance.md)
 - [compatibility matrix](docs/mcr-compatibility.md)
 - [self-certification rules](docs/mcr-certification.md)
-- [normative JSON schemas](schemas/v1)
+- [normative MCR 0.4 JSON schemas](schemas/mcr-0.4)
+- [MCR 0.4 migration guide](docs/mcr-0.4-migration.md)
+- [protocol changelog](docs/mcr-changelog.md)
 - [cross-language identity vectors](examples/content_identity/README.md)
 
 ```console
@@ -167,7 +171,11 @@ First bad build: build-02-modelopt-int8-scale-065
 These are exact host-cohort results, not a general TensorRT performance claim.
 Latency is retained in the generated receipt; this short run is not used to rank
 builds. Windows/WDDM did not expose process VRAM through NVML, so VRAM is recorded
-as unavailable rather than zero. See the complete
+as unavailable rather than zero. Each build binds the raw Polygraphy RunResults,
+its native comparator exit code, the ONNX and TensorRT bytes, the build recipe,
+calibration cohort, and source revision. One target evidence manifest then hashes
+every retained byte and every strict MCR; an extra, missing, or changed file
+invalidates the root. See the complete
 [NVIDIA reproduction](examples/nvidia_tensorrt_vertical/README.md) and the
 [technical report](docs/release-evidence-technical-report.md).
 
@@ -183,12 +191,15 @@ m2riv artifact numerical-diff \
 
 m2riv bisect runs/onnx-quantization/checkpoints.jsonl --mode monotonic
 
-m2riv schema export ./schemas/v1
-# Exported 24 public schemas to schemas/v1
+m2riv schema export ./schemas/mcr-0.4
+# Exported 29 public schemas to schemas/mcr-0.4
 
 m2riv mcr verify runs/onnx-quantization/reports/build-02-int8-calibration-scale-065
 # In a release gate, require every linked local component to be rehashed:
 m2riv mcr verify runs/onnx-quantization/reports/build-02-int8-calibration-scale-065 --strict
+
+# Verify a complete target archive, including every retained byte and MCR:
+m2riv mcr verify-target runs/nvidia/live
 ```
 
 The smaller [opset-upgrade example](examples/onnx_opset_upgrade/README.md) covers
@@ -211,16 +222,21 @@ exit code `3` means invalid or incomplete evidence; exit code `4` means a `WARN`
 that the policy did not explicitly allow. `WARN` is fail-closed by default. See
 the [recorded-output example](examples/recorded_compare/README.md).
 
-An MCR has two explicit identities. `id` addresses replay-stable evidence and
-excludes timestamps and run-scoped timing metrics; `run_id` addresses the exact
-execution, including timing, cache provenance, timestamp, and final verdict.
+MCR 0.4 has three explicit identities. `evidence_id` addresses replay-stable
+evidence and excludes timestamps and run-scoped timing metrics. `id` addresses
+the report and decision, so opposite verdicts cannot share a report identity.
+`run_id` addresses the exact execution, including timing, cache provenance,
+timestamp, and final verdict.
 The verifier accepts a bundle produced by M2RIV or another implementation; it
 does not execute the model or trust prose summaries. Producer/consumer
 conformance adds semantic interoperability checks on top of this integrity
 boundary; it still does not establish authorship.
-`integrity_valid` means every performed check passed, while
-`verification_complete` means all referenced local bundle components were
-recognized and rehashed. This is a self-consistency check, not a producer
+`integrity_valid` means every performed check passed.
+`bundle_verification_complete` covers local bundle components;
+`evidence_body_coverage` separately reports structured, opaque, unavailable,
+remote, redacted, and unrecognized bodies; and `metric_recomputable` states
+whether retained observation bodies are sufficient to replay the metrics. This
+is a self-consistency check, not a producer
 signature: the result explicitly reports `authenticity_verified: false` and
 `trust_scope: self-consistency-only`. See the
 [independent producer](examples/independent_producer/README.md),
@@ -346,6 +362,18 @@ Release-facing changes are tracked in [CHANGELOG.md](CHANGELOG.md).
 Public publication is governed by the owner-side
 [release checklist](docs/release-checklist.md); repository automation cannot
 self-approve brand clearance, PyPI trust, or security-notification ownership.
+
+## Adoption and participation
+
+The project currently has no publicly verified external adopter; repository-owned
+references are not counted as adoption. See [ADOPTERS.md](ADOPTERS.md) for the
+evidence threshold, [the external reproduction guide](docs/external-reproduction-guide.md)
+for CPU/GPU reruns, and [the adoption playbook](docs/adoption-playbook.md) for a
+bounded design-partner pilot. Questions and compatibility reports follow
+[SUPPORT.md](SUPPORT.md). Protocol changes follow
+[MCR governance](docs/protocol-governance.md), and the current security-program
+prework is tracked without badge inflation in
+[OpenSSF readiness](docs/openssf-readiness.md).
 
 ## Development
 

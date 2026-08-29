@@ -20,12 +20,12 @@ metrics only.
 - [x] Reproducible FP16-to-INT8 rare-slice gate and build bisect demo
 - [x] Security/resource limits and adversarial regression suite
 - [x] Execution-driven artifact bisect with per-checkpoint report bundles
-- [x] Bounded MCR 1.3 manifests, stable/run identities, runtime provenance, and
-  finding evidence links
+- [x] MCR 0.4 evidence/report/run identities, runtime provenance, finding links,
+  explicit evidence-body coverage, and pre-1.0 migration guide
 - [x] CPU-only ONNX per-tensor numerical diff and opset-upgrade release example
 - [x] Standalone MCR bundle verifier and external-producer conformance fixtures
-- [x] First-class producer/consumer conformance commands, receipts, specification,
-  compatibility matrix, and fail-closed decision profile
+- [x] Fixed PASS/WARN/BLOCK/ERROR producer/consumer conformance, mandatory
+  negative fixtures, receipts, specification, and compatibility matrix
 - [x] Polygraphy producer and MLflow consumer references outside the core package
 - [x] Reusable GitHub Action for compare, verify, upload, and fail-closed status
 - [x] Linux/Windows ONNX evidence matrix with runtime/platform provenance
@@ -35,6 +35,10 @@ metrics only.
 - [x] Composite-action end-to-end CI with a hash-locked dependency graph and
   explicit verifier completeness/coverage semantics
 - [x] SHA-pinned CI and tagged builds with checksums, SBOM, and provenance
+- [x] Opaque tool-native evidence, snapshot byte bindings, build provenance, and
+  a target root over every retained target file and strict MCR
+- [x] Public support, adopter, reproduction, protocol-governance, and OpenSSF
+  readiness entry points
 
 Exit criterion: a new user can produce a reviewable release decision locally or
 against two endpoints in under ten minutes; an independent producer can pass the

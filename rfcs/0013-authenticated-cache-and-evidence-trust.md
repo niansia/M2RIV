@@ -2,7 +2,7 @@
 
 - Decision status: Accepted
 - Implementation status: Implemented for v0.1
-- Contract impact: cache format v2; MCRVerification 1.2
+- Contract impact: cache format v2; current MCRVerification 0.2
 
 ## Problem
 
@@ -33,11 +33,13 @@ Retry count, latency, timestamp, and traces remain run provenance rather than ev
 identity. The runner validates dispatch cardinality and recomputes identities before
 any cache write.
 
-MCRVerification 1.2 separately exposes:
+MCRVerification 0.2 separately exposes:
 
 - `integrity_valid`: all checks actually performed succeeded;
-- `verification_complete`: every referenced local component was recognized and
-  rehashed without warnings;
+- `bundle_verification_complete`: every referenced local component was recognized
+  and rehashed;
+- `evidence_body_coverage` and `metric_recomputable`: retained body and replay
+  scope without conflating them with bundle integrity;
 - `trust_scope: self-consistency-only`; and
 - `authenticity_verified: false`.
 

@@ -39,7 +39,7 @@ from m2riv.reports import verify as report_verifier
 
 
 def content_id(label: str) -> str:
-    return f"m2riv:sha256:{fingerprint(label, namespace='report-test')}"
+    return f"mcr:sha256:{fingerprint(label, namespace='report-test')}"
 
 
 def sample_report() -> ModelChangeReport:
@@ -97,7 +97,7 @@ def sample_plan() -> CompiledReleasePlan:
     identifier = fingerprint(
         plan.model_dump(mode="python", exclude={"id"}), namespace="release-plan"
     )
-    return plan.model_copy(update={"id": f"m2riv:sha256:{identifier}"})
+    return plan.model_copy(update={"id": f"mcr:sha256:{identifier}"})
 
 
 def sample_numerical_diff() -> NumericalDiff:
@@ -129,7 +129,7 @@ def sample_numerical_diff() -> NumericalDiff:
         item.model_dump(mode="python", exclude={"schema_version", "id"}),
         namespace="onnx-numerical-diff",
     )
-    return item.model_copy(update={"id": f"m2riv:sha256:{identifier}"})
+    return item.model_copy(update={"id": f"mcr:sha256:{identifier}"})
 
 
 def write_raw_bundle(
@@ -139,7 +139,7 @@ def write_raw_bundle(
     manifest: EvidenceManifest | None = None,
 ) -> None:
     root.mkdir(parents=True, exist_ok=True)
-    (root / "m2riv-report.json").write_text(render_json(report), encoding="utf-8")
+    (root / "mcr-report.json").write_text(render_json(report), encoding="utf-8")
     if manifest is not None:
         (root / "evidence-manifest.json").write_text(
             manifest.model_dump_json(indent=2), encoding="utf-8"
@@ -148,7 +148,7 @@ def write_raw_bundle(
 
 def test_report_round_trip_and_stable_identity() -> None:
     report = sample_report()
-    assert report.schema_version == "1.3.0"
+    assert report.schema_version == "0.4.0"
     assert ModelChangeReport.model_validate_json(render_json(report)) == report
     assert sample_report().id == report.id
 
@@ -190,8 +190,24 @@ def test_evidence_identity_excludes_timestamp_and_run_scoped_metrics() -> None:
         created_at=datetime(2026, 8, 29, tzinfo=UTC),
     )
 
+    assert first.evidence_id == second.evidence_id
     assert first.id == second.id
     assert first.run_id != second.run_id
+
+
+def test_opposite_verdicts_share_evidence_but_never_report_identity() -> None:
+    blocked = sample_report()
+    passed = create_report(
+        baseline_snapshot_id=blocked.baseline_snapshot_id,
+        candidate_snapshot_id=blocked.candidate_snapshot_id,
+        metrics=blocked.metrics,
+        decision=MCRDecision(status=MCRStatus.PASS, allowed=True),
+        limitations=blocked.limitations,
+        created_at=blocked.created_at,
+    )
+    assert blocked.evidence_id == passed.evidence_id
+    assert blocked.id != passed.id
+    assert blocked.run_id != passed.run_id
 
 
 def test_markdown_surfaces_decision_and_slice() -> None:
@@ -239,7 +255,7 @@ def test_report_bundle_is_written_with_canonical_names(tmp_path: Path) -> None:
     bundle = write_report_bundle(report, tmp_path)
     assert bundle.plan_path is None
     assert bundle.evidence_manifest_path is None
-    assert bundle.json_path.name == "m2riv-report.json"
+    assert bundle.json_path.name == "mcr-report.json"
     assert bundle.markdown_path.name == "summary.md"
     assert bundle.junit_path.name == "junit.xml"
     assert bundle.sarif_path.name == "results.sarif"
@@ -257,11 +273,13 @@ def test_standalone_verifier_detects_report_tampering(tmp_path: Path) -> None:
     verified = verify_report_bundle(tmp_path)
     assert verified.valid is True
     assert verified.integrity_valid is True
-    assert verified.verification_complete is True
-    assert verified.verified_evidence_count == 0
-    assert verified.unverified_evidence_count == 0
+    assert verified.bundle_verification_complete is True
+    assert verified.evidence_body_coverage.declared == 0
+    assert verified.evidence_body_coverage.coverage == 1.0
     assert verified.decision_status == "BLOCK"
-    assert {"report-contract", "report-id", "run-id"}.issubset(verified.checks)
+    assert {"report-contract", "evidence-id", "report-id", "run-id"}.issubset(
+        verified.checks
+    )
 
     payload = json.loads(bundle.json_path.read_text("utf-8"))
     payload["metrics"][0]["candidate_value"] = 0.5
@@ -287,7 +305,7 @@ def test_standalone_verifier_rehashes_known_supplemental_evidence(
         artifact_diff.model_dump(mode="python", exclude={"schema_version", "id"}),
         namespace="artifact-diff",
     )
-    artifact_diff = artifact_diff.model_copy(update={"id": f"m2riv:sha256:{identifier}"})
+    artifact_diff = artifact_diff.model_copy(update={"id": f"mcr:sha256:{identifier}"})
     evidence = EvidenceRef(
         id=artifact_diff.id,
         kind="artifact-diff",
@@ -306,9 +324,9 @@ def test_standalone_verifier_rehashes_known_supplemental_evidence(
 
     verified = verify_report_bundle(tmp_path)
     assert "supplemental-id:artifact-diff" in verified.checks
-    assert verified.verification_complete is True
-    assert verified.verified_evidence_count == 1
-    assert verified.unverified_evidence_count == 0
+    assert verified.bundle_verification_complete is True
+    assert verified.evidence_body_coverage.verified_structured == 1
+    assert verified.evidence_body_coverage.coverage == 1.0
     tampered = json.loads(evidence_path.read_text("utf-8"))
     tampered["size_delta_bytes"] = 99
     evidence_path.write_text(json.dumps(tampered), encoding="utf-8")
@@ -360,10 +378,12 @@ def test_verifier_checks_plan_numerical_diff_and_warning_boundaries(
 
     assert "release-plan-id" in verified.checks
     assert "supplemental-id:numerical-diff" in verified.checks
-    assert len(verified.warnings) == 3
-    assert verified.verification_complete is False
-    assert verified.verified_evidence_count == 1
-    assert verified.unverified_evidence_count == 3
+    assert len(verified.warnings) == 1
+    assert verified.bundle_verification_complete is False
+    assert verified.evidence_body_coverage.verified_structured == 1
+    assert verified.evidence_body_coverage.unrecognized_local == 1
+    assert verified.evidence_body_coverage.remote == 1
+    assert verified.evidence_body_coverage.redacted == 1
 
 
 def test_verifier_rejects_missing_malformed_and_oversized_reports(
@@ -724,7 +744,7 @@ def test_external_producer_conformance_fixtures_are_current_and_valid() -> None:
         check=True,
         timeout=30,
     )
-    for expected in ("PASS", "WARN", "BLOCK"):
+    for expected in ("PASS", "WARN", "BLOCK", "ERROR"):
         fixture = root / "examples" / "mcr_conformance" / expected.lower()
         result = verify_report_bundle(fixture)
         assert result.valid is True
@@ -746,10 +766,12 @@ def test_independent_full_bundle_is_current_complete_and_valid() -> None:
     result = verify_report_bundle(root / "examples" / "mcr_conformance" / "full")
     assert result.valid is True
     assert result.integrity_valid is True
-    assert result.verification_complete is True
+    assert result.bundle_verification_complete is True
     assert result.decision_status == "BLOCK"
-    assert result.verified_evidence_count == 2
-    assert result.unverified_evidence_count == 0
+    assert result.evidence_body_coverage.verified_structured == 2
+    assert result.evidence_body_coverage.unavailable == 2
+    assert result.evidence_body_coverage.coverage == 0.5
+    assert result.metric_recomputable is False
     assert {
         "manifest-id",
         "evidence-set-ids",

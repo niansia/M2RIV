@@ -7,7 +7,7 @@ use std::env;
 use std::fs;
 use std::path::Path;
 
-const CONTENT_ID_PREFIX: &str = "m2riv:sha256:";
+const CONTENT_ID_PREFIX: &str = "mcr:sha256:";
 
 fn python_float(value: f64) -> Result<String> {
     if !value.is_finite() {
@@ -124,7 +124,7 @@ fn fingerprint(value: &Value, namespace: &str) -> Result<String> {
     }
     let canonical = canonical_json(value)?;
     let mut digest = Sha256::new();
-    digest.update(format!("m2riv:{namespace}:v1").as_bytes());
+    digest.update(format!("mcr:{namespace}:v1").as_bytes());
     digest.update([0]);
     digest.update(canonical.as_bytes());
     let digest = digest.finalize();
@@ -270,7 +270,7 @@ fn verify_vectors(path: &Path) -> Result<()> {
         }
     }
     println!(
-        "verified {} M2RIV v1 identity vectors in Rust",
+        "verified {} MCR v1 identity vectors in Rust",
         document.vectors.len()
     );
     Ok(())
@@ -427,7 +427,7 @@ fn build_report(evidence: &SimpleEvidence) -> Result<Value> {
         })
         .collect::<Vec<_>>();
     let evidence_payload = json!({
-        "schema_version": "1.3.0",
+        "schema_version": "0.4.0",
         "baseline_snapshot_id": baseline_id,
         "candidate_snapshot_id": candidate_id,
         "release_plan_id": null,
@@ -436,10 +436,18 @@ fn build_report(evidence: &SimpleEvidence) -> Result<Value> {
         "evidence_manifest": null,
         "evidence": []
     });
-    let report_id = content_id(&evidence_payload, "model-change-evidence")?;
+    let evidence_id = content_id(&evidence_payload, "model-change-evidence")?;
+    let report_payload = json!({
+        "schema_version": "0.4.0",
+        "evidence_id": evidence_id,
+        "release_plan_id": null,
+        "decision": decision
+    });
+    let report_id = content_id(&report_payload, "model-change-report")?;
     let run_payload = json!({
-        "schema_version": "1.3.0",
-        "evidence_id": report_id,
+        "schema_version": "0.4.0",
+        "report_id": report_id,
+        "evidence_id": evidence_id,
         "created_at": created_at,
         "baseline_snapshot_id": baseline_id,
         "candidate_snapshot_id": candidate_id,
@@ -453,8 +461,9 @@ fn build_report(evidence: &SimpleEvidence) -> Result<Value> {
     });
     let run_id = content_id(&run_payload, "model-change-run")?;
     Ok(json!({
-        "schema_version": "1.3.0",
+        "schema_version": "0.4.0",
         "id": report_id,
+        "evidence_id": evidence_id,
         "run_id": run_id,
         "created_at": created_at,
         "baseline_snapshot_id": baseline_id,
@@ -477,7 +486,7 @@ fn produce(input: &Path, output: &Path) -> Result<()> {
     let report = build_report(&evidence)?;
     fs::create_dir_all(output)
         .with_context(|| format!("create output directory {}", output.display()))?;
-    let destination = output.join("m2riv-report.json");
+    let destination = output.join("mcr-report.json");
     let mut encoded = serde_json::to_string_pretty(&report).context("render MCR report")?;
     encoded.push('\n');
     fs::write(&destination, encoded).with_context(|| format!("write {}", destination.display()))?;
@@ -602,7 +611,7 @@ fn normalize_executions(value: &Value) -> Result<Value> {
 
 fn verify_report(source: &Path) -> Result<()> {
     let report_path = if source.is_dir() {
-        source.join("m2riv-report.json")
+        source.join("mcr-report.json")
     } else {
         source.to_owned()
     };
@@ -612,8 +621,8 @@ fn verify_report(source: &Path) -> Result<()> {
     )
     .context("parse MCR report")?;
     let report = object(&report)?;
-    if required(report, "schema_version")? != "1.3.0" {
-        bail!("Rust reference verifier supports MCR 1.3.0");
+    if required(report, "schema_version")? != "0.4.0" {
+        bail!("Rust reference verifier supports MCR 0.4.0");
     }
 
     let metrics = report
@@ -665,7 +674,7 @@ fn verify_report(source: &Path) -> Result<()> {
         .unwrap_or(Value::Null);
     let evidence = report.get("evidence").cloned().unwrap_or_else(|| json!([]));
     let evidence_payload = json!({
-        "schema_version": "1.3.0",
+        "schema_version": "0.4.0",
         "baseline_snapshot_id": required(report, "baseline_snapshot_id")?,
         "candidate_snapshot_id": required(report, "candidate_snapshot_id")?,
         "release_plan_id": release_plan_id,
@@ -674,9 +683,19 @@ fn verify_report(source: &Path) -> Result<()> {
         "evidence_manifest": evidence_manifest,
         "evidence": evidence
     });
-    let expected_report_id = content_id(&evidence_payload, "model-change-evidence")?;
-    if required(report, "id")? != &expected_report_id {
+    let expected_evidence_id = content_id(&evidence_payload, "model-change-evidence")?;
+    if required(report, "evidence_id")? != &expected_evidence_id {
         bail!("MCR evidence identity does not match its contents");
+    }
+    let report_payload = json!({
+        "schema_version": "0.4.0",
+        "evidence_id": expected_evidence_id,
+        "release_plan_id": release_plan_id,
+        "decision": decision
+    });
+    let expected_report_id = content_id(&report_payload, "model-change-report")?;
+    if required(report, "id")? != &expected_report_id {
+        bail!("MCR report identity does not match its decision");
     }
 
     let created_at = required(report, "created_at")?
@@ -684,8 +703,9 @@ fn verify_report(source: &Path) -> Result<()> {
         .ok_or_else(|| anyhow!("created_at must be a string"))?;
     let executions = normalize_executions(report.get("executions").unwrap_or(&json!([])))?;
     let run_payload = json!({
-        "schema_version": "1.3.0",
-        "evidence_id": expected_report_id,
+        "schema_version": "0.4.0",
+        "report_id": expected_report_id,
+        "evidence_id": expected_evidence_id,
         "created_at": normalize_datetime(created_at)?,
         "baseline_snapshot_id": required(report, "baseline_snapshot_id")?,
         "candidate_snapshot_id": required(report, "candidate_snapshot_id")?,
@@ -712,7 +732,7 @@ fn verify_report(source: &Path) -> Result<()> {
         bail!("decision status and allowed flag disagree");
     }
     println!(
-        "verified MCR 1.3 report in Rust: {} {}",
+        "verified MCR 0.4 report in Rust: {} {}",
         status, expected_report_id
     );
     Ok(())

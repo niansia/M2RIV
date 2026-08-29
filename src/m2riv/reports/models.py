@@ -1,4 +1,4 @@
-"""Machine-portable Model Change Report (MCR) v1 envelope."""
+"""Machine-portable Model Change Report (MCR) candidate envelope."""
 
 from __future__ import annotations
 
@@ -65,8 +65,8 @@ class EvidenceManifestRef(Contract):
 
     id: ContentId
     uri: str = Field(default="evidence-manifest.json", min_length=1, max_length=2048)
-    media_type: Literal["application/vnd.m2riv.evidence-manifest+json"] = (
-        "application/vnd.m2riv.evidence-manifest+json"
+    media_type: Literal["application/vnd.model-change-report.evidence-manifest+json"] = (
+        "application/vnd.model-change-report.evidence-manifest+json"
     )
     evidence_count: int = Field(ge=1)
     set_count: int = Field(ge=1)
@@ -78,7 +78,7 @@ def create_evidence_set(evidence: tuple[EvidenceRef, ...]) -> EvidenceSet:
         raise ValueError("evidence set must contain at least one reference")
     members = tuple(item.id for item in evidence)
     identifier = fingerprint({"members": members}, namespace="evidence-set")
-    return EvidenceSet(id=f"m2riv:sha256:{identifier}", count=len(members), members=members)
+    return EvidenceSet(id=f"mcr:sha256:{identifier}", count=len(members), members=members)
 
 
 def create_evidence_manifest(
@@ -87,7 +87,7 @@ def create_evidence_manifest(
     """Create a manifest whose identity covers entries and set membership."""
     payload = {"schema_version": "1.0.0", "evidence": evidence, "sets": sets}
     identifier = fingerprint(payload, namespace="evidence-manifest")
-    return EvidenceManifest(id=f"m2riv:sha256:{identifier}", evidence=evidence, sets=sets)
+    return EvidenceManifest(id=f"mcr:sha256:{identifier}", evidence=evidence, sets=sets)
 
 
 class MCRMetric(Contract):
@@ -175,8 +175,9 @@ class MCRDecision(Contract):
 class ModelChangeReport(Contract):
     """The stable envelope M2RIV intends other tools to produce and consume."""
 
-    schema_version: Literal["1.3.0"] = "1.3.0"
+    schema_version: Literal["0.4.0"] = "0.4.0"
     id: ContentId
+    evidence_id: ContentId
     run_id: ContentId
     created_at: datetime
     baseline_snapshot_id: ContentId
@@ -219,19 +220,19 @@ def create_report(
     limitations: tuple[str, ...] = (),
     created_at: datetime | None = None,
 ) -> ModelChangeReport:
-    """Create separate deterministic evidence and volatile run identities.
+    """Create deterministic evidence/report IDs and a volatile run identity.
 
-    ``id`` covers replay-stable release evidence. ``run_id`` covers the exact
-    serialized run, including its timestamp, timing metrics, cache provenance,
-    and verdict. This lets identical model outputs deduplicate while preserving
-    an address for every measured execution.
+    ``evidence_id`` covers replay-stable evidence and permits deduplication.
+    ``id`` also covers the release decision, so opposite verdicts can never share
+    a report identity. ``run_id`` covers the exact serialized run, including its
+    timestamp, timing metrics, cache provenance, and limitations.
     """
     timestamp = created_at or datetime.now(UTC)
     stable_metric_ids = {
         metric.metric_id for metric in metrics if metric.identity_scope == "evidence"
     }
     evidence_payload = {
-        "schema_version": "1.3.0",
+        "schema_version": "0.4.0",
         "baseline_snapshot_id": baseline_snapshot_id,
         "candidate_snapshot_id": candidate_snapshot_id,
         "release_plan_id": release_plan_id,
@@ -249,10 +250,18 @@ def create_report(
         "evidence_manifest": evidence_manifest,
         "evidence": evidence,
     }
-    report_id = fingerprint(evidence_payload, namespace="model-change-evidence")
+    evidence_id = fingerprint(evidence_payload, namespace="model-change-evidence")
+    report_payload = {
+        "schema_version": "0.4.0",
+        "evidence_id": f"mcr:sha256:{evidence_id}",
+        "release_plan_id": release_plan_id,
+        "decision": decision,
+    }
+    report_id = fingerprint(report_payload, namespace="model-change-report")
     run_payload = {
-        "schema_version": "1.3.0",
-        "evidence_id": f"m2riv:sha256:{report_id}",
+        "schema_version": "0.4.0",
+        "report_id": f"mcr:sha256:{report_id}",
+        "evidence_id": f"mcr:sha256:{evidence_id}",
         "created_at": timestamp,
         "baseline_snapshot_id": baseline_snapshot_id,
         "candidate_snapshot_id": candidate_snapshot_id,
@@ -266,8 +275,9 @@ def create_report(
     }
     run_id = fingerprint(run_payload, namespace="model-change-run")
     return ModelChangeReport(
-        id=f"m2riv:sha256:{report_id}",
-        run_id=f"m2riv:sha256:{run_id}",
+        id=f"mcr:sha256:{report_id}",
+        evidence_id=f"mcr:sha256:{evidence_id}",
+        run_id=f"mcr:sha256:{run_id}",
         created_at=timestamp,
         baseline_snapshot_id=baseline_snapshot_id,
         candidate_snapshot_id=candidate_snapshot_id,

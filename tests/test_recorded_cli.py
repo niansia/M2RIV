@@ -93,7 +93,7 @@ def test_compare_cli_blocks_and_writes_all_ci_artifacts(tmp_path: Path) -> None:
     assert {path.name for path in output.iterdir() if path.is_file()} == {
         "evidence-manifest.json",
         "junit.xml",
-        "m2riv-report.json",
+        "mcr-report.json",
         "release-plan.json",
         "results.sarif",
         "summary.md",
@@ -171,7 +171,7 @@ rules:
     )
 
     assert result.exit_code == expected_exit
-    report = json.loads((output / "m2riv-report.json").read_text("utf-8"))
+    report = json.loads((output / "mcr-report.json").read_text("utf-8"))
     assert report["decision"]["status"] == "WARN"
     assert report["decision"]["allowed"] is allow_warn
     assert f"RELEASE ALLOWED: {str(allow_warn).lower()}" in result.stdout
