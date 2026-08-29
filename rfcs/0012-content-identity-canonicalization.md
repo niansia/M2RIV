@@ -49,10 +49,26 @@ canonicalized to the typed `+00:00` form.
 ## Conformance
 
 [`examples/content_identity/golden-vectors.json`](../examples/content_identity/golden-vectors.json)
-contains canonical bytes and digests. Independent standard-library Python and
-Node implementations verify those vectors in CI. Full MCR fixtures add contract-
-level vectors for report, run, manifest, evidence-set, release-plan, artifact-diff,
-and numerical-diff namespaces.
+contains canonical bytes and digests. Its conformance-only typed-value notation
+uses exact IEEE-754 hexadecimal bits for binary64, base-10 strings for integers,
+and explicit tags for datetime, path, and set inputs. This prevents a generic
+JSON parser from erasing `1` versus `1.0` before the algorithm is tested. The
+notation is not part of the MCR wire format.
+
+Independent Python, Node, and Rust implementations verify 20 typed vectors plus
+1,024 deterministic finite-binary64 spelling vectors in CI,
+including negative zero, smallest subnormal, minimum normal, maximum finite,
+Python fixed/scientific boundaries, hard round-trip values, Unicode scalar
+ordering, emoji and combining characters, typed UTC/offset datetime, portable
+paths, portable string sets, explicit defaults/nulls, escaping, and large
+integers. Full MCR fixtures add contract-level vectors for report, run, manifest,
+evidence-set, release-plan, artifact-diff, and numerical-diff namespaces.
+
+The Rust reference additionally produces a minimal MCR that the Python verifier
+accepts and recomputes IDs for a Python-produced MCR. This closes implementation
+interoperability for the exercised MCR 1.3 profile; it does not prove that every
+possible binary64 spelling is portable or remove the schema-aware formatter
+requirement.
 
 ## Compatibility
 
@@ -60,3 +76,9 @@ This RFC documents and freezes the existing v1 algorithm; it does not change
 current IDs. A future canonicalization change must use a new domain version and
 publish migration vectors. RFC 8785 is not adopted retroactively because its
 number and string rules would change existing content addresses.
+
+Before an MCR 2.0/public identity v2 freeze, maintainers MUST compare this v1
+cost against a type-explicit or non-floating identity profile. Identity-bearing
+thresholds and measurements SHOULD prefer decimal strings or scaled integers
+when their domain has an exact decimal unit. Arbitrary binary64 remains allowed
+in v1 only where the schema supplies the type needed by the formatter.

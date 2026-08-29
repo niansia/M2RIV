@@ -1,7 +1,14 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "canonicalization_version": "v1",
   "algorithm": "sha256",
+  "typed_value_notation": {
+    "$float64": "16 lowercase hexadecimal IEEE-754 binary64 bits",
+    "$integer": "base-10 integer string",
+    "$datetime": "offset-aware RFC 3339 string converted to typed datetime",
+    "$path": "path converted to POSIX separators",
+    "$set": "portable string set sorted by Unicode scalar value"
+  },
   "vectors": [
     {
       "name": "object-order-unicode",
@@ -18,7 +25,15 @@
       "name": "numbers-and-arrays",
       "namespace": "golden-numbers",
       "value": {
-        "values": [-0.0, 0.5, -1.25, 42, true, false, null]
+        "values": [
+          -0.0,
+          0.5,
+          -1.25,
+          42,
+          true,
+          false,
+          null
+        ]
       },
       "canonical_json": "{\"values\":[-0.0,0.5,-1.25,42,true,false,null]}",
       "sha256": "d63985b6c5e8312da3d50197885064831dc31b5248236bf2f01e65d190704205"
@@ -33,12 +48,233 @@
           "slash": "a/b"
         },
         "array": [
-          {"b": 2, "a": 1},
+          {
+            "b": 2,
+            "a": 1
+          },
           "é"
         ]
       },
       "canonical_json": "{\"array\":[{\"a\":1,\"b\":2},\"é\"],\"outer\":{\"line\":\"one\\ntwo\",\"quote\":\"\\\"\",\"slash\":\"a/b\"}}",
       "sha256": "2c475981d300dcb4beed9c4c82ab16d079b2158438f3d86783f89539cb8ebe3c"
+    },
+    {
+      "name": "integer-versus-integral-float",
+      "namespace": "typed-number-kind",
+      "typed_value": {
+        "integer": {
+          "$integer": "1"
+        },
+        "float": {
+          "$float64": "3ff0000000000000"
+        }
+      },
+      "canonical_json": "{\"float\":1.0,\"integer\":1}",
+      "sha256": "69c4e4c5ee2f369ef620ac630b0ae69db9388b7338ea6ef89fb245f477b84622"
+    },
+    {
+      "name": "signed-zero",
+      "namespace": "typed-signed-zero",
+      "typed_value": {
+        "negative": {
+          "$float64": "8000000000000000"
+        },
+        "positive": {
+          "$float64": "0000000000000000"
+        }
+      },
+      "canonical_json": "{\"negative\":-0.0,\"positive\":0.0}",
+      "sha256": "f44c9bce6036403ef6481dae3b37194ffd153ad78c5e840033cbf759c1df4686"
+    },
+    {
+      "name": "smallest-subnormal",
+      "namespace": "typed-subnormal",
+      "typed_value": {
+        "value": {
+          "$float64": "0000000000000001"
+        }
+      },
+      "canonical_json": "{\"value\":5e-324}",
+      "sha256": "bb3e341c4c3a1106965681491ef69d094da01af548be0c74c0ed080629b0ae48"
+    },
+    {
+      "name": "smallest-normal",
+      "namespace": "typed-normal",
+      "typed_value": {
+        "value": {
+          "$float64": "0010000000000000"
+        }
+      },
+      "canonical_json": "{\"value\":2.2250738585072014e-308}",
+      "sha256": "273f39ef493a60b98a3cefa989556b03aca0008c8aed230ad97a55997ed0d9ca"
+    },
+    {
+      "name": "largest-finite",
+      "namespace": "typed-max-finite",
+      "typed_value": {
+        "value": {
+          "$float64": "7fefffffffffffff"
+        }
+      },
+      "canonical_json": "{\"value\":1.7976931348623157e+308}",
+      "sha256": "af8b692e136e398380a4573c88fcf24a7e03a6a90a2106b2c48041486774ec11"
+    },
+    {
+      "name": "python-fixed-lower-boundary",
+      "namespace": "typed-fixed-lower",
+      "typed_value": {
+        "fixed": {
+          "$float64": "3f1a36e2eb1c432d"
+        },
+        "scientific": {
+          "$float64": "3ee4f8b588e368f1"
+        }
+      },
+      "canonical_json": "{\"fixed\":0.0001,\"scientific\":1e-05}",
+      "sha256": "e4cb3854b416b1aaff5cd0b82671ef8fc4e162efa724e31db49ebc1604e9d7f5"
+    },
+    {
+      "name": "python-fixed-upper-boundary",
+      "namespace": "typed-fixed-upper",
+      "typed_value": {
+        "fixed": {
+          "$float64": "430c6bf526340000"
+        },
+        "scientific": {
+          "$float64": "4341c37937e08000"
+        }
+      },
+      "canonical_json": "{\"fixed\":1000000000000000.0,\"scientific\":1e+16}",
+      "sha256": "83ef32f9e767592ccca37e3199d8691f66a2a68b179f413f4e05cdd4d4af5819"
+    },
+    {
+      "name": "hard-round-trip-values",
+      "namespace": "typed-round-trip",
+      "typed_value": {
+        "decimal_sum": {
+          "$float64": "3fd3333333333334"
+        },
+        "small": {
+          "$float64": "3e8091f1667f0595"
+        },
+        "large": {
+          "$float64": "441ac53a7e04bcd9"
+        }
+      },
+      "canonical_json": "{\"decimal_sum\":0.30000000000000004,\"large\":1.2345678901234567e+20,\"small\":1.2345678901234566e-07}",
+      "sha256": "4b2284682fac2af2f55a30324d36a1ea34b3315697f0881c30c65f1b7cc05b55"
+    },
+    {
+      "name": "unicode-scalar-key-order",
+      "namespace": "typed-unicode-order",
+      "typed_value": {
+        "😀": "astral",
+        "": "private-use",
+        "a": "ascii"
+      },
+      "canonical_json": "{\"a\":\"ascii\",\"\":\"private-use\",\"😀\":\"astral\"}",
+      "sha256": "49c97e9c49f6bff26dd4b15cced7665c1a5d4901ab8d0449c0043e4a9de5d168"
+    },
+    {
+      "name": "unicode-no-normalization",
+      "namespace": "typed-unicode-normalization",
+      "typed_value": {
+        "composed": "é",
+        "decomposed": "é",
+        "emoji": "🧪"
+      },
+      "canonical_json": "{\"composed\":\"é\",\"decomposed\":\"é\",\"emoji\":\"🧪\"}",
+      "sha256": "f9845a75e5821ffc83e1bec84223e64c3090a6d6767338e62b3fce41a24d0876"
+    },
+    {
+      "name": "utc-datetime-normalization",
+      "namespace": "typed-datetime-utc",
+      "typed_value": {
+        "created_at": {
+          "$datetime": "2026-08-29T12:34:56.123456Z"
+        }
+      },
+      "canonical_json": "{\"created_at\":\"2026-08-29T12:34:56.123456+00:00\"}",
+      "sha256": "da402c07f3fb2e595dbdea42b4c3acba48e84a3e5bf1056cff2ca86c62a28c56"
+    },
+    {
+      "name": "offset-datetime-preservation",
+      "namespace": "typed-datetime-offset",
+      "typed_value": {
+        "created_at": {
+          "$datetime": "2026-08-29T20:34:56+08:00"
+        }
+      },
+      "canonical_json": "{\"created_at\":\"2026-08-29T20:34:56+08:00\"}",
+      "sha256": "bcb63e69981451b3933727aac5947d58b54e3e9e2288bd0edc86982e0446d56b"
+    },
+    {
+      "name": "portable-path",
+      "namespace": "typed-path",
+      "typed_value": {
+        "path": {
+          "$path": "artifacts\\engine\\model.plan"
+        }
+      },
+      "canonical_json": "{\"path\":\"artifacts/engine/model.plan\"}",
+      "sha256": "715f20715707d0c12d6d0770414c5debd4a60d26f75b8115e0d1eb81872f41ba"
+    },
+    {
+      "name": "portable-string-set",
+      "namespace": "typed-set",
+      "typed_value": {
+        "capabilities": {
+          "$set": [
+            "zeta",
+            "alpha",
+            "beta",
+            "alpha"
+          ]
+        }
+      },
+      "canonical_json": "{\"capabilities\":[\"alpha\",\"beta\",\"zeta\"]}",
+      "sha256": "82007d94428427506c77da7722ea09945c0b018304141b46e547972ea0919c1a"
+    },
+    {
+      "name": "explicit-null-and-defaults",
+      "namespace": "typed-defaults",
+      "typed_value": {
+        "required": "value",
+        "optional": null,
+        "defaults": {
+          "enabled": false,
+          "count": {
+            "$integer": "0"
+          },
+          "items": []
+        }
+      },
+      "canonical_json": "{\"defaults\":{\"count\":0,\"enabled\":false,\"items\":[]},\"optional\":null,\"required\":\"value\"}",
+      "sha256": "c942d79a0b186fb35cfb2029071ba17b79880ba585e6bbd6e1bcd314f7d3a5cc"
+    },
+    {
+      "name": "safe-integer-boundaries",
+      "namespace": "typed-integers",
+      "typed_value": {
+        "javascript_safe_max": {
+          "$integer": "9007199254740991"
+        },
+        "signed_min": {
+          "$integer": "-9223372036854775808"
+        }
+      },
+      "canonical_json": "{\"javascript_safe_max\":9007199254740991,\"signed_min\":-9223372036854775808}",
+      "sha256": "4b67da5867eee9fd1ebdaae1a1b8381b30fbe954e02d425d807fc7b873415a8f"
+    },
+    {
+      "name": "control-and-separator-escaping",
+      "namespace": "typed-escaping",
+      "typed_value": {
+        "control": "\b\f\n\r\t\u0000",
+        "separators": "  "
+      },
+      "canonical_json": "{\"control\":\"\\b\\f\\n\\r\\t\\u0000\",\"separators\":\"  \"}",
+      "sha256": "4537dff3e9dc4da1769352b3b94329e5982ac4e5a40fdd750961f76bf1e6c18a"
     }
   ]
 }

@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+from examples.content_identity.typed_values import materialize_typed_value
 from m2riv.core.identity import (
     build_local_snapshot,
     canonical_json,
@@ -63,8 +64,10 @@ def test_public_content_identity_golden_vectors_match_the_runtime() -> None:
         (root / "examples" / "content_identity" / "golden-vectors.json").read_text(encoding="utf-8")
     )
     for vector in document["vectors"]:
-        assert canonical_json(vector["value"]).decode() == vector["canonical_json"]
-        assert fingerprint(vector["value"], namespace=vector["namespace"]) == vector["sha256"]
+        source = vector.get("typed_value", vector.get("value"))
+        value = materialize_typed_value(source)
+        assert canonical_json(value).decode() == vector["canonical_json"]
+        assert fingerprint(value, namespace=vector["namespace"]) == vector["sha256"]
 
     completed = subprocess.run(
         [sys.executable, str(root / "examples" / "content_identity" / "verify_golden.py")],
@@ -73,7 +76,19 @@ def test_public_content_identity_golden_vectors_match_the_runtime() -> None:
         text=True,
         timeout=30,
     )
-    assert "verified 3" in completed.stdout
+    assert f"verified {len(document['vectors'])}" in completed.stdout
+    assert "verified 1024 binary64 spelling vectors" in completed.stdout
+    subprocess.run(
+        [
+            sys.executable,
+            str(root / "examples" / "content_identity" / "generate_vectors.py"),
+            "--check",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
 
 
 def test_missing_and_non_artifact_paths_fail_closed(tmp_path: Path) -> None:

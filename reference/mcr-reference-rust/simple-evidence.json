@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "created_at": "2026-08-29T12:00:00Z",
+  "baseline_label": "pytorch-fp16-build-102",
+  "candidate_label": "tensorrt-int8-build-103",
+  "metric": {
+    "metric_id": "quality",
+    "unit": "fraction",
+    "direction": "higher_is_better",
+    "baseline_value": 0.9125,
+    "candidate_value": 0.9105,
+    "non_inferiority_margin": 0.005,
+    "sample_size": 200
+  }
+}
