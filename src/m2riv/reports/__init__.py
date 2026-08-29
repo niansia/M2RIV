@@ -17,6 +17,11 @@ from m2riv.reports.models import (
     create_report,
 )
 from m2riv.reports.render import render_json, render_markdown
+from m2riv.reports.verify import (
+    MCRVerification,
+    MCRVerificationError,
+    verify_report_bundle,
+)
 
 __all__ = [
     "EvidenceManifest",
@@ -27,6 +32,8 @@ __all__ = [
     "MCRFinding",
     "MCRMetric",
     "MCRStatus",
+    "MCRVerification",
+    "MCRVerificationError",
     "ModelChangeReport",
     "ReportBundle",
     "create_evidence_manifest",
@@ -36,5 +43,6 @@ __all__ = [
     "render_junit",
     "render_markdown",
     "render_sarif",
+    "verify_report_bundle",
     "write_report_bundle",
 ]

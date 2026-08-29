@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import platform
 from collections.abc import Sequence
 from pathlib import Path
 from time import perf_counter_ns
@@ -116,8 +117,12 @@ class OnnxRuntimeAdapter:
             model_family=model_family,
             runtime_profile=RuntimeProfile(
                 framework="onnxruntime",
+                framework_version=self._runtime_version,
                 device="cpu",
                 dtype=input_type.removeprefix("tensor(").removesuffix(")"),
+                operating_system=platform.system().lower(),
+                architecture=platform.machine().lower(),
+                python_version=platform.python_version(),
             ),
             execution_config={
                 "adapter": "onnxruntime-cpu-v1",

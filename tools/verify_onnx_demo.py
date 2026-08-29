@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from m2riv.reports import verify_report_bundle
+
 EXPECTED_STATUSES = {
     "build-00-fp16": "PASS",
     "build-01-int8-balanced": "PASS",
@@ -51,14 +53,17 @@ def verify(destination: Path) -> None:
 
     for checkpoint, expected_status in EXPECTED_STATUSES.items():
         report_directory = root / "reports" / checkpoint
+        verification = verify_report_bundle(report_directory)
+        if not verification.valid:
+            raise ValueError(f"{checkpoint} MCR bundle failed integrity verification")
         report_path = report_directory / "m2riv-report.json"
         if report_path.stat().st_size > MAX_MCR_BYTES:
             raise ValueError(f"{checkpoint} MCR exceeds {MAX_MCR_BYTES} bytes")
         report = _object(report_path)
         manifest = _object(report_directory / "evidence-manifest.json")
         reference = report.get("evidence_manifest")
-        if report.get("schema_version") != "1.2.0":
-            raise ValueError(f"{checkpoint} is not an MCR 1.2 report")
+        if report.get("schema_version") != "1.3.0":
+            raise ValueError(f"{checkpoint} is not an MCR 1.3 report")
         if report.get("decision", {}).get("status") != expected_status:
             raise ValueError(f"{checkpoint} has the wrong release status")
         if not isinstance(reference, dict) or reference.get("id") != manifest.get("id"):

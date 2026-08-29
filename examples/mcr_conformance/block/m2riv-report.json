@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.3.0",
+  "id": "m2riv:sha256:a43e0280e6d25602cb6458716e1fea5e178b448069d20ffe7794d58445a48d24",
+  "run_id": "m2riv:sha256:d7a470d4b9a50bff1c4165e577ca3edcf2fe188ae51402ebd9e451a3e5699c8c",
+  "created_at": "2026-08-29T00:00:00Z",
+  "baseline_snapshot_id": "m2riv:sha256:8bdf0708192466cbad67935968f646606ebb8cc1a83627803b35a79ffb8e6d04",
+  "candidate_snapshot_id": "m2riv:sha256:299e0e4f6fbd8d7aebeb36e23dae306850417c457050dcb01892e740c6c65f35",
+  "release_plan_id": null,
+  "executions": [
+    {
+      "role": "candidate",
+      "executor_id": "example.external-producer",
+      "executor_version": "1.0",
+      "config_fingerprint": "11392e737db6dc009376426843dba2450880f2dac5ddc3ddd8d61c91f9be7d56",
+      "runtime_profile": {
+        "seed": 0,
+        "deterministic": true,
+        "repetitions": 1,
+        "framework": "fixture-runtime",
+        "framework_version": "1.0",
+        "device": "cpu",
+        "dtype": null,
+        "operating_system": "portable-fixture",
+        "architecture": "generic",
+        "python_version": "3.11+",
+        "parameters": {}
+      },
+      "capabilities": [
+        "paired-observations"
+      ],
+      "requested_cases": 10,
+      "returned_observations": 10,
+      "cache_hits": 0
+    }
+  ],
+  "metrics": [
+    {
+      "metric_id": "accuracy",
+      "scope": "overall",
+      "unit": "score",
+      "direction": "higher_is_better",
+      "baseline_value": 0.9,
+      "candidate_value": 0.7,
+      "delta": -0.2,
+      "confidence_level": null,
+      "interval_lower": null,
+      "interval_upper": null,
+      "effect_size": null,
+      "sample_size": 10,
+      "evidence_set_id": null,
+      "identity_scope": "evidence"
+    }
+  ],
+  "decision": {
+    "status": "BLOCK",
+    "allowed": false,
+    "findings": [
+      {
+        "rule_id": "accuracy-floor",
+        "status": "BLOCK",
+        "message": "external producer fixture: BLOCK",
+        "metric_id": "accuracy",
+        "evidence": [],
+        "evidence_set_id": null
+      }
+    ]
+  },
+  "evidence_manifest": null,
+  "evidence": [],
+  "limitations": [
+    "Minimal external-producer conformance fixture; no model was run."
+  ]
+}

@@ -2,6 +2,18 @@
   "additionalProperties": false,
   "description": "Execution-relevant settings that participate in snapshot identity.",
   "properties": {
+    "architecture": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Architecture"
+    },
     "deterministic": {
       "default": true,
       "title": "Deterministic",
@@ -43,10 +55,46 @@
       "default": null,
       "title": "Framework"
     },
+    "framework_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Framework Version"
+    },
+    "operating_system": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Operating System"
+    },
     "parameters": {
       "additionalProperties": true,
       "title": "Parameters",
       "type": "object"
+    },
+    "python_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Python Version"
     },
     "repetitions": {
       "default": 1,

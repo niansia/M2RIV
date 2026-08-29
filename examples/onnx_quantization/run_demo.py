@@ -248,6 +248,7 @@ rules:
     checkpoint_rows: list[dict[str, str]] = []
     artifact_checkpoint_rows: list[dict[str, str]] = []
     first_bad_numerical_tensor: str | None = None
+    first_bad_numerical_rows: tuple[Any, ...] = ()
     for name, path in builds:
         candidate_adapter = OnnxRuntimeAdapter(path, model_family=ModelFamily.CV)
         artifact_diff = compare_artifacts(baseline_profile, inspect_artifact(path))
@@ -271,6 +272,9 @@ rules:
         ]
         if numerical_diff is not None:
             first_bad_numerical_tensor = numerical_diff.first_divergent_tensor
+            first_bad_numerical_rows = tuple(
+                item for item in numerical_diff.tensors if item.name != "label"
+            )
             linked_evidence.append(
                 EvidenceRef(
                     id=numerical_diff.id,
@@ -344,6 +348,12 @@ rules:
         f"Critical slice: digit {RARE_DIGIT} with normalized ink sum >= "
         f"{RARE_RISK_THRESHOLD:.0f}; the rule is derived from inputs, not outcomes.",
         "Baseline: CPU-executed FP16 ONNX. Candidates: CPU-executed static INT8 QDQ ONNX.",
+        "Runtime: "
+        f"{baseline_adapter.describe().runtime_profile.framework} "
+        f"{baseline_adapter.describe().runtime_profile.framework_version}; "
+        f"{baseline_adapter.describe().runtime_profile.operating_system}/"
+        f"{baseline_adapter.describe().runtime_profile.architecture}; Python "
+        f"{baseline_adapter.describe().runtime_profile.python_version}.",
         "",
         "| Build | Overall accuracy | Delta | Rare-class accuracy | Delta | Gate |",
         "|---|---:|---:|---:|---:|---|",
@@ -361,6 +371,18 @@ rules:
             "",
             f"First bad build: `{first_bad}`.",
             f"First shared activation outside tolerance: `{first_bad_numerical_tensor}`.",
+            "",
+            "| Shared tensor | max abs error | RMSE | cosine similarity |",
+            "|---|---:|---:|---:|",
+        )
+    )
+    lines.extend(
+        f"| `{item.name}` | {item.max_abs_error:.4f} | {item.rmse:.4f} | "
+        f"{item.cosine_similarity:.6f} |"
+        for item in first_bad_numerical_rows
+    )
+    lines.extend(
+        (
             "",
             "The result is a paired release decision over a fixed holdout set, not a claim "
             "about all handwritten-digit distributions or all quantization methods.",

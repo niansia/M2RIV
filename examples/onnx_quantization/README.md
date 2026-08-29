@@ -69,7 +69,26 @@ The `onnx-demo` extra pins the exact demo toolchain. Tested ONNX Runtime CPU
 kernels can still place two common-class build-03 samples on opposite sides of
 the argmax boundary (93.32–93.64% overall); the critical slice remains 78.72%,
 the gate remains `BLOCK`, and the first bad build remains build-02. The generated
-README and MCR are authoritative for the executing host.
+README and MCR are authoritative for the executing host. MCR execution records
+now include the operating system, architecture, Python version, ONNX Runtime
+version, device, and dtype. CI runs this demo on both Linux and Windows and keeps
+the platform-specific bundles.
+
+For scale-0.75, both observed platforms locate `hidden_linear` first. Exact
+max-absolute-error / RMSE / cosine triples are themselves runtime evidence:
+
+| Shared tensor | Linux x86-64 | Windows x86-64 |
+| --- | ---: | ---: |
+| `hidden_linear` | 3.8411 / 0.9126 / 0.997577 | 3.9343 / 0.9951 / 0.997173 |
+| `hidden` | 12.4455 / 2.9291 / 0.863517 | 12.7547 / 2.9930 / 0.854680 |
+| `output_linear` | 33.8709 / 7.5163 / 0.991185 | 34.0834 / 8.2349 / 0.990702 |
+| `logits` | 33.9308 / 7.5554 / 0.991056 | 34.1688 / 8.2708 / 0.990609 |
+
+Verify any generated report directory independently with:
+
+```console
+m2riv mcr verify runs/onnx-quantization/reports/build-02-int8-calibration-scale-075
+```
 
 Dataset provenance: [scikit-learn digits documentation](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html)
 and the [UCI Optical Recognition of Handwritten Digits dataset](https://archive.ics.uci.edu/dataset/80/optical+recognition+of+handwritten+digits).

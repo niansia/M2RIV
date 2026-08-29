@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import Field, FiniteFloat, StringConstraints, model_validator
 
 from m2riv.core.identity import fingerprint
-from m2riv.core.models import ContentId, Contract, Digest, EvidenceRef
+from m2riv.core.models import ContentId, Contract, Digest, EvidenceRef, RuntimeProfile
 
 SafeExecutionCapability = Annotated[
     str,
@@ -141,6 +141,7 @@ class MCRExecution(Contract):
     executor_id: str = Field(min_length=1)
     executor_version: str = Field(min_length=1)
     config_fingerprint: Digest
+    runtime_profile: RuntimeProfile | None = None
     capabilities: frozenset[SafeExecutionCapability] = Field(
         default_factory=frozenset, max_length=64
     )
@@ -174,7 +175,7 @@ class MCRDecision(Contract):
 class ModelChangeReport(Contract):
     """The stable envelope M2RIV intends other tools to produce and consume."""
 
-    schema_version: Literal["1.2.0"] = "1.2.0"
+    schema_version: Literal["1.3.0"] = "1.3.0"
     id: ContentId
     run_id: ContentId
     created_at: datetime
@@ -230,7 +231,7 @@ def create_report(
         metric.metric_id for metric in metrics if metric.identity_scope == "evidence"
     }
     evidence_payload = {
-        "schema_version": "1.2.0",
+        "schema_version": "1.3.0",
         "baseline_snapshot_id": baseline_snapshot_id,
         "candidate_snapshot_id": candidate_snapshot_id,
         "release_plan_id": release_plan_id,
@@ -252,7 +253,7 @@ def create_report(
     }
     report_id = fingerprint(evidence_payload, namespace="model-change-evidence")
     run_payload = {
-        "schema_version": "1.2.0",
+        "schema_version": "1.3.0",
         "evidence_id": f"m2riv:sha256:{report_id}",
         "created_at": timestamp,
         "baseline_snapshot_id": baseline_snapshot_id,

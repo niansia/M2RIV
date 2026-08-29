@@ -1,0 +1,68 @@
+{
+  "$defs": {
+    "MCRStatus": {
+      "enum": [
+        "PASS",
+        "WARN",
+        "BLOCK",
+        "ERROR"
+      ],
+      "title": "MCRStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Machine-readable result from verifying one MCR bundle.",
+  "properties": {
+    "checks": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 128,
+      "minItems": 1,
+      "title": "Checks",
+      "type": "array"
+    },
+    "decision_status": {
+      "$ref": "#/$defs/MCRStatus"
+    },
+    "report_id": {
+      "pattern": "^m2riv:sha256:[a-f0-9]{64}$",
+      "title": "Report Id",
+      "type": "string"
+    },
+    "run_id": {
+      "pattern": "^m2riv:sha256:[a-f0-9]{64}$",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "valid": {
+      "default": true,
+      "title": "Valid",
+      "type": "boolean"
+    },
+    "warnings": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 128,
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "report_id",
+    "run_id",
+    "decision_status",
+    "checks"
+  ],
+  "title": "MCRVerification",
+  "type": "object"
+}

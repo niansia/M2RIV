@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import BaseModel, ValidationError
 
+from m2riv.artifacts import OnnxGraphSummary, OnnxTensorSpec, TensorNumericalDiff
 from m2riv.core.identity import fingerprint
 from m2riv.core.models import (
     Claim,
@@ -15,6 +16,7 @@ from m2riv.core.models import (
     Observation,
     RetentionMode,
     RunManifest,
+    RuntimeProfile,
 )
 
 
@@ -76,3 +78,48 @@ def test_observation_requires_timezone() -> None:
 
 def test_fingerprints_are_domain_separated() -> None:
     assert fingerprint("same", namespace="suite") != fingerprint("same", namespace="config")
+
+
+def test_source_runtime_and_manifest_provenance_rejects_ambiguous_values() -> None:
+    for uri in ("   ", "model\0revision"):
+        with pytest.raises(ValidationError):
+            ModelRef(uri=uri)
+    with pytest.raises(ValidationError, match="credentials"):
+        RuntimeProfile(parameters={"items": [{"authorization": "secret"}]})
+    with pytest.raises(ValidationError, match="timezone-aware"):
+        RunManifest(
+            run_id=content_id("naive-run"),
+            baseline_snapshot_id=content_id("naive-baseline"),
+            candidate_snapshot_ids=(content_id("naive-candidate"),),
+            suite_fingerprint="1" * 64,
+            config_fingerprint="2" * 64,
+            created_at=datetime(2026, 8, 29),
+        )
+
+
+def test_onnx_contracts_reject_control_characters() -> None:
+    with pytest.raises(ValidationError, match="tensor names"):
+        OnnxTensorSpec(name="bad\nname", element_type="FLOAT")
+    with pytest.raises(ValidationError, match="producer metadata"):
+        OnnxGraphSummary(
+            ir_version=1,
+            producer_name="bad\nproducer",
+            model_version=1,
+            node_count=0,
+            initializer_count=0,
+            parameter_count=0,
+            metadata_fingerprint="3" * 64,
+        )
+    with pytest.raises(ValidationError, match="tensor names"):
+        TensorNumericalDiff(
+            name="bad\ntensor",
+            baseline_dtype="float32",
+            candidate_dtype="float32",
+            element_count=1,
+            max_abs_error=0,
+            mean_abs_error=0,
+            rmse=0,
+            max_relative_error=0,
+            cosine_similarity=1,
+            within_tolerance=True,
+        )

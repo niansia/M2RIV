@@ -51,7 +51,13 @@ from m2riv.io import load_policy, load_suite
 from m2riv.pipeline import ReleaseComparison, compare_exact_match
 from m2riv.planning import compile_release_plan
 from m2riv.plugins import builtin_metric_registry
-from m2riv.reports import ReportBundle, render_markdown, write_report_bundle
+from m2riv.reports import (
+    MCRVerificationError,
+    ReportBundle,
+    render_markdown,
+    verify_report_bundle,
+    write_report_bundle,
+)
 
 app = typer.Typer(
     name="m2riv",
@@ -60,8 +66,10 @@ app = typer.Typer(
 )
 schema_app = typer.Typer(help="Manage public M2RIV contracts.")
 artifact_app = typer.Typer(help="Inspect and compare deployment artifacts without inference.")
+mcr_app = typer.Typer(help="Validate portable Model Change Report bundles.")
 app.add_typer(schema_app, name="schema")
 app.add_typer(artifact_app, name="artifact")
+app.add_typer(mcr_app, name="mcr")
 
 
 class BisectAdapterKind(StrEnum):
@@ -78,6 +86,19 @@ class OnnxOutputMode(StrEnum):
 def version() -> None:
     """Print the installed M2RIV version."""
     typer.echo(__version__)
+
+
+@mcr_app.command("verify")
+def mcr_verify_command(
+    source: Annotated[Path, typer.Argument(exists=True, readable=True)],
+) -> None:
+    """Verify MCR schema, identities, manifests, sets, and linked evidence."""
+    try:
+        result = verify_report_bundle(source)
+    except (OSError, MCRVerificationError) as error:
+        typer.echo(json.dumps({"valid": False, "error": str(error)}, indent=2))
+        raise typer.Exit(code=3) from error
+    typer.echo(result.model_dump_json(indent=2))
 
 
 @app.command()

@@ -1,10 +1,20 @@
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
+from datetime import datetime
+from enum import StrEnum
 from pathlib import Path
 
 import pytest
 
-from m2riv.core.identity import build_local_snapshot, hash_artifact
+from m2riv.core.identity import (
+    build_local_snapshot,
+    canonical_json,
+    fingerprint,
+    hash_artifact,
+)
 from m2riv.core.models import RuntimeProfile
 
 
@@ -28,6 +38,62 @@ def test_execution_config_changes_snapshot_identity(tmp_path: Path) -> None:
 
     assert fp16.id != int8.id
     assert fp16.artifact_hashes[0].digest == int8.artifact_hashes[0].digest
+
+
+def test_canonical_json_rejects_ambiguous_values_and_normalizes_paths() -> None:
+    class Example(StrEnum):
+        VALUE = "value"
+
+    assert canonical_json({"path": Path("a/b"), "enum": Example.VALUE}) == (
+        b'{"enum":"value","path":"a/b"}'
+    )
+    with pytest.raises(TypeError, match="keys must be strings"):
+        canonical_json({1: "value"})
+    with pytest.raises(ValueError, match="timezone-aware"):
+        canonical_json(datetime(2026, 8, 29))
+    for namespace in ("", "invalid\0namespace"):
+        with pytest.raises(ValueError, match="namespace"):
+            fingerprint("value", namespace=namespace)
+
+
+def test_missing_and_non_artifact_paths_fail_closed(tmp_path: Path) -> None:
+    with pytest.raises(FileNotFoundError):
+        hash_artifact(tmp_path / "missing.bin")
+
+
+def test_pydantic_frozenset_identity_is_stable_across_hash_seeds() -> None:
+    source_root = Path(__file__).parents[1] / "src"
+    script = """
+from m2riv.core.identity import fingerprint
+from m2riv.core.models import PluginRecord
+
+record = PluginRecord(
+    name="seed-probe",
+    version="1.0",
+    kind="metric",
+    capabilities=frozenset({"accuracy", "latency", "slice:rare", "robustness"}),
+    config_fingerprint="0" * 64,
+)
+print(fingerprint(record, namespace="hash-seed-probe"))
+"""
+    identities: set[str] = set()
+    for seed in ("1", "2", "101", "random"):
+        environment = os.environ.copy()
+        environment["PYTHONHASHSEED"] = seed
+        environment["PYTHONPATH"] = os.pathsep.join(
+            filter(None, (str(source_root), environment.get("PYTHONPATH")))
+        )
+        completed = subprocess.run(
+            [sys.executable, "-c", script],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=environment,
+            timeout=30,
+        )
+        identities.add(completed.stdout.strip())
+
+    assert len(identities) == 1
 
 
 def test_directory_hash_is_stable_and_structure_sensitive(tmp_path: Path) -> None:

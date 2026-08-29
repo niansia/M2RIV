@@ -31,7 +31,10 @@ MAX_ARTIFACT_ENTRIES = 100_000
 
 def _jsonable(value: Any) -> Any:
     if isinstance(value, BaseModel):
-        return _jsonable(value.model_dump(mode="json", exclude_none=False))
+        # Keep Python containers intact until the canonicalizer has sorted
+        # unordered values. Pydantic's JSON mode eagerly turns frozensets into
+        # lists, preserving hash-table iteration order across that boundary.
+        return _jsonable(value.model_dump(mode="python", exclude_none=False))
     if isinstance(value, Mapping):
         if not all(isinstance(key, str) for key in value):
             raise TypeError("canonical JSON object keys must be strings")

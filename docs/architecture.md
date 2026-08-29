@@ -99,14 +99,22 @@ compiler toolchains, and CI providers to produce or consume MCR independently of
 the M2RIV CLI. If that happens, M2RIV becomes infrastructure rather than one more
 evaluation application.
 
-MCR schema 1.2 keeps per-observation references out of repeated metric records.
+MCR schema 1.3 keeps per-observation references out of repeated metric records.
 Metrics point to content-addressed `EvidenceSet` objects in an external
 `EvidenceManifest`; the MCR contains only the manifest identity and bounded
 supplemental evidence such as an artifact diff. Bundle persistence verifies every
 manifest identity and set reference before atomically publishing it.
 
+`m2riv mcr verify` is the producer-neutral consumption boundary. It validates the
+MCR contract, recomputes stable and run identities, rehashes manifests and evidence
+sets, checks all set references, and rehashes release plans plus recognized
+artifact/numerical diffs when their bodies are present. Unknown or remote evidence
+is surfaced as an explicit warning rather than silently treated as verified.
+
 The report `id` is a deterministic evidence identity over snapshots, release plan,
 stable metrics, finding evidence links, manifest, and supplemental artifacts.
 Timestamp and run-scoped metrics such as wall-clock latency are intentionally
 excluded. `run_id` covers the complete measured execution. Findings point directly
-to evidence sets, so a consumer never sees an unexplained `BLOCK`.
+to evidence sets, so a consumer never sees an unexplained `BLOCK`. Each execution
+also carries the snapshot runtime profile, including framework/runtime version and
+host platform fields when the adapter can establish them.

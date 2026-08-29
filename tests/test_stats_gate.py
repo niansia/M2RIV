@@ -12,7 +12,13 @@ from m2riv.gate import (
     MetricEvidence,
     evaluate_gate,
 )
-from m2riv.stats import ConfidenceInterval, PairedEstimate, binary_paired_evidence, paired_bootstrap
+from m2riv.stats import (
+    BinaryFlipMatrix,
+    ConfidenceInterval,
+    PairedEstimate,
+    binary_paired_evidence,
+    paired_bootstrap,
+)
 
 
 def test_paired_bootstrap_is_deterministic_and_preserves_pairing() -> None:
@@ -206,3 +212,22 @@ def test_serialized_policy_and_evidence_reject_non_finite_numbers() -> None:
             resamples=1,
             seed=0,
         )
+
+
+def test_statistical_edge_contracts_and_single_pair_path() -> None:
+    with pytest.raises(ValidationError, match="finite"):
+        ConfidenceInterval(low=float("nan"), high=1, confidence_level=0.95)
+    with pytest.raises(ValidationError, match="must not exceed"):
+        ConfidenceInterval(low=2, high=1, confidence_level=0.95)
+    flips = BinaryFlipMatrix(both_pass=1, baseline_only=2, candidate_only=3, both_fail=4)
+    assert flips.n_pairs == 10
+    assert paired_bootstrap([1], [2], resamples=1).effect_size is None
+    for arguments in (
+        {"confidence_level": 1.0},
+        {"resamples": 0},
+    ):
+        with pytest.raises(ValueError):
+            paired_bootstrap([1], [1], **arguments)  # type: ignore[arg-type]
+    for baseline, candidate in (([True], []), ([], [])):
+        with pytest.raises(ValueError):
+            binary_paired_evidence(baseline, candidate)

@@ -133,8 +133,12 @@ class RuntimeProfile(Contract):
     deterministic: bool = True
     repetitions: Annotated[int, Field(ge=1)] = 1
     framework: str | None = None
+    framework_version: str | None = None
     device: str | None = None
     dtype: str | None = None
+    operating_system: str | None = None
+    architecture: str | None = None
+    python_version: str | None = None
     parameters: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("parameters")

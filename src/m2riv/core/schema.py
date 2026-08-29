@@ -28,6 +28,7 @@ from m2riv.reports.models import (
     EvidenceSet,
     ModelChangeReport,
 )
+from m2riv.reports.verify import MCRVerification
 
 PUBLIC_CONTRACTS: tuple[type[BaseModel], ...] = (
     ModelRef,
@@ -44,6 +45,7 @@ PUBLIC_CONTRACTS: tuple[type[BaseModel], ...] = (
     EvidenceManifestRef,
     EvidenceManifest,
     ModelChangeReport,
+    MCRVerification,
     PluginManifest,
     ExecutorDescriptor,
     CompiledReleasePlan,
