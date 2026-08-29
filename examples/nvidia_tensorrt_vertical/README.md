@@ -86,8 +86,14 @@ portable artifacts.
 
 [`reference-receipt-rtx4060-20260829.json`](reference-receipt-rtx4060-20260829.json)
 is the compact receipt from the first complete target execution. Its source
-`gpu-receipt.json` SHA-256 is
-`c3d70a68e5b9e544313808fe4832255791a9e38e135e691cf6f102ff6779490c`.
+revision is `073d55b95116e5ef2f420de2e424d5d1c5c29061`; its target evidence ID is
+`mcr:sha256:b2c99b902a6a09fba3cfd8aec7df78c18927ba7ebd7b8cf94596a8e63c125dbd`
+and covers 4,514 retained files. The source `gpu-receipt.json` SHA-256 is
+`a1ad352b7f01d47db2d35a4376f356327ae408277f510c5ccf3472e7dbaff1a3`;
+the target manifest SHA-256 is
+`7a1036ff5aa1541d82678bd3adb74c5160f58ba746c55336964b883c0a940186`.
 The complete engines, Polygraphy outputs, and MCR bundles are distributed as a
 separate evidence archive because TensorRT engines are target-specific binaries.
+`M2RIV-nvidia-evidence-RTX4060-MCR0.4-20260829.zip` has SHA-256
+`06a060000afb40cd9dd6e529b08249863d20a91706030d2b505493572fd21a05`.
 The compact receipt is a first-party observation, not independent reproduction.

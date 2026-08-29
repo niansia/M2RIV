@@ -55,10 +55,10 @@ def test_release_build_has_provenance_sbom_and_gated_trusted_publish() -> None:
 def test_ci_upgrades_vulnerable_packaging_bootstrap_before_audit() -> None:
     source = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
 
-    assert 'python -m pip install "setuptools>=83"' in source
-    assert source.index('python -m pip install "setuptools>=83"') < source.index(
-        "python -m pip_audit --local --skip-editable"
-    )
+    audit_index = source.index("python -m pip_audit --local --skip-editable")
+    for requirement in ('"pip>=26.2"', '"setuptools>=83"'):
+        assert requirement in source
+        assert source.index(requirement) < audit_index
 
 
 def test_checkout_never_persists_credentials() -> None:

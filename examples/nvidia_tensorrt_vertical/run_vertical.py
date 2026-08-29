@@ -199,7 +199,7 @@ def _result_rows(
     cases: tuple[Any, ...],
     polygraphy_exit: int,
 ) -> tuple[list[dict[str, Any]], tuple[BackendCaseComparison, ...], str, str]:
-    from polygraphy.comparator import Comparator, CompareFunc, RunResults
+    from polygraphy.comparator import Comparator, RunResults, SimpleCompareFunc
     from polygraphy.logger import G_LOGGER
 
     results = RunResults.load(str(results_path))
@@ -219,7 +219,7 @@ def _result_rows(
         G_LOGGER.module_severity = G_LOGGER.CRITICAL
         accuracy_results = Comparator.compare_accuracy(
             selected,
-            compare_func=CompareFunc.simple(
+            compare_func=SimpleCompareFunc(
                 atol=ABSOLUTE_TOLERANCE,
                 rtol=RELATIVE_TOLERANCE,
             ),

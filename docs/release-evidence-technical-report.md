@@ -140,7 +140,13 @@ scale-065`. Four strict MCR verifications succeeded. Every structured backend
 claim links a verified native body and matching exit code; snapshot/build evidence
 binds retained artifact bytes, source revision, calibration cohort, and tool
 versions. A target evidence manifest covers every retained file and strict report.
-The exact target-root and archive digests are published with the compact receipt.
+The root is
+`mcr:sha256:b2c99b902a6a09fba3cfd8aec7df78c18927ba7ebd7b8cf94596a8e63c125dbd`
+over 4,514 retained files produced from source revision
+`073d55b95116e5ef2f420de2e424d5d1c5c29061`. The complete archive SHA-256 is
+`06a060000afb40cd9dd6e529b08249863d20a91706030d2b505493572fd21a05`.
+The exact target-root, manifest, receipt, and archive digests are published with
+the compact receipt.
 
 The recorded single-case runner timings are retained as run evidence, but this
 short execution does not establish a performance ranking. Windows/WDDM did not

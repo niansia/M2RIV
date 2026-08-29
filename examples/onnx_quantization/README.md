@@ -74,6 +74,12 @@ Windows, asserts bounded accuracy ranges plus the same PASS/BLOCK boundary, and
 keeps both platform-specific evidence bundles. Exact max-absolute-error / RMSE /
 cosine triples remain runtime evidence rather than copied documentation.
 
+ONNX Runtime quantizer versions may retain the pre-QDQ name (`hidden_linear` or
+`hidden_bias`) or expose the first common post-QDQ activation (`hidden`). The
+verifier requires that the declared first divergence equal the first failed
+tensor row and remain in this hidden-activation stage; it does not mistake a
+tool-internal tensor rename for a changed release result.
+
 Regenerating the training fixture is intentionally separate from running the
 release demo. It may change floating-point weights across BLAS implementations,
 so the new digest and both platform runs must be reviewed before committing it:

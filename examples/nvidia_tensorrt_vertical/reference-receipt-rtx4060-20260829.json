@@ -1,6 +1,13 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "evidence_level": "live-target-gpu",
+  "source_commit": "073d55b95116e5ef2f420de2e424d5d1c5c29061",
+  "target_evidence_id": "mcr:sha256:b2c99b902a6a09fba3cfd8aec7df78c18927ba7ebd7b8cf94596a8e63c125dbd",
+  "verified_file_count": 4514,
+  "target_manifest_sha256": "7a1036ff5aa1541d82678bd3adb74c5160f58ba746c55336964b883c0a940186",
+  "gpu_receipt_sha256": "a1ad352b7f01d47db2d35a4376f356327ae408277f510c5ccf3472e7dbaff1a3",
+  "archive_name": "M2RIV-nvidia-evidence-RTX4060-MCR0.4-20260829.zip",
+  "archive_sha256": "06a060000afb40cd9dd6e529b08249863d20a91706030d2b505493572fd21a05",
   "preflight": {
     "gpu_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
     "driver_version": "555.97",
@@ -23,8 +30,8 @@
       "decision": "PASS",
       "backend_matched_cases": 629,
       "case_count": 629,
-      "mean_latency_ms": 0.8752057965495439,
-      "p95_latency_ms": 1.0383129119873047,
+      "mean_latency_ms": 0.9959145835548971,
+      "p95_latency_ms": 1.0182857513427734,
       "peak_vram_mib": null
     },
     {
@@ -34,8 +41,8 @@
       "decision": "PASS",
       "backend_matched_cases": 629,
       "case_count": 629,
-      "mean_latency_ms": 0.988506550629681,
-      "p95_latency_ms": 1.024484634399414,
+      "mean_latency_ms": 0.9066364912994336,
+      "p95_latency_ms": 1.0132789611816406,
       "peak_vram_mib": null
     },
     {
@@ -45,8 +52,8 @@
       "decision": "BLOCK",
       "backend_matched_cases": 629,
       "case_count": 629,
-      "mean_latency_ms": 0.9573408075281091,
-      "p95_latency_ms": 1.001596450805664,
+      "mean_latency_ms": 0.9310851984069534,
+      "p95_latency_ms": 1.010894775390625,
       "peak_vram_mib": null
     },
     {
@@ -56,8 +63,8 @@
       "decision": "BLOCK",
       "backend_matched_cases": 629,
       "case_count": 629,
-      "mean_latency_ms": 0.943905977452313,
-      "p95_latency_ms": 1.0104179382324219,
+      "mean_latency_ms": 0.9418561083334239,
+      "p95_latency_ms": 1.0089874267578125,
       "peak_vram_mib": null
     }
   ],

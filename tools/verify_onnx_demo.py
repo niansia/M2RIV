@@ -115,8 +115,24 @@ def verify(destination: Path) -> None:
     }.issubset(operator_names):
         raise ValueError("first bad build does not contain the expected QDQ graph changes")
     numerical_diff = _object(root / "reports" / FIRST_BAD / "numerical-diff.json")
-    if numerical_diff.get("first_divergent_tensor") != "hidden_linear":
-        raise ValueError("numerical diff did not locate the first shared activation drift")
+    tensor_rows = numerical_diff.get("tensors")
+    if not isinstance(tensor_rows, list):
+        raise ValueError("numerical diff does not contain per-tensor evidence")
+    first_failed = next(
+        (
+            item.get("name")
+            for item in tensor_rows
+            if isinstance(item, dict) and item.get("within_tolerance") is False
+        ),
+        None,
+    )
+    declared_first = numerical_diff.get("first_divergent_tensor")
+    if declared_first != first_failed or declared_first not in {
+        "hidden_linear",
+        "hidden_bias",
+        "hidden",
+    }:
+        raise ValueError("numerical diff did not locate the first shared hidden activation drift")
     first_bad_report = _object(root / "reports" / FIRST_BAD / "mcr-report.json")
     linked_kinds = {item.get("kind") for item in first_bad_report.get("evidence", [])}
     if "numerical-diff" not in linked_kinds:

@@ -49,7 +49,7 @@ def _from_polygraphy(
     relative_tolerance: float,
 ) -> dict[str, Any]:
     try:
-        from polygraphy.comparator import Comparator, CompareFunc, RunResults
+        from polygraphy.comparator import Comparator, RunResults, SimpleCompareFunc
     except ImportError as error:
         raise RuntimeError("Polygraphy is required for --polygraphy-results") from error
 
@@ -65,7 +65,7 @@ def _from_polygraphy(
     )
     comparison_results = Comparator.compare_accuracy(
         selected,
-        compare_func=CompareFunc.simple(atol=absolute_tolerance, rtol=relative_tolerance),
+        compare_func=SimpleCompareFunc(atol=absolute_tolerance, rtol=relative_tolerance),
     )
     if len(comparison_results) != 1:
         raise ValueError("Polygraphy returned an unexpected comparator result count")

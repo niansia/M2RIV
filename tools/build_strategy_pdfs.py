@@ -486,7 +486,7 @@ def build_report(path: Path) -> None:
         ),
         _p("Verification result", styles["h2"]),
         _p(
-            "First bad = build-02. Four strict MCR bundles verified. Every BackendComparisonEvidence ID was recomputed; unknown local references = 0. Receipt SHA-256: c3d70a68…79490c.",
+            "First bad = build-02. Four strict MCR bundles and all backend-comparison IDs verified; unknown local references = 0. Target root mcr:sha256:b2c99b90…c125dbd covers 4,514 files. Archive SHA-256: 06a06000…21a05.",
             styles["callout"],
         ),
         _p(
@@ -540,9 +540,10 @@ def build_report(path: Path) -> None:
         ),
         _p("References", styles["h2"]),
         _p(
-            "MCR specification · docs/mcr-specification.md<br/>MCR conformance · docs/mcr-conformance.md<br/>MLflow evaluation · mlflow.org/docs/latest/ml/evaluation<br/>NVIDIA Polygraphy comparator · docs.nvidia.com/deeplearning/tensorrt/latest/_static/polygraphy/comparator/toc.html<br/>NVIDIA Model Optimizer · github.com/NVIDIA/Model-Optimizer<br/>TensorRT-Model-Connect validation · nvidia.github.io/TensorRT-Model-Connect/user-guides/validate-benchmark/",
+            "MCR specification · docs/mcr-specification.md<br/>MCR conformance · docs/mcr-conformance.md<br/>MLflow evaluation · mlflow.org/docs/latest/ml/evaluation<br/>NVIDIA Polygraphy, Model Optimizer, and TensorRT-Model-Connect · NVIDIA documentation",
             styles["small"],
         ),
+        Spacer(1, 4 * mm),
         _p(
             "Conclusion<br/><b>MCR's claim is narrow and testable:</b> deployable model changes should carry portable, reviewable release evidence across tool boundaries. The reference implementation now demonstrates the complete path from artifact and retained native backend oracle to strict bundle/target-root verification and first-bad localization.",
             styles["callout"],
