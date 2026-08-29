@@ -4,7 +4,7 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Python 3.11–3.13](https://img.shields.io/badge/Python-3.11%E2%80%933.13-3776AB.svg)](pyproject.toml)
 
-**Model-to-Release Inspection & Verification** *(pre-alpha working name)*
+**Model-to-Release Inspection & Verification**
 
 M2RIV is the **vendor-neutral release-evidence layer for deployable AI models**.
 It turns a change between model builds into a portable, content-addressed, and
@@ -12,15 +12,29 @@ independently checkable Model Change Report (MCR).
 
 > MCR is the protocol candidate. M2RIV is the reference implementation.
 
-![M2RIV release-evidence flow](docs/images/m2riv-release-evidence-flow.png)
+**Status:** Pre-alpha reference implementation · MCR 0.4 protocol candidate ·
+[design partners welcome](ADOPTERS.md) · [roadmap](ROADMAP.md)
+
+![M2RIV release-evidence flow](docs/images/m2riv-release-evidence-flow.svg)
 
 Named products in the diagram are interoperability examples, not bundled
 dependencies or endorsements. Verification covers declared integrity and
-conformance; it does not establish producer identity.
+conformance; it does not establish producer identity. The diagram has an
+[editable draw.io source](docs/images/source/m2riv-release-evidence-flow.drawio).
+
+> [!IMPORTANT]
+> **NVIDIA target result:** all four builds matched ONNX Runtime and TensorRT on
+> `629/629` cases, while the critical slice fell from `91.49%` to `78.72%`.
+> M2RIV returned `BLOCK` and localized the first bad build to `#02`.
+> See the [reproducible case study](docs/release-evidence-case-study.md).
 
 ## Quick start
 
 Install the current source and run the small recorded-output example:
+
+> [!NOTE]
+> This quickstart intentionally produces `BLOCK` and exits with code `2`.
+> That is the expected successful demonstration of the release gate.
 
 ```console
 git clone https://github.com/niansia/M2RIV.git
@@ -38,10 +52,10 @@ m2riv compare \
 m2riv mcr verify runs/quickstart --strict
 ```
 
-The example intentionally returns `BLOCK` (exit code `2`): the declared rare
-slice regresses more sharply than the common slice. It writes a compiled release
-plan, an evidence manifest, MCR JSON, Markdown, JUnit, and SARIF without requiring
-model downloads or network access. See the [full quickstart](docs/quickstart.md).
+The declared rare slice regresses more sharply than the common slice. The example
+writes a compiled release plan, an evidence manifest, MCR JSON, Markdown, JUnit,
+and SARIF without requiring model downloads or network access. See the
+[full quickstart](docs/quickstart.md).
 
 ## Why this exists
 
@@ -91,6 +105,14 @@ Its large retained evidence is distributed as a
 [GitHub Release asset](https://github.com/niansia/M2RIV/releases/tag/evidence-rtx4060-20260829)
 rather than stored in Git history; the repository keeps the small receipt, hashes, scripts, and
 [reproducible case study](docs/release-evidence-case-study.md).
+
+### Reproduce on your hardware
+
+Independent reproductions across NVIDIA GPUs, TensorRT versions, operating
+systems, and other deployment runtimes are welcome. If you reproduce this
+release story on another system, open an
+[External Reproduction report](https://github.com/niansia/M2RIV/issues/new?template=external-reproduction.yml).
+Repository-owned reruns are not counted as external adoption.
 
 ## MCR at a glance
 
