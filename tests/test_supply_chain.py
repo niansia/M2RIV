@@ -52,6 +52,15 @@ def test_release_build_has_provenance_sbom_and_gated_trusted_publish() -> None:
     assert "secrets." not in source
 
 
+def test_ci_upgrades_vulnerable_packaging_bootstrap_before_audit() -> None:
+    source = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
+
+    assert 'python -m pip install "setuptools>=83"' in source
+    assert source.index('python -m pip install "setuptools>=83"') < source.index(
+        "python -m pip_audit --local --skip-editable"
+    )
+
+
 def test_checkout_never_persists_credentials() -> None:
     for workflow in WORKFLOW_FILES:
         source = workflow.read_text("utf-8")

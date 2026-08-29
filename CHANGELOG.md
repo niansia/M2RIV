@@ -87,3 +87,5 @@ versions for portable JSON contracts. Pre-1.0 APIs may change with migration not
   path escape, mutable reads, and redirected atomic-write targets
 - CI runs a Python dependency vulnerability audit. Release build steps no longer
   receive an OIDC token; provenance is created in a separate attestation job
+- CI upgrades the hosted runner's packaging bootstrap to `setuptools>=83` before
+  auditing, excluding PYSEC-2026-3447 from the executable build environment
