@@ -7,10 +7,10 @@ import sys
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
+from runpy import run_path
 
 import pytest
 
-from examples.content_identity.typed_values import materialize_typed_value
 from m2riv.core.identity import (
     build_local_snapshot,
     canonical_json,
@@ -18,6 +18,10 @@ from m2riv.core.identity import (
     hash_artifact,
 )
 from m2riv.core.models import RuntimeProfile
+
+materialize_typed_value = run_path(
+    str(Path(__file__).parents[1] / "examples" / "content_identity" / "typed_values.py")
+)["materialize_typed_value"]
 
 
 def test_same_file_content_has_same_identity_across_paths(tmp_path: Path) -> None:
