@@ -139,7 +139,7 @@ def test_nvidia_runner_uses_isolated_cache_and_hash_locked_dependencies() -> Non
     assert "astral-sh/setup-uv@" in source
     assert 'version: "0.11.18"' in source
     assert "enable-cache: false" in source
-    assert "UV_CACHE_DIR: ${{ runner.temp }}/m2riv-uv-cache" in source
+    assert "UV_CACHE_DIR: .uv-cache-${{ github.run_id }}" in source
     assert "uv sync --frozen --extra onnx-demo" in source
     assert source.count("--require-hashes") == 2
     assert "python -m pip" not in source
