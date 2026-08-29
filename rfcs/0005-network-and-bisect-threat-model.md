@@ -71,10 +71,14 @@ provider-mutated model cannot inherit stale evidence from an earlier run.
 ### SSRF and URL confusion
 
 Non-HTTP schemes (`file`, `data`, `ftp`, custom transports), URL userinfo, protocol-
-relative endpoints, and credentials in query strings are rejected. Operators are
-responsible for network egress policy; the library does not claim to reliably
-classify every private, rebinding, or link-local destination. Deployments evaluating
-untrusted endpoint URLs should use an egress-restricted worker.
+relative endpoints, and credentials in query strings are rejected. Known metadata
+hostnames, link-local IPv4/IPv6 (including legacy numeric and IPv4-mapped forms),
+AWS's unique-local metadata address, and catalogued non-link-local metadata
+addresses such as `100.100.100.200` are also rejected. Loopback, RFC 1918, and
+overlay-network endpoints remain supported for self-hosted inference, so this is
+not a general private-address ban. Operators remain responsible for network egress
+policy and DNS-rebinding defenses; deployments evaluating untrusted endpoint URLs
+should use an egress-restricted worker.
 
 ### Retry and response amplification
 

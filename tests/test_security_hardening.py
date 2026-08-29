@@ -227,6 +227,12 @@ def test_runner_owns_observation_identity_and_rejects_forged_seed(tmp_path: Path
         "http://[fe80::1]/v1",
         "http://[::ffff:169.254.169.254]/v1",
         "http://[fd00:ec2::254]/v1",
+        "http://100.100.100.200/v1",
+        "http://1684301000/v1",
+        "http://0x646464C8/v1",
+        "http://0144.0144.0144.0310/v1",
+        "http://100.100.25800/v1",
+        "http://[::ffff:100.100.100.200]/v1",
     ],
 )
 def test_metadata_endpoints_are_rejected(endpoint: str) -> None:

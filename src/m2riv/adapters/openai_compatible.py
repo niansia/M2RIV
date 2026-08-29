@@ -61,6 +61,13 @@ _METADATA_HOSTS = frozenset(
         "metadata.goog",
     }
 )
+_METADATA_IPV4_ADDRESSES = frozenset(
+    {
+        # Alibaba Cloud ECS metadata is inside shared address space rather than
+        # link-local space, so generic ``is_link_local`` checks do not catch it.
+        ipaddress.IPv4Address("100.100.100.200"),
+    }
+)
 
 
 class OpenAICompatibleError(RuntimeError):
@@ -161,6 +168,9 @@ def _normalize_endpoint(endpoint: str) -> str:
         # forms. Parse them locally without performing a DNS lookup.
         address = _legacy_ipv4_address(host)
     mapped = address.ipv4_mapped if isinstance(address, ipaddress.IPv6Address) else None
+    effective_ipv4 = mapped or (address if isinstance(address, ipaddress.IPv4Address) else None)
+    if effective_ipv4 in _METADATA_IPV4_ADDRESSES:
+        raise ValueError("endpoint must not target a cloud metadata address")
     if address is not None and (
         address.is_link_local
         or bool(mapped and mapped.is_link_local)

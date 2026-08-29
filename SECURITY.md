@@ -35,7 +35,8 @@ owner-side release checklist items before public v0.1.
   runtime and excluded from snapshots, cache keys, reports, and error messages.
   A redaction control is not proof that an arbitrary endpoint cannot exfiltrate
   prompts sent to it. Credential-bearing requests require HTTPS; cloud metadata
-  link-local addresses are refused. Private and loopback endpoints remain valid
+  hostnames, link-local addresses, and known non-link-local metadata addresses
+  are refused. Private and loopback endpoints remain valid
   for self-hosted inference when no credential is sent.
 - Cache envelopes are HMAC-authenticated. With no configuration the HMAC key is
   random and process-local, so a new process treats old entries as misses. Set a

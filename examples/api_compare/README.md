@@ -22,8 +22,9 @@ An unauthenticated local endpoint can omit the environment variables. The suite
 uses exact-match outputs only as a canonical smoke test; projects should provide
 domain metrics through the `PairedMetric` boundary.
 
-Credential-bearing requests require HTTPS. Link-local cloud metadata endpoints
-are rejected, while loopback and RFC 1918 endpoints remain available for
+Credential-bearing requests require HTTPS. Cloud metadata hostnames plus known
+link-local and non-link-local metadata addresses are rejected, while loopback
+and RFC 1918 endpoints remain available for
 unauthenticated self-hosted inference. The Python adapter has an explicit
 `allow_insecure_http=True` escape hatch for isolated development networks; the CLI
 does not expose it so credentials cannot be downgraded accidentally.
