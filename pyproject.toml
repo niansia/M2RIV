@@ -64,9 +64,9 @@ dev = [
 m2riv = "m2riv.cli:app"
 
 [project.urls]
-Documentation = "https://github.com/M2RIV/m2riv"
-Issues = "https://github.com/M2RIV/m2riv/issues"
-Source = "https://github.com/M2RIV/m2riv"
+Documentation = "https://github.com/niansia/M2RIV"
+Issues = "https://github.com/niansia/M2RIV/issues"
+Source = "https://github.com/niansia/M2RIV"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/m2riv"]

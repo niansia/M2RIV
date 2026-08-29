@@ -70,10 +70,11 @@ The first foundation slice provides:
 ## Real CPU-only quantization demo
 
 The primary demo uses real observations rather than hand-written pass/fail fixtures.
-It uses scikit-learn's bundled copy of the UCI handwritten-digits dataset, trains a
-small MLP, exports the same learned
-weights to FP16 ONNX, creates static INT8 QDQ builds with ONNX Runtime, and runs
-629 paired holdout cases entirely on CPU.
+It uses scikit-learn's bundled copy of the UCI handwritten-digits dataset and a
+reviewed FP32 fixture from a real sklearn MLP, exports the same fixed weights to
+FP16 ONNX, creates static INT8 QDQ builds with ONNX Runtime, and runs 629 paired
+holdout cases entirely on CPU. Pinning the fixture prevents BLAS-specific training
+drift from changing the artifact under test.
 
 ```console
 python -m pip install -e ".[onnx-demo]"
@@ -86,41 +87,34 @@ Expected release story with seed 23:
 Build                                      Overall    Critical rare slice   Gate
 build-00-fp16                               94.75%                91.49%   PASS
 build-01-int8-balanced                      94.75%                91.49%   PASS
-build-02-int8-calibration-scale-075         93.64%                80.85%  BLOCK
-build-03-int8-calibration-scale-070    93.32–93.64%                78.72%  BLOCK
+build-02-int8-calibration-scale-065         92.85%                74.47%  BLOCK
+build-03-int8-calibration-scale-060         92.37%                70.21%  BLOCK
 
-First bad build: build-02-int8-calibration-scale-075
+First bad build: build-02-int8-calibration-scale-065
 ```
 
 The numerical diff makes the causal chain inspectable rather than stopping at
-the failing build (128 declared cases, FP16 baseline vs scale-0.75 INT8). The
-first divergence is stable while the exact CPU values are platform evidence:
-
-| Shared tensor | Linux x86-64 max/RMSE/cos | Windows x86-64 max/RMSE/cos |
-| --- | ---: | ---: |
-| `hidden_linear` *(first divergent)* | 3.8411 / 0.9126 / 0.997577 | 3.9343 / 0.9951 / 0.997173 |
-| `hidden` | 12.4455 / 2.9291 / 0.863517 | 12.7547 / 2.9930 / 0.854680 |
-| `output_linear` | 33.8709 / 7.5163 / 0.991185 | 34.0834 / 8.2349 / 0.990702 |
-| `logits` | 33.9308 / 7.5554 / 0.991056 | 34.1688 / 8.2708 / 0.990609 |
+the failing build (128 declared cases, FP16 baseline vs scale-0.65 INT8). The
+generated report records the exact per-tensor max error, RMSE, and cosine values
+for the executing platform instead of copying volatile runtime evidence here.
 
 The critical slice is declared from inputs—rare training digit 1 with normalized
 ink sum at least 18—not selected after seeing model failures. The complete
 [reproduction procedure](examples/onnx_quantization/README.md) explains the data,
 calibration mistake, policy, limitations, and generated evidence.
-The build-03 range is an observed portability result, not a root-cause claim:
-ONNX Runtime 1.29.0 produced 93.64% on Windows/x86-64 and 93.32% on
-Linux/x86-64. The rare slice, decision, and first-bad build were invariant. New
-MCR executions record OS, architecture, Python, framework, and framework version,
-and CI preserves both platform bundles so future differences remain auditable.
+The source fixture has a pinned SHA-256 and is checked before execution. MCR
+executions record OS, architecture, Python, framework, and framework version, and
+CI preserves both Linux and Windows bundles so bounded runtime differences remain
+auditable without changing the PASS/BLOCK boundary.
 
 ```console
 m2riv artifact diff \
   runs/onnx-quantization/artifacts/build-00-fp16.onnx \
-  runs/onnx-quantization/artifacts/build-02-int8-calibration-scale-075.onnx
+  runs/onnx-quantization/artifacts/build-02-int8-calibration-scale-065.onnx
 
 m2riv artifact numerical-diff \
   runs/onnx-quantization/artifacts/build-00-fp16.onnx \
-  runs/onnx-quantization/artifacts/build-02-int8-calibration-scale-075.onnx \
+  runs/onnx-quantization/artifacts/build-02-int8-calibration-scale-065.onnx \
   --suite runs/onnx-quantization/suite.jsonl
 
 m2riv bisect runs/onnx-quantization/checkpoints.jsonl --mode monotonic
@@ -128,7 +122,7 @@ m2riv bisect runs/onnx-quantization/checkpoints.jsonl --mode monotonic
 m2riv schema export ./schemas/v1
 # Exported 21 public schemas to schemas/v1
 
-m2riv mcr verify runs/onnx-quantization/reports/build-02-int8-calibration-scale-075
+m2riv mcr verify runs/onnx-quantization/reports/build-02-int8-calibration-scale-065
 ```
 
 The smaller [opset-upgrade example](examples/onnx_opset_upgrade/README.md) covers

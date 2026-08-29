@@ -7,6 +7,8 @@ dataset. Nothing is downloaded and no generated labels are used.
 from __future__ import annotations
 
 import argparse
+import base64
+import hashlib
 import json
 from dataclasses import asdict
 from pathlib import Path
@@ -25,7 +27,6 @@ from onnxruntime.quantization import (
 from onnxruntime.quantization.shape_inference import quant_pre_process
 from sklearn.datasets import load_digits
 from sklearn.model_selection import train_test_split
-from sklearn.neural_network import MLPClassifier
 
 from m2riv.adapters import OnnxRuntimeAdapter
 from m2riv.artifacts import compare_artifacts, compare_onnx_numerics, inspect_artifact
@@ -41,6 +42,8 @@ RARE_DIGIT = 1
 RARE_RISK_SLICE = "rare-high-ink"
 RARE_RISK_THRESHOLD = 18.0
 RARE_METRIC = f"accuracy@risk={RARE_RISK_SLICE}"
+FIXTURE_PATH = Path(__file__).with_name("assets") / "digits-mlp-fp32.onnx.b64"
+FIXTURE_SHA256 = "1d6652110add0355b2c6f4e2ab5aee63be1690384d41c79dc6eff201afd3bdb7"
 
 
 class ArrayCalibrationReader(CalibrationDataReader):
@@ -54,16 +57,16 @@ class ArrayCalibrationReader(CalibrationDataReader):
 
 
 def _make_onnx_model(
-    model: MLPClassifier,
+    weights: dict[str, np.ndarray[Any, Any]],
     *,
     numpy_dtype: np.dtype[Any],
     tensor_type: int,
 ) -> onnx.ModelProto:
     initializers = [
-        numpy_helper.from_array(model.coefs_[0].astype(numpy_dtype), "w0"),
-        numpy_helper.from_array(model.intercepts_[0].astype(numpy_dtype), "b0"),
-        numpy_helper.from_array(model.coefs_[1].astype(numpy_dtype), "w1"),
-        numpy_helper.from_array(model.intercepts_[1].astype(numpy_dtype), "b1"),
+        numpy_helper.from_array(weights["w0"].astype(numpy_dtype), "w0"),
+        numpy_helper.from_array(weights["b0"].astype(numpy_dtype), "b0"),
+        numpy_helper.from_array(weights["w1"].astype(numpy_dtype), "w1"),
+        numpy_helper.from_array(weights["b1"].astype(numpy_dtype), "b1"),
     ]
     nodes = [
         helper.make_node("MatMul", ["input", "w0"], ["hidden_linear"]),
@@ -90,6 +93,25 @@ def _make_onnx_model(
     result.metadata_props.add(key="training_seed", value=str(SEED))
     onnx.checker.check_model(result)
     return result
+
+
+def _load_source_fixture() -> tuple[bytes, dict[str, np.ndarray[Any, Any]]]:
+    encoded = "".join(FIXTURE_PATH.read_text("ascii").split())
+    payload = base64.b64decode(encoded, validate=True)
+    actual_hash = hashlib.sha256(payload).hexdigest()
+    if actual_hash != FIXTURE_SHA256:
+        raise RuntimeError(
+            f"ONNX source fixture hash changed: expected {FIXTURE_SHA256}, got {actual_hash}"
+        )
+    model = onnx.load_model_from_string(payload)
+    onnx.checker.check_model(model)
+    weights = {
+        initializer.name: numpy_helper.to_array(initializer)
+        for initializer in model.graph.initializer
+    }
+    if set(weights) != {"w0", "b0", "w1", "b1"}:
+        raise RuntimeError("ONNX source fixture has an unexpected initializer contract")
+    return payload, weights
 
 
 def _write_json(path: Path, value: Any) -> None:
@@ -127,37 +149,19 @@ def run_demo(destination: Path) -> Path:
     )
 
     rare_indices = np.flatnonzero(train_y == RARE_DIGIT)
-    common_indices = np.flatnonzero(train_y != RARE_DIGIT)
-    retained_rare = rare_indices[: len(rare_indices) // 4]
-    retained = np.concatenate((common_indices, retained_rare))
-    np.random.default_rng(SEED).shuffle(retained)
-    classifier = MLPClassifier(
-        hidden_layer_sizes=(32,),
-        activation="relu",
-        solver="lbfgs",
-        alpha=1e-4,
-        max_iter=500,
-        random_state=SEED,
-    )
-    classifier.fit(train_x[retained], train_y[retained])
+    retained_rare_count = len(rare_indices) // 4
+    source_payload, source_weights = _load_source_fixture()
 
     fp32_path = artifact_dir / "digits-fp32-source.onnx"
     preprocessed_path = artifact_dir / "digits-fp32-preprocessed.onnx"
     fp16_path = artifact_dir / "build-00-fp16.onnx"
-    onnx.save_model(
-        _make_onnx_model(
-            classifier,
-            numpy_dtype=np.dtype(np.float32),
-            tensor_type=TensorProto.FLOAT,
-        ),
-        fp32_path,
-    )
+    fp32_path.write_bytes(source_payload)
     # This fixed-shape MLP needs ONNX shape inference and graph optimization,
     # not transformer-oriented symbolic inference (which would add SymPy).
     quant_pre_process(fp32_path, preprocessed_path, skip_symbolic_shape=True)
     onnx.save_model(
         _make_onnx_model(
-            classifier,
+            source_weights,
             numpy_dtype=np.dtype(np.float16),
             tensor_type=TensorProto.FLOAT16,
         ),
@@ -167,8 +171,8 @@ def run_demo(destination: Path) -> Path:
     builds: list[tuple[str, Path]] = [("build-00-fp16", fp16_path)]
     calibration_builds = (
         ("build-01-int8-balanced", 1.0),
-        ("build-02-int8-calibration-scale-075", 0.75),
-        ("build-03-int8-calibration-scale-070", 0.70),
+        ("build-02-int8-calibration-scale-065", 0.65),
+        ("build-03-int8-calibration-scale-060", 0.60),
     )
     for name, scale in calibration_builds:
         target = artifact_dir / f"{name}.onnx"
@@ -260,7 +264,7 @@ rules:
                 absolute_tolerance=1e-3,
                 relative_tolerance=1e-2,
             )
-            if name == "build-02-int8-calibration-scale-075"
+            if name == "build-02-int8-calibration-scale-065"
             else None
         )
         linked_evidence = [
@@ -344,7 +348,8 @@ rules:
         "",
         "Dataset: scikit-learn's bundled UCI handwritten-digits data (1,797 real samples).",
         f"Training rare-class setup: digit {RARE_DIGIT} retained "
-        f"{len(retained_rare)}/{len(rare_indices)} training examples.",
+        f"{retained_rare_count}/{len(rare_indices)} training examples in the fixed fixture.",
+        f"Source fixture SHA-256: `{FIXTURE_SHA256}`; regeneration is explicit and reviewable.",
         f"Critical slice: digit {RARE_DIGIT} with normalized ink sum >= "
         f"{RARE_RISK_THRESHOLD:.0f}; the rule is derived from inputs, not outcomes.",
         "Baseline: CPU-executed FP16 ONNX. Candidates: CPU-executed static INT8 QDQ ONNX.",

@@ -222,11 +222,11 @@ def build_correction(target: Path) -> None:
                     ["Build", "Overall", "Critical rare slice", "Gate"],
                     ["build-00-fp16", "94.75%", "91.49%", "PASS"],
                     ["build-01-int8-balanced", "94.75%", "91.49%", "PASS"],
-                    ["build-02-int8-calibration-scale-075", "93.64%", "80.85%", "BLOCK"],
+                    ["build-02-int8-calibration-scale-065", "92.85%", "74.47%", "BLOCK"],
                     [
-                        "build-03-int8-calibration-scale-070",
-                        "93.32–93.64%*",
-                        "78.72%",
+                        "build-03-int8-calibration-scale-060",
+                        "92.37%*",
+                        "70.21%",
                         "BLOCK",
                     ],
                 ],
@@ -234,9 +234,9 @@ def build_correction(target: Path) -> None:
             ),
             Spacer(1, 4 * mm),
             _p(
-                "Bisect result: first bad build = build-02-int8-calibration-scale-075. Dataset 為 scikit-learn 內建的 UCI handwritten digits，"
-                "1,797 個真實樣本；不下載模型或資料；全程 CPUExecutionProvider。* build-03 的兩個 common-class "
-                "樣本會因 ORT CPU kernel / 平台落在 argmax 邊界兩側；rare slice、gate 與 first-bad 結果不變。",
+                "Bisect result: first bad build = build-02-int8-calibration-scale-065. Dataset 為 scikit-learn 內建的 UCI handwritten digits，"
+                "1,797 個真實樣本；固定且有 SHA-256 的 sklearn MLP fixture；全程 CPUExecutionProvider。* 精確值以執行主機產生的 "
+                "MCR 為準；CI 對 Linux/Windows 驗證有界差異、相同 gate 與 first-bad 結果。",
                 styles["small"],
             ),
             PageBreak(),

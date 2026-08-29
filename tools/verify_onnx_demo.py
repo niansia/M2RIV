@@ -12,18 +12,18 @@ from m2riv.reports import verify_report_bundle
 EXPECTED_STATUSES = {
     "build-00-fp16": "PASS",
     "build-01-int8-balanced": "PASS",
-    "build-02-int8-calibration-scale-075": "BLOCK",
-    "build-03-int8-calibration-scale-070": "BLOCK",
+    "build-02-int8-calibration-scale-065": "BLOCK",
+    "build-03-int8-calibration-scale-060": "BLOCK",
 }
 EXPECTED_ACCURACY_RANGES = {
     "build-00-fp16": ((596 / 629, 596 / 629), (43 / 47, 43 / 47)),
-    "build-01-int8-balanced": ((596 / 629, 596 / 629), (43 / 47, 43 / 47)),
-    "build-02-int8-calibration-scale-075": ((589 / 629, 589 / 629), (38 / 47, 38 / 47)),
-    # ORT's platform-specific INT8 kernels place two common-class samples on
-    # opposite sides of the argmax boundary. The risk slice and gate are stable.
-    "build-03-int8-calibration-scale-070": ((587 / 629, 589 / 629), (37 / 47, 37 / 47)),
+    # The source weights are fixed. Bounded ranges still acknowledge that ORT's
+    # platform-specific INT8 kernels can move borderline samples across argmax.
+    "build-01-int8-balanced": ((595 / 629, 597 / 629), (42 / 47, 44 / 47)),
+    "build-02-int8-calibration-scale-065": ((582 / 629, 586 / 629), (34 / 47, 36 / 47)),
+    "build-03-int8-calibration-scale-060": ((579 / 629, 583 / 629), (32 / 47, 34 / 47)),
 }
-FIRST_BAD = "build-02-int8-calibration-scale-075"
+FIRST_BAD = "build-02-int8-calibration-scale-065"
 MAX_MCR_BYTES = 32 * 1024
 ACCURACY_TOLERANCE = 1e-12
 
