@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 import os
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence, Set
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -39,6 +39,18 @@ class _Accumulator:
     shape_changed: bool = False
     baseline_dtype: str = ""
     candidate_dtype: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class _LoadedGraphs:
+    baseline_profile: Any
+    candidate_profile: Any
+    baseline_model: Any
+    candidate_model: Any
+    baseline_values: dict[str, Any]
+    candidate_values: dict[str, Any]
+    common_names: frozenset[str]
+    tensor_names: tuple[str, ...]
 
 
 def _load_model(path: Path) -> tuple[Any, Any]:
@@ -78,7 +90,7 @@ def _typed_values(model: Any) -> dict[str, Any]:
     return values
 
 
-def _ordered_outputs(model: Any, available: set[str]) -> tuple[str, ...]:
+def _ordered_outputs(model: Any, available: Set[str]) -> tuple[str, ...]:
     ordered: list[str] = []
     for node in model.graph.node:
         for name in node.output:
@@ -153,15 +165,9 @@ def _feeds(case: EvalCase, inputs: Sequence[Any], np: Any) -> dict[str, Any]:
     return result
 
 
-def compare_onnx_numerics(
-    baseline: str | Path,
-    candidate: str | Path,
-    cases: Sequence[EvalCase],
-    *,
-    absolute_tolerance: float = 1e-5,
-    relative_tolerance: float = 1e-4,
-) -> NumericalDiff:
-    """Execute shared intermediate tensors and locate the first numerical drift."""
+def _validate_request(
+    cases: Sequence[EvalCase], absolute_tolerance: float, relative_tolerance: float
+) -> None:
     if not cases or len(cases) > MAX_NUMERICAL_CASES:
         raise ValueError(f"numerical diff requires 1 to {MAX_NUMERICAL_CASES} cases")
     if (
@@ -171,31 +177,45 @@ def compare_onnx_numerics(
         or relative_tolerance < 0
     ):
         raise ValueError("numerical diff tolerances must be finite and non-negative")
-    baseline_path = Path(baseline)
-    candidate_path = Path(candidate)
+
+
+def _load_graphs(baseline: str | Path, candidate: str | Path) -> _LoadedGraphs:
     try:
-        baseline_profile, baseline_model = _load_model(baseline_path)
-        candidate_profile, candidate_model = _load_model(candidate_path)
+        baseline_profile, baseline_model = _load_model(Path(baseline))
+        candidate_profile, candidate_model = _load_model(Path(candidate))
     except ArtifactInspectionError as error:
         raise NumericalDiffError(str(error)) from error
+
     baseline_values = _typed_values(baseline_model)
     candidate_values = _typed_values(candidate_model)
-    if (
-        len(baseline_values) > MAX_NUMERICAL_TENSORS
-        or len(candidate_values) > MAX_NUMERICAL_TENSORS
-    ):
+    if max(len(baseline_values), len(candidate_values)) > MAX_NUMERICAL_TENSORS:
         raise NumericalDiffError("typed tensor count exceeds the numerical diff limit")
-    common = (
+
+    common_names = frozenset(
         set(baseline_values)
         & set(candidate_values)
         & _produced_names(baseline_model)
         & _produced_names(candidate_model)
     )
-    ordered = _ordered_outputs(baseline_model, common)
-    if not ordered:
+    tensor_names = _ordered_outputs(baseline_model, common_names)
+    if not tensor_names:
         raise NumericalDiffError("the ONNX graphs expose no comparable tensor names")
-    if len(ordered) > MAX_NUMERICAL_TENSORS:
+    if len(tensor_names) > MAX_NUMERICAL_TENSORS:
         raise NumericalDiffError("comparable tensor count exceeds the numerical diff limit")
+
+    return _LoadedGraphs(
+        baseline_profile=baseline_profile,
+        candidate_profile=candidate_profile,
+        baseline_model=baseline_model,
+        candidate_model=candidate_model,
+        baseline_values=baseline_values,
+        candidate_values=candidate_values,
+        common_names=common_names,
+        tensor_names=tensor_names,
+    )
+
+
+def _load_runtime() -> tuple[Any, Any]:
     try:
         import numpy as np
 
@@ -203,115 +223,193 @@ def compare_onnx_numerics(
         import onnxruntime as ort  # type: ignore[import-untyped]
     except ImportError as error:
         raise NumericalDiffError("numerical diff requires the optional 'onnx' extra") from error
+    return np, ort
 
+
+def _create_sessions(
+    graphs: _LoadedGraphs, ort: Any
+) -> tuple[Any, Any, Sequence[Any], Sequence[Any]]:
     options = ort.SessionOptions()
     options.intra_op_num_threads = 1
     options.inter_op_num_threads = 1
     options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
     options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_DISABLE_ALL
     try:
-        baseline_bytes = _instrument(baseline_model, ordered)
-        candidate_bytes = _instrument(candidate_model, ordered)
         baseline_session = ort.InferenceSession(
-            baseline_bytes, options, providers=["CPUExecutionProvider"]
+            _instrument(graphs.baseline_model, graphs.tensor_names),
+            options,
+            providers=["CPUExecutionProvider"],
         )
         candidate_session = ort.InferenceSession(
-            candidate_bytes, options, providers=["CPUExecutionProvider"]
+            _instrument(graphs.candidate_model, graphs.tensor_names),
+            options,
+            providers=["CPUExecutionProvider"],
         )
         baseline_inputs = baseline_session.get_inputs()
         candidate_inputs = candidate_session.get_inputs()
-        if [(item.name, len(item.shape)) for item in baseline_inputs] != [
-            (item.name, len(item.shape)) for item in candidate_inputs
-        ]:
-            raise NumericalDiffError("ONNX graph input signatures are incompatible")
-        accumulators = {name: _Accumulator() for name in ordered}
-        total_output_elements = 0
+    except Exception:
+        raise NumericalDiffError("ONNX Runtime numerical comparison failed") from None
+
+    baseline_signature = [(item.name, len(item.shape)) for item in baseline_inputs]
+    candidate_signature = [(item.name, len(item.shape)) for item in candidate_inputs]
+    if baseline_signature != candidate_signature:
+        raise NumericalDiffError("ONNX graph input signatures are incompatible")
+    return baseline_session, candidate_session, baseline_inputs, candidate_inputs
+
+
+def _accumulate_tensor(
+    accumulator: _Accumulator,
+    baseline_value: Any,
+    candidate_value: Any,
+    np: Any,
+    *,
+    absolute_tolerance: float,
+    relative_tolerance: float,
+    tensor_name: str,
+) -> int:
+    baseline = np.asarray(baseline_value)
+    candidate = np.asarray(candidate_value)
+    if baseline.shape != candidate.shape:
+        raise NumericalDiffError(f"shared tensor {tensor_name!r} changed shape")
+    if baseline.size == 0:
+        raise NumericalDiffError("numerical diff does not compare empty tensors")
+    if baseline.size > MAX_ELEMENTS_PER_TENSOR:
+        raise NumericalDiffError("an output tensor exceeds the element budget")
+    if baseline.dtype.kind not in "biuf" or candidate.dtype.kind not in "biuf":
+        raise NumericalDiffError("numerical diff only supports numeric tensors")
+
+    baseline64 = baseline.astype(np.float64, copy=False).reshape(-1)
+    candidate64 = candidate.astype(np.float64, copy=False).reshape(-1)
+    delta = candidate64 - baseline64
+    absolute = np.abs(delta)
+    relative = absolute / np.maximum(np.abs(baseline64), 1e-12)
+    shape = tuple(int(value) for value in baseline.shape)
+    if accumulator.shape is None:
+        accumulator.shape = shape
+    elif accumulator.shape != shape:
+        accumulator.shape_changed = True
+    accumulator.baseline_dtype = str(baseline.dtype)
+    accumulator.candidate_dtype = str(candidate.dtype)
+    accumulator.count += int(baseline64.size)
+    accumulator.abs_sum += float(np.sum(absolute))
+    accumulator.sq_sum += float(np.dot(delta, delta))
+    accumulator.max_abs = max(accumulator.max_abs, float(np.max(absolute)))
+    accumulator.max_rel = max(accumulator.max_rel, float(np.max(relative)))
+    accumulator.dot += float(np.dot(baseline64, candidate64))
+    accumulator.baseline_sq += float(np.dot(baseline64, baseline64))
+    accumulator.candidate_sq += float(np.dot(candidate64, candidate64))
+    accumulator.within = accumulator.within and bool(
+        np.allclose(
+            baseline64,
+            candidate64,
+            atol=absolute_tolerance,
+            rtol=relative_tolerance,
+        )
+    )
+    return int(baseline.size) * 2
+
+
+def _compare_cases(
+    graphs: _LoadedGraphs,
+    sessions: tuple[Any, Any, Sequence[Any], Sequence[Any]],
+    cases: Sequence[EvalCase],
+    np: Any,
+    *,
+    absolute_tolerance: float,
+    relative_tolerance: float,
+) -> dict[str, _Accumulator]:
+    baseline_session, candidate_session, baseline_inputs, candidate_inputs = sessions
+    accumulators = {name: _Accumulator() for name in graphs.tensor_names}
+    output_elements = 0
+    try:
         for case in cases:
             baseline_feed = _feeds(case, baseline_inputs, np)
             candidate_feed = _feeds(case, candidate_inputs, np)
-            baseline_outputs = baseline_session.run(list(ordered), baseline_feed)
-            candidate_outputs = candidate_session.run(list(ordered), candidate_feed)
+            baseline_outputs = baseline_session.run(list(graphs.tensor_names), baseline_feed)
+            candidate_outputs = candidate_session.run(list(graphs.tensor_names), candidate_feed)
             for name, baseline_value, candidate_value in zip(
-                ordered, baseline_outputs, candidate_outputs, strict=True
+                graphs.tensor_names, baseline_outputs, candidate_outputs, strict=True
             ):
-                left = np.asarray(baseline_value)
-                right = np.asarray(candidate_value)
-                if left.shape != right.shape:
-                    raise NumericalDiffError(f"shared tensor {name!r} changed shape")
-                if left.size == 0:
-                    raise NumericalDiffError("numerical diff does not compare empty tensors")
-                if left.size > MAX_ELEMENTS_PER_TENSOR:
-                    raise NumericalDiffError("an output tensor exceeds the element budget")
-                total_output_elements += int(left.size) * 2
-                if total_output_elements > MAX_TOTAL_ELEMENTS:
-                    raise NumericalDiffError("outputs exceed the numerical diff element budget")
-                if left.dtype.kind not in "biuf" or right.dtype.kind not in "biuf":
-                    raise NumericalDiffError("numerical diff only supports numeric tensors")
-                left64 = left.astype(np.float64, copy=False).reshape(-1)
-                right64 = right.astype(np.float64, copy=False).reshape(-1)
-                delta = right64 - left64
-                absolute = np.abs(delta)
-                relative = absolute / np.maximum(np.abs(left64), 1e-12)
-                item = accumulators[name]
-                shape = tuple(int(value) for value in left.shape)
-                if item.shape is None:
-                    item.shape = shape
-                elif item.shape != shape:
-                    item.shape_changed = True
-                item.baseline_dtype = str(left.dtype)
-                item.candidate_dtype = str(right.dtype)
-                item.count += int(left64.size)
-                item.abs_sum += float(np.sum(absolute))
-                item.sq_sum += float(np.dot(delta, delta))
-                item.max_abs = max(item.max_abs, float(np.max(absolute)))
-                item.max_rel = max(item.max_rel, float(np.max(relative)))
-                item.dot += float(np.dot(left64, right64))
-                item.baseline_sq += float(np.dot(left64, left64))
-                item.candidate_sq += float(np.dot(right64, right64))
-                item.within = item.within and bool(
-                    np.allclose(
-                        left64,
-                        right64,
-                        atol=absolute_tolerance,
-                        rtol=relative_tolerance,
-                    )
+                output_elements += _accumulate_tensor(
+                    accumulators[name],
+                    baseline_value,
+                    candidate_value,
+                    np,
+                    absolute_tolerance=absolute_tolerance,
+                    relative_tolerance=relative_tolerance,
+                    tensor_name=name,
                 )
+                if output_elements > MAX_TOTAL_ELEMENTS:
+                    raise NumericalDiffError("outputs exceed the numerical diff element budget")
     except NumericalDiffError:
         raise
     except Exception:
         raise NumericalDiffError("ONNX Runtime numerical comparison failed") from None
+    return accumulators
 
-    tensor_diffs: list[TensorNumericalDiff] = []
-    for name in ordered:
-        item = accumulators[name]
-        count = item.count
-        denominator = math.sqrt(item.baseline_sq * item.candidate_sq)
-        cosine = item.dot / denominator if denominator else 1.0
-        tensor_diffs.append(
+
+def _tensor_diffs(
+    tensor_names: Sequence[str], accumulators: Mapping[str, _Accumulator]
+) -> tuple[TensorNumericalDiff, ...]:
+    results: list[TensorNumericalDiff] = []
+    for name in tensor_names:
+        accumulator = accumulators[name]
+        denominator = math.sqrt(accumulator.baseline_sq * accumulator.candidate_sq)
+        cosine = accumulator.dot / denominator if denominator else 1.0
+        results.append(
             TensorNumericalDiff(
                 name=name,
-                baseline_dtype=item.baseline_dtype,
-                candidate_dtype=item.candidate_dtype,
-                shape=None if item.shape_changed else item.shape,
-                element_count=count,
-                max_abs_error=item.max_abs,
-                mean_abs_error=item.abs_sum / count,
-                rmse=math.sqrt(item.sq_sum / count),
-                max_relative_error=item.max_rel,
+                baseline_dtype=accumulator.baseline_dtype,
+                candidate_dtype=accumulator.candidate_dtype,
+                shape=None if accumulator.shape_changed else accumulator.shape,
+                element_count=accumulator.count,
+                max_abs_error=accumulator.max_abs,
+                mean_abs_error=accumulator.abs_sum / accumulator.count,
+                rmse=math.sqrt(accumulator.sq_sum / accumulator.count),
+                max_relative_error=accumulator.max_rel,
                 cosine_similarity=max(-1.0, min(1.0, cosine)),
-                within_tolerance=item.within,
+                within_tolerance=accumulator.within,
             )
         )
+    return tuple(results)
+
+
+def compare_onnx_numerics(
+    baseline: str | Path,
+    candidate: str | Path,
+    cases: Sequence[EvalCase],
+    *,
+    absolute_tolerance: float = 1e-5,
+    relative_tolerance: float = 1e-4,
+) -> NumericalDiff:
+    """Execute shared intermediate tensors and locate the first numerical drift."""
+    _validate_request(cases, absolute_tolerance, relative_tolerance)
+    graphs = _load_graphs(baseline, candidate)
+    np, ort = _load_runtime()
+    sessions = _create_sessions(graphs, ort)
+    accumulators = _compare_cases(
+        graphs,
+        sessions,
+        cases,
+        np,
+        absolute_tolerance=absolute_tolerance,
+        relative_tolerance=relative_tolerance,
+    )
+    tensor_diffs = _tensor_diffs(graphs.tensor_names, accumulators)
     first_divergent = next((item.name for item in tensor_diffs if not item.within_tolerance), None)
     payload = {
-        "baseline_profile_id": baseline_profile.id,
-        "candidate_profile_id": candidate_profile.id,
+        "baseline_profile_id": graphs.baseline_profile.id,
+        "candidate_profile_id": graphs.candidate_profile.id,
         "case_count": len(cases),
         "absolute_tolerance": absolute_tolerance,
         "relative_tolerance": relative_tolerance,
-        "baseline_only_tensors": tuple(sorted(set(baseline_values) - common)),
-        "candidate_only_tensors": tuple(sorted(set(candidate_values) - common)),
-        "tensors": tuple(tensor_diffs),
+        "baseline_only_tensors": tuple(
+            sorted(set(graphs.baseline_values) - graphs.common_names)
+        ),
+        "candidate_only_tensors": tuple(
+            sorted(set(graphs.candidate_values) - graphs.common_names)
+        ),
+        "tensors": tensor_diffs,
         "first_divergent_tensor": first_divergent,
     }
     identifier = fingerprint(payload, namespace="onnx-numerical-diff")

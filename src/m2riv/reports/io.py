@@ -90,15 +90,8 @@ def _atomic_write_text(target: Path, content: str) -> None:
         raise
 
 
-def write_report_bundle(
-    report: ModelChangeReport,
-    destination: Path,
-    *,
-    release_plan: CompiledReleasePlan | None = None,
-    evidence_manifest: EvidenceManifest | None = None,
-) -> ReportBundle:
-    """Atomically publish canonical JSON and human-readable Markdown."""
-    canonical_report = create_report(
+def _validate_report_identity(report: ModelChangeReport) -> None:
+    canonical = create_report(
         baseline_snapshot_id=report.baseline_snapshot_id,
         candidate_snapshot_id=report.candidate_snapshot_id,
         release_plan_id=report.release_plan_id,
@@ -111,51 +104,79 @@ def write_report_bundle(
         created_at=report.created_at,
     )
     if (
-        canonical_report.id != report.id
-        or canonical_report.evidence_id != report.evidence_id
-        or canonical_report.run_id != report.run_id
+        canonical.id != report.id
+        or canonical.evidence_id != report.evidence_id
+        or canonical.run_id != report.run_id
     ):
         raise ValueError("MCR identity does not match its contents")
-    if release_plan is not None and report.release_plan_id != release_plan.id:
-        raise ValueError("release plan identity does not match the MCR reference")
+
+
+def _validate_evidence_manifest(
+    report: ModelChangeReport, evidence_manifest: EvidenceManifest | None
+) -> None:
     if (report.evidence_manifest is None) is not (evidence_manifest is None):
         raise ValueError("MCR and evidence manifest must be provided together")
-    if evidence_manifest is not None:
-        canonical_manifest = create_evidence_manifest(
-            evidence_manifest.evidence, evidence_manifest.sets
-        )
-        reference = report.evidence_manifest
-        if canonical_manifest.id != evidence_manifest.id:
-            raise ValueError("evidence manifest identity does not match its contents")
-        if (
-            reference is None
-            or reference.id != evidence_manifest.id
-            or reference.evidence_count != len(evidence_manifest.evidence)
-            or reference.set_count != len(evidence_manifest.sets)
-        ):
-            raise ValueError("evidence manifest identity does not match the MCR reference")
-        available_sets = {item.id for item in evidence_manifest.sets}
-        if any(
-            metric.evidence_set_id is not None and metric.evidence_set_id not in available_sets
-            for metric in report.metrics
-        ):
-            raise ValueError("MCR metric references an unknown evidence set")
-        if any(
-            finding.evidence_set_id is not None and finding.evidence_set_id not in available_sets
-            for finding in report.decision.findings
-        ):
-            raise ValueError("MCR finding references an unknown evidence set")
-    _prepare_destination(destination)
-    plan_path: Path | None = None
-    if release_plan is not None:
-        plan_path = destination / "release-plan.json"
+    if evidence_manifest is None:
+        return
+
+    canonical = create_evidence_manifest(evidence_manifest.evidence, evidence_manifest.sets)
+    reference = report.evidence_manifest
+    if canonical.id != evidence_manifest.id:
+        raise ValueError("evidence manifest identity does not match its contents")
+    if (
+        reference is None
+        or reference.id != evidence_manifest.id
+        or reference.evidence_count != len(evidence_manifest.evidence)
+        or reference.set_count != len(evidence_manifest.sets)
+    ):
+        raise ValueError("evidence manifest identity does not match the MCR reference")
+
+    available_sets = {item.id for item in evidence_manifest.sets}
+    if any(
+        metric.evidence_set_id is not None and metric.evidence_set_id not in available_sets
+        for metric in report.metrics
+    ):
+        raise ValueError("MCR metric references an unknown evidence set")
+    if any(
+        finding.evidence_set_id is not None and finding.evidence_set_id not in available_sets
+        for finding in report.decision.findings
+    ):
+        raise ValueError("MCR finding references an unknown evidence set")
+
+
+def _write_optional_contracts(
+    destination: Path,
+    release_plan: CompiledReleasePlan | None,
+    evidence_manifest: EvidenceManifest | None,
+) -> tuple[Path | None, Path | None]:
+    plan_path = destination / "release-plan.json" if release_plan is not None else None
+    if plan_path is not None and release_plan is not None:
         _atomic_write_text(plan_path, release_plan.model_dump_json(indent=2) + "\n")
-    evidence_manifest_path: Path | None = None
-    if evidence_manifest is not None:
-        evidence_manifest_path = destination / "evidence-manifest.json"
-        _atomic_write_text(
-            evidence_manifest_path, evidence_manifest.model_dump_json(indent=2) + "\n"
-        )
+
+    manifest_path = (
+        destination / "evidence-manifest.json" if evidence_manifest is not None else None
+    )
+    if manifest_path is not None and evidence_manifest is not None:
+        _atomic_write_text(manifest_path, evidence_manifest.model_dump_json(indent=2) + "\n")
+    return plan_path, manifest_path
+
+
+def write_report_bundle(
+    report: ModelChangeReport,
+    destination: Path,
+    *,
+    release_plan: CompiledReleasePlan | None = None,
+    evidence_manifest: EvidenceManifest | None = None,
+) -> ReportBundle:
+    """Atomically publish canonical JSON and human-readable Markdown."""
+    _validate_report_identity(report)
+    if release_plan is not None and report.release_plan_id != release_plan.id:
+        raise ValueError("release plan identity does not match the MCR reference")
+    _validate_evidence_manifest(report, evidence_manifest)
+    _prepare_destination(destination)
+    plan_path, evidence_manifest_path = _write_optional_contracts(
+        destination, release_plan, evidence_manifest
+    )
     json_path = destination / "mcr-report.json"
     markdown_path = destination / "summary.md"
     junit_path = destination / "junit.xml"

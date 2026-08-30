@@ -516,6 +516,34 @@ def test_unsafe_or_invalid_configuration_is_rejected(kwargs: dict[str, object]) 
         OpenAICompatibleAdapter(endpoint, "model", **kwargs)
 
 
+def test_recursive_request_profile_is_rejected_without_recursion_failure() -> None:
+    profile: dict[str, object] = {}
+    profile["nested"] = profile
+
+    with pytest.raises(ValueError, match="recursive object"):
+        OpenAICompatibleAdapter(
+            "https://models.example.test/v1",
+            "model",
+            request_profile=profile,
+        )
+
+
+def test_deep_request_profile_is_rejected_before_serialization() -> None:
+    profile: dict[str, object] = {}
+    cursor = profile
+    for _ in range(66):
+        child: dict[str, object] = {}
+        cursor["nested"] = child
+        cursor = child
+
+    with pytest.raises(ValueError, match="nesting limit"):
+        OpenAICompatibleAdapter(
+            "https://models.example.test/v1",
+            "model",
+            request_profile=profile,
+        )
+
+
 def test_runtime_profile_cannot_smuggle_headers_or_owned_fields() -> None:
     called = False
 

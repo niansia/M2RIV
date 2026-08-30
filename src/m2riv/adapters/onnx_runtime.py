@@ -34,6 +34,83 @@ def _safe_io_name(value: str, *, label: str) -> str:
     return value
 
 
+def _load_verified_model(source: Path) -> tuple[Any, bytes]:
+    try:
+        artifact_profile = inspect_artifact(source)
+    except ArtifactInspectionError as error:
+        raise OnnxRuntimeError(str(error)) from error
+    if artifact_profile.onnx is None:
+        raise OnnxRuntimeError("artifact must contain exactly one inspectable ONNX model")
+    if artifact_profile.onnx.uses_external_data:
+        raise OnnxRuntimeError("external ONNX tensor data is not supported")
+    components = tuple(item for item in artifact_profile.components if item.role == "model-onnx")
+    if len(components) != 1:
+        raise OnnxRuntimeError("artifact must contain exactly one ONNX component")
+    model_source = source if source.is_file() else source / components[0].relative_path
+    try:
+        model_bytes = read_verified_file(
+            model_source,
+            max_bytes=MAX_ONNX_BYTES,
+            expected_digest=components[0].digest,
+        )
+    except ValueError as error:
+        raise OnnxRuntimeError(str(error)) from error
+    return artifact_profile, model_bytes
+
+
+def _create_cpu_session(model_bytes: bytes, intra_op_threads: int) -> tuple[Any, Any, Any]:
+    os.environ.setdefault("ORT_DISABLE_TELEMETRY", "1")
+    try:
+        import numpy as np
+        import onnxruntime as ort  # type: ignore[import-untyped]
+
+        options = ort.SessionOptions()
+        options.intra_op_num_threads = intra_op_threads
+        options.inter_op_num_threads = 1
+        options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+        session = ort.InferenceSession(
+            model_bytes,
+            sess_options=options,
+            providers=["CPUExecutionProvider"],
+        )
+    except ImportError as error:
+        raise OnnxRuntimeError("ONNX execution requires the optional 'onnx' extra") from error
+    except Exception:
+        raise OnnxRuntimeError("ONNX Runtime could not create a CPU session") from None
+    return np, ort, session
+
+
+def _select_io(
+    session: Any,
+    np: Any,
+    *,
+    input_name: str | None,
+    output_name: str | None,
+) -> tuple[str, str, int, Any, str]:
+    inputs = session.get_inputs()
+    outputs = session.get_outputs()
+    if not inputs or not outputs:
+        raise OnnxRuntimeError("ONNX graph must expose at least one input and output")
+    selected_input = input_name or inputs[0].name
+    selected_output = output_name or outputs[0].name
+    input_metadata = next((item for item in inputs if item.name == selected_input), None)
+    if input_metadata is None:
+        raise OnnxRuntimeError("requested ONNX input does not exist")
+    if not any(item.name == selected_output for item in outputs):
+        raise OnnxRuntimeError("requested ONNX output does not exist")
+    input_type = input_metadata.type
+    numpy_dtype = {
+        "tensor(float)": np.float32,
+        "tensor(float16)": np.float16,
+        "tensor(double)": np.float64,
+        "tensor(int64)": np.int64,
+        "tensor(int32)": np.int32,
+    }.get(input_type)
+    if numpy_dtype is None:
+        raise OnnxRuntimeError(f"unsupported ONNX input type: {input_type}")
+    return selected_input, selected_output, len(input_metadata.shape), numpy_dtype, input_type
+
+
 class OnnxRuntimeAdapter:
     """Execute one self-contained ONNX graph with the CPU execution provider.
 
@@ -59,76 +136,21 @@ class OnnxRuntimeAdapter:
         ):
             raise ValueError("intra_op_threads must be an integer between 1 and 256")
         source = Path(model_path)
-        try:
-            artifact_profile = inspect_artifact(source)
-        except ArtifactInspectionError as error:
-            raise OnnxRuntimeError(str(error)) from error
-        if artifact_profile.onnx is None:
-            raise OnnxRuntimeError("artifact must contain exactly one inspectable ONNX model")
-        if artifact_profile.onnx.uses_external_data:
-            raise OnnxRuntimeError("external ONNX tensor data is not supported")
-        components = tuple(
-            item for item in artifact_profile.components if item.role == "model-onnx"
+        artifact_profile, model_bytes = _load_verified_model(source)
+        np, ort, session = _create_cpu_session(model_bytes, intra_op_threads)
+        selected_input, selected_output, input_rank, numpy_dtype, input_type = _select_io(
+            session,
+            np,
+            input_name=input_name,
+            output_name=output_name,
         )
-        if len(components) != 1:
-            raise OnnxRuntimeError("artifact must contain exactly one ONNX component")
-        model_source = source if source.is_file() else source / components[0].relative_path
-        try:
-            model_bytes = read_verified_file(
-                model_source,
-                max_bytes=MAX_ONNX_BYTES,
-                expected_digest=components[0].digest,
-            )
-            # ONNX Runtime telemetry is outside the evidence contract and is disabled
-            # before importing the native runtime. Respect an explicit operator value.
-            os.environ.setdefault("ORT_DISABLE_TELEMETRY", "1")
-            import numpy as np
-            import onnxruntime as ort  # type: ignore[import-untyped]
-
-            options = ort.SessionOptions()
-            options.intra_op_num_threads = intra_op_threads
-            options.inter_op_num_threads = 1
-            options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
-            session = ort.InferenceSession(
-                model_bytes,
-                sess_options=options,
-                providers=["CPUExecutionProvider"],
-            )
-        except ImportError as error:
-            raise OnnxRuntimeError("ONNX execution requires the optional 'onnx' extra") from error
-        except ValueError as error:
-            raise OnnxRuntimeError(str(error)) from error
-        except Exception:
-            raise OnnxRuntimeError("ONNX Runtime could not create a CPU session") from None
-
-        inputs = session.get_inputs()
-        outputs = session.get_outputs()
-        if not inputs or not outputs:
-            raise OnnxRuntimeError("ONNX graph must expose at least one input and output")
-        selected_input = input_name or inputs[0].name
-        selected_output = output_name or outputs[0].name
-        input_metadata = next((item for item in inputs if item.name == selected_input), None)
-        if input_metadata is None:
-            raise OnnxRuntimeError("requested ONNX input does not exist")
-        if not any(item.name == selected_output for item in outputs):
-            raise OnnxRuntimeError("requested ONNX output does not exist")
-        input_type = input_metadata.type
-        numpy_dtype = {
-            "tensor(float)": np.float32,
-            "tensor(float16)": np.float16,
-            "tensor(double)": np.float64,
-            "tensor(int64)": np.int64,
-            "tensor(int32)": np.int32,
-        }.get(input_type)
-        if numpy_dtype is None:
-            raise OnnxRuntimeError(f"unsupported ONNX input type: {input_type}")
 
         self._source = source
         self._session = session
         self._numpy = np
         self._input_name = _safe_io_name(selected_input, label="input")
         self._output_name = _safe_io_name(selected_output, label="output")
-        self._input_rank = len(input_metadata.shape)
+        self._input_rank = input_rank
         self._numpy_dtype = numpy_dtype
         self._output_mode = output_mode
         self._runtime_version = _safe_io_name(ort.__version__, label="runtime version")
@@ -185,7 +207,7 @@ class OnnxRuntimeAdapter:
             value = value[self._input_name]
         try:
             array = self._numpy.asarray(value, dtype=self._numpy_dtype)
-        except Exception:
+        except (OverflowError, RecursionError, TypeError, ValueError):
             raise OnnxRuntimeError("case input could not be converted to the ONNX dtype") from None
         if array.size > MAX_INPUT_ELEMENTS:
             raise OnnxRuntimeError(f"case input exceeds {MAX_INPUT_ELEMENTS} element limit")

@@ -9,6 +9,7 @@ import math
 import re
 import time
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from typing import Any
@@ -35,6 +36,8 @@ _MAX_ELAPSED_S = 3600.0
 _MAX_RETRIES = 5
 _MAX_RETRY_AFTER_CAP_S = 60.0
 _MAX_TIMEOUT_S = 300.0
+_MAX_PROFILE_DEPTH = 64
+_MAX_PROFILE_NODES = 100_000
 _RETRYABLE_STATUS = frozenset({429})
 _FORBIDDEN_PROFILE_KEYS = frozenset(
     {
@@ -78,32 +81,65 @@ def _normalized_key(key: str) -> str:
     return "".join(character for character in key.casefold() if character.isalnum())
 
 
-def _validate_profile(value: Mapping[str, Any], *, location: str) -> dict[str, Any]:
-    """Copy a JSON request profile while rejecting credentials and owned fields."""
+def _enter_profile_container(
+    item: Any,
+    depth: int,
+    active: set[int],
+    pending: list[tuple[Any, int, bool]],
+    *,
+    location: str,
+    kind: str,
+) -> None:
+    identity = id(item)
+    if identity in active:
+        raise ValueError(f"{location} contains a recursive {kind}")
+    active.add(identity)
+    pending.append((item, depth, True))
 
-    def visit(item: Any) -> None:
+
+def _reject_profile_credentials(value: Any, *, location: str) -> None:
+    pending: list[tuple[Any, int, bool]] = [(value, 0, False)]
+    active: set[int] = set()
+    nodes = 0
+    while pending:
+        item, depth, leaving = pending.pop()
+        if leaving:
+            active.remove(id(item))
+            continue
+        nodes += 1
+        if nodes > _MAX_PROFILE_NODES:
+            raise ValueError(f"{location} exceeds the JSON node limit")
+        if depth > _MAX_PROFILE_DEPTH:
+            raise ValueError(f"{location} exceeds the JSON nesting limit")
         if isinstance(item, Mapping):
+            _enter_profile_container(
+                item, depth, active, pending, location=location, kind="object"
+            )
             for key, child in item.items():
                 if not isinstance(key, str):
                     raise ValueError(f"{location} object keys must be strings")
                 if _normalized_key(key) in _FORBIDDEN_PROFILE_KEYS:
                     raise ValueError(f"{location} must not contain credentials or headers")
-                visit(child)
+                pending.append((child, depth + 1, False))
         elif isinstance(item, (list, tuple)):
-            for child in item:
-                visit(child)
+            _enter_profile_container(
+                item, depth, active, pending, location=location, kind="array"
+            )
+            pending.extend((child, depth + 1, False) for child in item)
 
+
+def _validate_profile(value: Mapping[str, Any], *, location: str) -> dict[str, Any]:
+    """Copy a JSON request profile while rejecting credentials and owned fields."""
     for key in value:
         if not isinstance(key, str):
             raise ValueError(f"{location} object keys must be strings")
         if _normalized_key(key) in _RESERVED_REQUEST_KEYS:
             raise ValueError(f"{location} contains an adapter-owned field")
-    visit(value)
+
+    _reject_profile_credentials(value, location=location)
     try:
-        # This simultaneously deep-copies, normalizes supported values, and rejects
-        # non-finite/non-JSON evidence before it reaches a request or fingerprint.
         encoded = canonical_json(value)
-    except (TypeError, ValueError):
+    except (RecursionError, TypeError, ValueError):
         raise ValueError(f"{location} must be finite JSON-compatible data") from None
 
     decoded = json.loads(encoded)
@@ -250,16 +286,24 @@ def _retry_delay(response: httpx.Response | None, *, cap_s: float) -> float:
 
 def _contains_any_secret(value: Any, secrets: tuple[str, ...]) -> bool:
     """Scan every JSON string, including object keys, without rendering the value."""
-    if isinstance(value, str):
-        return any(secret in value for secret in secrets)
-    if isinstance(value, Mapping):
-        return any(
-            _contains_any_secret(key, secrets) or _contains_any_secret(item, secrets)
-            for key, item in value.items()
-        )
-    if isinstance(value, (list, tuple)):
-        return any(_contains_any_secret(item, secrets) for item in value)
+    pending = [value]
+    while pending:
+        item = pending.pop()
+        if isinstance(item, str) and any(secret in item for secret in secrets):
+            return True
+        if isinstance(item, Mapping):
+            pending.extend(item.keys())
+            pending.extend(item.values())
+        elif isinstance(item, (list, tuple)):
+            pending.extend(item)
     return False
+
+
+def _ensure_before_deadline(deadline: float, case_label: str) -> float:
+    remaining = deadline - time.perf_counter()
+    if remaining <= 0:
+        raise OpenAICompatibleError(f"{case_label} exceeded the cumulative elapsed-time limit")
+    return remaining
 
 
 def _read_bounded_response(
@@ -270,8 +314,7 @@ def _read_bounded_response(
     case_label: str,
 ) -> bytes:
     """Read an identity-encoded body without ever buffering beyond its evidence cap."""
-    if time.perf_counter() >= deadline:
-        raise OpenAICompatibleError(f"{case_label} exceeded the cumulative elapsed-time limit")
+    _ensure_before_deadline(deadline, case_label)
     content_encoding = response.headers.get("Content-Encoding", "").strip().casefold()
     if content_encoding not in {"", "identity"}:
         raise OpenAICompatibleError(
@@ -292,8 +335,7 @@ def _read_bounded_response(
         # Mock/custom transports may return an already-materialized response. Real
         # network transports remain streaming because this adapter uses client.stream.
         body_bytes = response.content
-        if time.perf_counter() >= deadline:
-            raise OpenAICompatibleError(f"{case_label} exceeded the cumulative elapsed-time limit")
+        _ensure_before_deadline(deadline, case_label)
         if len(body_bytes) > max_bytes:
             raise OpenAICompatibleError(
                 f"remote endpoint response exceeded the evidence size limit for {case_label}"
@@ -302,14 +344,64 @@ def _read_bounded_response(
 
     body = bytearray()
     for chunk in response.iter_raw():
-        if time.perf_counter() >= deadline:
-            raise OpenAICompatibleError(f"{case_label} exceeded the cumulative elapsed-time limit")
+        _ensure_before_deadline(deadline, case_label)
         if len(body) + len(chunk) > max_bytes:
             raise OpenAICompatibleError(
                 f"remote endpoint response exceeded the evidence size limit for {case_label}"
             )
         body.extend(chunk)
     return bytes(body)
+
+
+def _validate_execution_limits(
+    *,
+    timeout_s: float,
+    max_retries: int,
+    retry_after_cap_s: float,
+    max_response_bytes: int,
+    max_elapsed_s: float,
+) -> None:
+    if (
+        not isinstance(timeout_s, (int, float))
+        or not math.isfinite(timeout_s)
+        or not 0 < timeout_s <= _MAX_TIMEOUT_S
+    ):
+        raise ValueError(f"timeout_s must be finite and in (0, {_MAX_TIMEOUT_S}]")
+    if (
+        isinstance(max_retries, bool)
+        or not isinstance(max_retries, int)
+        or not 0 <= max_retries <= _MAX_RETRIES
+    ):
+        raise ValueError(f"max_retries must be an integer in [0, {_MAX_RETRIES}]")
+    if (
+        not isinstance(retry_after_cap_s, (int, float))
+        or not math.isfinite(retry_after_cap_s)
+        or not 0 <= retry_after_cap_s <= _MAX_RETRY_AFTER_CAP_S
+    ):
+        raise ValueError(
+            f"retry_after_cap_s must be finite and in [0, {_MAX_RETRY_AFTER_CAP_S}]"
+        )
+    if (
+        isinstance(max_response_bytes, bool)
+        or not isinstance(max_response_bytes, int)
+        or not 1 <= max_response_bytes <= _MAX_CONFIGURED_RESPONSE_BYTES
+    ):
+        raise ValueError(
+            f"max_response_bytes must be an integer in [1, {_MAX_CONFIGURED_RESPONSE_BYTES}]"
+        )
+    if (
+        not isinstance(max_elapsed_s, (int, float))
+        or not math.isfinite(max_elapsed_s)
+        or not 0 < max_elapsed_s <= _MAX_ELAPSED_S
+    ):
+        raise ValueError(f"max_elapsed_s must be finite and in (0, {_MAX_ELAPSED_S}]")
+
+
+@dataclass(frozen=True, slots=True)
+class _CompletedRequest:
+    body: bytes
+    attempts: int
+    attempt_latencies_ms: tuple[float, ...]
 
 
 class OpenAICompatibleAdapter:
@@ -343,40 +435,13 @@ class OpenAICompatibleAdapter:
             not isinstance(api_key, str) or not api_key or "\r" in api_key or "\n" in api_key
         ):
             raise ValueError("api_key must be a non-empty string containing no newlines")
-        if (
-            not isinstance(timeout_s, (int, float))
-            or not math.isfinite(timeout_s)
-            or not 0 < timeout_s <= _MAX_TIMEOUT_S
-        ):
-            raise ValueError(f"timeout_s must be finite and in (0, {_MAX_TIMEOUT_S}]")
-        if (
-            isinstance(max_retries, bool)
-            or not isinstance(max_retries, int)
-            or not 0 <= max_retries <= _MAX_RETRIES
-        ):
-            raise ValueError(f"max_retries must be an integer in [0, {_MAX_RETRIES}]")
-        if (
-            not isinstance(retry_after_cap_s, (int, float))
-            or not math.isfinite(retry_after_cap_s)
-            or not 0 <= retry_after_cap_s <= _MAX_RETRY_AFTER_CAP_S
-        ):
-            raise ValueError(
-                f"retry_after_cap_s must be finite and in [0, {_MAX_RETRY_AFTER_CAP_S}]"
-            )
-        if (
-            isinstance(max_response_bytes, bool)
-            or not isinstance(max_response_bytes, int)
-            or not 1 <= max_response_bytes <= _MAX_CONFIGURED_RESPONSE_BYTES
-        ):
-            raise ValueError(
-                f"max_response_bytes must be an integer in [1, {_MAX_CONFIGURED_RESPONSE_BYTES}]"
-            )
-        if (
-            not isinstance(max_elapsed_s, (int, float))
-            or not math.isfinite(max_elapsed_s)
-            or not 0 < max_elapsed_s <= _MAX_ELAPSED_S
-        ):
-            raise ValueError(f"max_elapsed_s must be finite and in (0, {_MAX_ELAPSED_S}]")
+        _validate_execution_limits(
+            timeout_s=timeout_s,
+            max_retries=max_retries,
+            retry_after_cap_s=retry_after_cap_s,
+            max_response_bytes=max_response_bytes,
+            max_elapsed_s=max_elapsed_s,
+        )
         if client is not None and transport is not None:
             raise ValueError("client and transport are mutually exclusive")
         if not isinstance(allow_insecure_http, bool):
@@ -534,7 +599,7 @@ class OpenAICompatibleAdapter:
         *,
         case_label: str,
     ) -> Observation:
-        headers = {
+        headers: dict[str, str] = {
             "Accept": "application/json",
             "Accept-Encoding": "identity",
             "Content-Type": "application/json",
@@ -544,95 +609,30 @@ class OpenAICompatibleAdapter:
 
         started = time.perf_counter()
         deadline = started + self._max_elapsed_s
-        attempt_latencies: list[float] = []
-        response: httpx.Response | None = None
-        response_body: bytes | None = None
-        attempts = 0
-        for attempt in range(self._max_retries + 1):
-            remaining_s = deadline - time.perf_counter()
-            if remaining_s <= 0:
-                raise OpenAICompatibleError(
-                    f"{case_label} exceeded the cumulative elapsed-time limit"
-                )
-            attempts = attempt + 1
-            attempt_started = time.perf_counter()
-            try:
-                with client.stream(
-                    "POST",
-                    _chat_completions_url(self._endpoint),
-                    json=body,
-                    headers=headers,
-                    timeout=min(self._timeout_s, remaining_s),
-                ) as streamed_response:
-                    response = streamed_response
-                    if 200 <= response.status_code < 300:
-                        response_body = _read_bounded_response(
-                            response,
-                            max_bytes=self._max_response_bytes,
-                            deadline=deadline,
-                            case_label=case_label,
-                        )
-            except httpx.TransportError:
-                attempt_latencies.append(round((time.perf_counter() - attempt_started) * 1000, 3))
-                if time.perf_counter() >= deadline:
-                    raise OpenAICompatibleError(
-                        f"{case_label} exceeded the cumulative elapsed-time limit"
-                    ) from None
-                if attempt == self._max_retries:
-                    raise OpenAICompatibleError(
-                        f"remote transport failed for {case_label} after {attempts} attempts"
-                    ) from None
-                continue
-
-            attempt_latencies.append(round((time.perf_counter() - attempt_started) * 1000, 3))
-            retryable = (
-                response.status_code in _RETRYABLE_STATUS or 500 <= response.status_code < 600
-            )
-            if retryable and attempt < self._max_retries:
-                delay = _retry_delay(response, cap_s=self._retry_after_cap_s)
-                if delay:
-                    if delay >= deadline - time.perf_counter():
-                        raise OpenAICompatibleError(
-                            f"{case_label} exceeded the cumulative elapsed-time limit"
-                        )
-                    time.sleep(delay)
-                continue
-            break
-
-        if response is None:  # pragma: no cover - loop always responds or raises
-            raise OpenAICompatibleError(f"remote transport failed for {case_label}")
-        if time.perf_counter() >= deadline:
-            raise OpenAICompatibleError(f"{case_label} exceeded the cumulative elapsed-time limit")
-        if not 200 <= response.status_code < 300:
-            raise OpenAICompatibleError(
-                f"remote endpoint returned HTTP {response.status_code} for {case_label} "
-                f"after {attempts} attempts"
-            )
-        if response_body is None:  # pragma: no cover - successful responses are read above
-            raise OpenAICompatibleError(
-                f"remote endpoint returned no response evidence for {case_label}"
-            )
-
+        completed = self._request_response(
+            client,
+            body,
+            headers,
+            deadline=deadline,
+            case_label=case_label,
+        )
         try:
-            payload = parse_strict_json(response_body)
+            payload = parse_strict_json(completed.body)
         except StrictJSONError:
             raise OpenAICompatibleError(
                 f"remote endpoint returned invalid JSON for {case_label}"
             ) from None
-        if time.perf_counter() >= deadline:
-            raise OpenAICompatibleError(f"{case_label} exceeded the cumulative elapsed-time limit")
+        _ensure_before_deadline(deadline, case_label)
         if self._response_secrets and _contains_any_secret(payload, self._response_secrets):
             raise OpenAICompatibleError(
                 f"remote endpoint response failed secret-safety validation for {case_label}"
             )
         content, usage = self._extract_evidence(payload, case_label=case_label)
-        finished = time.perf_counter()
-        if finished >= deadline:
-            raise OpenAICompatibleError(f"{case_label} exceeded the cumulative elapsed-time limit")
-        total_latency_ms = round((finished - started) * 1000, 3)
+        total_latency_ms = round((time.perf_counter() - started) * 1000, 3)
+        _ensure_before_deadline(deadline, case_label)
         traces: dict[str, Any] = {
-            "attempts": attempts,
-            "attempt_latencies_ms": attempt_latencies,
+            "attempts": completed.attempts,
+            "attempt_latencies_ms": list(completed.attempt_latencies_ms),
             "latency_ms": total_latency_ms,
         }
         if usage is not None:
@@ -649,7 +649,7 @@ class OpenAICompatibleAdapter:
                 ),
                 snapshot_id=self._snapshot.id,
                 case_id=case.case_id,
-                attempt=attempts - 1,
+                attempt=completed.attempts - 1,
                 seed=profile.seed,
                 output=content,
                 output_digest=output_digest,
@@ -660,6 +660,101 @@ class OpenAICompatibleAdapter:
             raise OpenAICompatibleError(
                 f"remote endpoint returned invalid evidence for {case_label}"
             ) from None
+
+    def _request_response(
+        self,
+        client: httpx.Client,
+        body: dict[str, Any],
+        headers: dict[str, str],
+        *,
+        deadline: float,
+        case_label: str,
+    ) -> _CompletedRequest:
+        attempt_latencies: list[float] = []
+        for attempt in range(self._max_retries + 1):
+            remaining_s = _ensure_before_deadline(deadline, case_label)
+            attempt_started = time.perf_counter()
+            try:
+                response, response_body = self._send_attempt(
+                    client,
+                    body,
+                    headers,
+                    timeout_s=min(self._timeout_s, remaining_s),
+                    deadline=deadline,
+                    case_label=case_label,
+                )
+            except httpx.TransportError:
+                attempt_latencies.append(round((time.perf_counter() - attempt_started) * 1000, 3))
+                _ensure_before_deadline(deadline, case_label)
+                if attempt == self._max_retries:
+                    raise OpenAICompatibleError(
+                        f"remote transport failed for {case_label} after {attempt + 1} attempts"
+                    ) from None
+                continue
+
+            attempt_latencies.append(round((time.perf_counter() - attempt_started) * 1000, 3))
+            if self._should_retry(response) and attempt < self._max_retries:
+                self._wait_before_retry(response, deadline=deadline, case_label=case_label)
+                continue
+            _ensure_before_deadline(deadline, case_label)
+            if not 200 <= response.status_code < 300:
+                raise OpenAICompatibleError(
+                    f"remote endpoint returned HTTP {response.status_code} for {case_label} "
+                    f"after {attempt + 1} attempts"
+                )
+            if response_body is None:  # pragma: no cover - successful responses are read above
+                raise OpenAICompatibleError(
+                    f"remote endpoint returned no response evidence for {case_label}"
+                )
+            return _CompletedRequest(
+                body=response_body,
+                attempts=attempt + 1,
+                attempt_latencies_ms=tuple(attempt_latencies),
+            )
+        raise OpenAICompatibleError(f"remote transport failed for {case_label}")  # pragma: no cover
+
+    def _send_attempt(
+        self,
+        client: httpx.Client,
+        body: dict[str, Any],
+        headers: dict[str, str],
+        *,
+        timeout_s: float,
+        deadline: float,
+        case_label: str,
+    ) -> tuple[httpx.Response, bytes | None]:
+        with client.stream(
+            "POST",
+            _chat_completions_url(self._endpoint),
+            json=body,
+            headers=headers,
+            timeout=timeout_s,
+        ) as response:
+            response_body = None
+            if 200 <= response.status_code < 300:
+                response_body = _read_bounded_response(
+                    response,
+                    max_bytes=self._max_response_bytes,
+                    deadline=deadline,
+                    case_label=case_label,
+                )
+        return response, response_body
+
+    @staticmethod
+    def _should_retry(response: httpx.Response) -> bool:
+        return response.status_code in _RETRYABLE_STATUS or 500 <= response.status_code < 600
+
+    def _wait_before_retry(
+        self, response: httpx.Response, *, deadline: float, case_label: str
+    ) -> None:
+        delay = _retry_delay(response, cap_s=self._retry_after_cap_s)
+        if not delay:
+            return
+        if delay >= _ensure_before_deadline(deadline, case_label):
+            raise OpenAICompatibleError(
+                f"{case_label} exceeded the cumulative elapsed-time limit"
+            )
+        time.sleep(delay)
 
     @staticmethod
     def _extract_evidence(payload: Any, *, case_label: str) -> tuple[str, dict[str, Any] | None]:

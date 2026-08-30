@@ -189,32 +189,37 @@ class ObservationCache:
             return None
         return entry_stat
 
+    def _create_cache_root(self) -> None:
+        missing: list[Path] = []
+        cursor = self.root
+        while not cursor.exists() and not cursor.is_symlink():
+            missing.append(cursor)
+            if cursor.parent == cursor:
+                break
+            cursor = cursor.parent
+        if not self._safe_shard(cursor):
+            raise ValueError("cache parent must be a regular local directory")
+        for directory in reversed(missing):
+            directory.mkdir()
+            if not self._safe_shard(directory):
+                raise ValueError("cache root changed during creation")
+
+    def _ensure_shard(self, shard: Path) -> None:
+        if shard.exists() or shard.is_symlink():
+            if not self._safe_shard(shard):
+                raise ValueError("cache shard must be a regular local directory")
+            return
+        shard.mkdir()
+        if not self._safe_shard(shard):
+            raise ValueError("cache shard changed during creation")
+
     def _prepare_shard(self, shard: Path) -> None:
         if self.root.exists() or self.root.is_symlink():
             if not self._safe_shard(self.root):
                 raise ValueError("cache root must be a regular local directory")
         else:
-            missing: list[Path] = []
-            cursor = self.root
-            while not cursor.exists() and not cursor.is_symlink():
-                missing.append(cursor)
-                if cursor.parent == cursor:
-                    break
-                cursor = cursor.parent
-            if not self._safe_shard(cursor):
-                raise ValueError("cache parent must be a regular local directory")
-            for directory in reversed(missing):
-                directory.mkdir()
-                if not self._safe_shard(directory):
-                    raise ValueError("cache root changed during creation")
-
-        if shard.exists() or shard.is_symlink():
-            if not self._safe_shard(shard):
-                raise ValueError("cache shard must be a regular local directory")
-        else:
-            shard.mkdir()
-            if not self._safe_shard(shard):
-                raise ValueError("cache shard changed during creation")
+            self._create_cache_root()
+        self._ensure_shard(shard)
 
     def get(self, key: CacheKey) -> Observation | None:
         """Read a verified observation; malformed or inconsistent entries are misses."""
