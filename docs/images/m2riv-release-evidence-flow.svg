@@ -1,166 +1,215 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1680" height="900" viewBox="0 0 1680 900" role="img" aria-labelledby="title description">
-  <title id="title">M2RIV release evidence architecture</title>
-  <desc id="description">Producers feed the M2RIV evidence kernel, which emits a Model Change Report for release consumers and four-state decisions. A lower lane shows the NVIDIA ModelOpt and TensorRT example.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1880" height="1050" viewBox="0 0 1880 1050" role="img" aria-labelledby="diagram-title diagram-description">
+  <title id="diagram-title">M2RIV release evidence architecture</title>
+  <desc id="diagram-description">Inputs flow through the M2RIV evidence kernel into the MCR protocol, release consumers, and four release decisions. The lower lane shows an NVIDIA deployment example.</desc>
   <defs>
-    <linearGradient id="page" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#fbfdff"/>
-      <stop offset="1" stop-color="#f2f6fc"/>
-    </linearGradient>
-    <linearGradient id="mcr" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#2f65c7"/>
-      <stop offset="1" stop-color="#234eaa"/>
-    </linearGradient>
-    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
-      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#1e335c" flood-opacity="0.10"/>
-    </filter>
-    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#17356f"/>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#173B73"/>
     </marker>
+    <symbol id="icon-artifact_cube" viewBox="0 0 64 64"><g fill="none" stroke="#173B73" stroke-width="3" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M32 8l20 12v24L32 56 12 44V20z" /><path d="M12 20l20 12 20-12M32 32v24M22 14l20 12M42 14L22 26" /></g></symbol>
+    <symbol id="icon-bar_chart" viewBox="0 0 64 64"><g fill="#173B73" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="34" width="8" height="20" rx="1" /><rect x="23" y="24" width="8" height="30" rx="1" /><rect x="36" y="14" width="8" height="40" rx="1" /><rect x="49" y="28" width="5" height="26" rx="1" /></g></symbol>
+    <symbol id="icon-bisect_branch" viewBox="0 0 64 64"><g fill="none" stroke="#173B73" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="14" r="4" /><circle cx="46" cy="14" r="4" /><circle cx="32" cy="50" r="4" /><path d="M18 18v10c0 6 4 8 14 8M46 18v10c0 6-4 8-14 8M32 36v10" /></g></symbol>
+    <symbol id="icon-block" viewBox="0 0 64 64"><g fill="none" stroke="#C94C3F" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M20 10h24l10 10v24L44 54H20L10 44V20z" /><path d="M24 20v19M30 18v21M36 20v19M42 24v15" /><path d="M20 38c6 0 6 8 14 8 7 0 12-4 14-10" /></g></symbol>
+    <symbol id="icon-ci_nodes" viewBox="0 0 64 64"><g fill="none" stroke="#173B73" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="20" r="6" /><circle cx="46" cy="20" r="6" /><circle cx="32" cy="46" r="6" /><path d="M23 24l6 14M41 24l-6 14M24 20h16" /></g></symbol>
+    <symbol id="icon-database" viewBox="0 0 64 64"><g fill="none" stroke="#173B73" stroke-width="3" xmlns="http://www.w3.org/2000/svg"><ellipse cx="32" cy="16" rx="18" ry="7" /><path d="M14 16v12c0 4 8 7 18 7s18-3 18-7V16" /><path d="M14 28v12c0 4 8 7 18 7s18-3 18-7V28" /><path d="M14 40v8c0 4 8 7 18 7s18-3 18-7v-8" /></g></symbol>
+    <symbol id="icon-document_mcr" viewBox="0 0 64 64"><g fill="none" stroke="#2F66C7" stroke-width="3" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M16 8h22l10 10v38H16z" /><path d="M38 8v12h10" /><path d="M22 30h20M22 38h20M22 46h14" /></g></symbol>
+    <symbol id="icon-error" viewBox="0 0 64 64"><g fill="none" stroke="#C94C3F" stroke-width="4" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="32" r="22" /><path d="M23 23l18 18M41 23L23 41" /></g></symbol>
+    <symbol id="icon-gear" viewBox="0 0 64 64"><g fill="none" stroke="#173B73" stroke-width="3" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="32" r="9" /><path d="M32 8v7M32 49v7M8 32h7M49 32h7M15 15l5 5M44 44l5 5M49 15l-5 5M20 44l-5 5" /><circle cx="32" cy="32" r="17" /></g></symbol>
+    <symbol id="icon-globe" viewBox="0 0 64 64"><g fill="none" stroke="#173B73" stroke-width="3" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="32" r="22" /><path d="M10 32h44M32 10c8 8 8 36 0 44M32 10c-8 8-8 36 0 44" /></g></symbol>
+    <symbol id="icon-model_network" viewBox="0 0 64 64"><g fill="none" stroke="#68A63B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="16" r="4" /><circle cx="18" cy="32" r="4" /><circle cx="18" cy="48" r="4" /><circle cx="46" cy="12" r="4" /><circle cx="46" cy="26" r="4" /><circle cx="46" cy="40" r="4" /><circle cx="46" cy="54" r="4" /><path d="M22 16L42 12M22 16L42 26M22 32L42 26M22 32L42 40M22 48L42 40M22 48L42 54" /></g></symbol>
+    <symbol id="icon-pass" viewBox="0 0 64 64"><g fill="none" stroke="#68A63B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="32" r="22" /><path d="M20 33l8 8 16-19" /></g></symbol>
+    <symbol id="icon-people" viewBox="0 0 64 64"><g fill="none" stroke="#173B73" stroke-width="3" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="22" r="6" /><circle cx="42" cy="24" r="5" /><path d="M12 50c1-10 7-15 12-15s11 5 12 15M34 39c3-4 7-6 10-6 5 0 9 4 10 12" /></g></symbol>
+    <symbol id="icon-play_triangle" viewBox="0 0 64 64"><path d="M20 12l30 20-30 20z" fill="none" stroke="#68A63B" stroke-width="4" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" /></symbol>
+    <symbol id="icon-scales" viewBox="0 0 64 64"><g fill="none" stroke="#173B73" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M32 10v40M20 16h24M14 20h12M38 20h12M20 16l-8 16h16zM44 16l-8 16h16zM22 52h20" /></g></symbol>
+    <symbol id="icon-shield_check" viewBox="0 0 64 64"><g fill="none" stroke="#173B73" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M32 8l18 7v14c0 13-8 22-18 27-10-5-18-14-18-27V15z" /><path d="M23 31l6 6 12-13" /></g></symbol>
+    <symbol id="icon-sliders" viewBox="0 0 64 64"><g fill="none" stroke="#68A63B" stroke-width="3" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"><path d="M10 16h44M10 32h44M10 48h44" /><circle cx="24" cy="16" r="4" fill="white" /><circle cx="40" cy="32" r="4" fill="white" /><circle cx="20" cy="48" r="4" fill="white" /></g></symbol>
+    <symbol id="icon-speedometer" viewBox="0 0 64 64"><g fill="none" stroke="#173B73" stroke-width="3" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"><path d="M12 44a22 22 0 1 1 40 0" /><path d="M32 32l12-10" /><circle cx="32" cy="32" r="3" fill="#173B73" stroke="none" /></g></symbol>
+    <symbol id="icon-statistics" viewBox="0 0 64 64"><g fill="none" stroke="#173B73" stroke-width="3" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="36" width="8" height="18" /><rect x="24" y="26" width="8" height="28" /><rect x="38" y="16" width="8" height="38" /><path d="M8 54h46" /></g></symbol>
+    <symbol id="icon-target" viewBox="0 0 64 64"><g fill="none" stroke="#2F66C7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="28" cy="36" r="20" /><circle cx="28" cy="36" r="12" /><circle cx="28" cy="36" r="4" /><path d="M40 24L54 10M45 10h9v9" /></g></symbol>
+    <symbol id="icon-warn" viewBox="0 0 64 64"><g fill="none" stroke="#E59A3A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M32 10l24 42H8z" /><path d="M32 24v13" /><circle cx="32" cy="45" r="2" fill="#E59A3A" stroke="none" /></g></symbol>
+    <symbol id="icon-waveform" viewBox="0 0 64 64"><path d="M6 34h12l5-20 8 38 7-30 5 12h15" fill="none" stroke="#173B73" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" /></symbol>
     <style>
-      text { font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; fill: #142342; }
-      .title { font-size: 64px; font-weight: 760; letter-spacing: 1px; }
-      .subtitle { font-size: 27px; font-weight: 450; fill: #344969; }
-      .panel { fill: #fff; stroke: #a9b9d2; stroke-width: 1.5; rx: 16; filter: url(#shadow); }
-      .panel-head { fill: #f3f7fd; stroke: #a9b9d2; stroke-width: 1.5; }
-      .number { fill: #2f65c7; }
-      .number-text { fill: #fff; font-size: 21px; font-weight: 750; text-anchor: middle; dominant-baseline: middle; }
-      .head-text { font-size: 22px; font-weight: 700; }
-      .chip { fill: #fbfdff; stroke: #86a8df; stroke-width: 1.4; rx: 9; }
-      .chip-text { font-size: 18px; font-weight: 520; dominant-baseline: middle; }
-      .card { fill: #f8fbff; stroke: #86a8df; stroke-width: 1.4; rx: 10; }
-      .card-title { font-size: 18px; font-weight: 650; text-anchor: middle; }
-      .icon { fill: none; stroke: #1d4389; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-      .arrow { stroke: #17356f; stroke-width: 5; fill: none; marker-end: url(#arrow); }
-      .bullet { fill: #2f65c7; }
-      .bullet-text { font-size: 17px; }
-      .bullet-small { font-size: 15px; }
-      .mcr-title { fill: #fff; }
-      .pass-text { fill: #4f8739; }
-      .warn-text { fill: #c77b19; }
-      .block-text { fill: #b63e3e; }
-      .error-text { fill: #bd4838; }
-      .small { font-size: 15px; fill: #50627e; }
-      .lane-title { font-size: 21px; font-weight: 700; }
-      .lane-node { fill: #fff; stroke: #9aa9bf; stroke-width: 1.4; rx: 10; }
-      .lane-node-key { fill: #eef4ff; stroke: #5d87d5; stroke-width: 1.6; rx: 10; }
-      .lane-text { font-size: 16px; font-weight: 620; text-anchor: middle; dominant-baseline: middle; }
-      .lane-arrow { stroke: #17356f; stroke-width: 3; fill: none; marker-end: url(#arrow); }
-      .status-text { font-size: 19px; font-weight: 740; text-anchor: middle; dominant-baseline: middle; }
+      text { font-family: "Segoe UI", Helvetica, Arial, sans-serif; fill: #142342; }
+      .page-title { font-size: 58px; font-weight: 750; letter-spacing: 1px; }
+      .subtitle { font-size: 26px; font-weight: 400; fill: #344969; }
+      .panel { fill: #ffffff; stroke: #a9b9d2; stroke-width: 1.5; }
+      .panel-header { fill: #f3f7fd; stroke: #a9b9d2; stroke-width: 1.5; }
+      .step-circle { fill: #2f66c7; }
+      .step-number { fill: #ffffff; font-size: 21px; font-weight: 750; dominant-baseline: middle; }
+      .panel-title { font-size: 20px; font-weight: 700; dominant-baseline: middle; }
+      .panel-title-compact { font-size: 19px; font-weight: 700; dominant-baseline: middle; }
+      .chip { fill: #fbfdff; stroke: #86a8df; stroke-width: 1.5; }
+      .chip-label { font-size: 17px; font-weight: 450; dominant-baseline: middle; }
+      .kernel-card { fill: #f8fbff; stroke: #86a8df; stroke-width: 1.5; }
+      .kernel-label { font-size: 16px; font-weight: 650; dominant-baseline: middle; }
+      .caption { font-size: 15px; fill: #50627e; }
+      .flow-arrow { stroke: #173b73; stroke-width: 4; marker-end: url(#arrow); }
+      .lane-arrow { stroke: #173b73; stroke-width: 3; marker-end: url(#arrow); }
+      .mcr-outline { fill: #ffffff; stroke: #2f66c7; stroke-width: 2; }
+      .mcr-header { fill: #2f66c7; }
+      .mcr-title { fill: #ffffff; font-size: 18px; font-weight: 700; }
+      .mcr-subtitle { fill: #dce8ff; font-size: 15px; font-weight: 650; }
+      .bullet { fill: #2f66c7; }
+      .bullet-label { font-size: 16px; fill: #243654; dominant-baseline: middle; }
+      .state-label { font-size: 19px; font-weight: 700; dominant-baseline: middle; }
+      .lane-title { font-size: 20px; font-weight: 700; }
+      .lane-node { fill: #ffffff; stroke: #9aa9bf; stroke-width: 1.5; }
+      .lane-key { fill: #eef4ff; stroke: #5d87d5; stroke-width: 1.6; }
+      .lane-label { font-size: 15px; font-weight: 650; dominant-baseline: middle; }
+      .goal-title { font-size: 18px; font-weight: 700; fill: #18355f; }
+      .goal-copy { font-size: 17px; fill: #243654; }
     </style>
   </defs>
-
-  <rect width="1680" height="900" fill="url(#page)"/>
-  <text x="840" y="76" class="title" text-anchor="middle">M2RIV</text>
-  <text x="840" y="118" class="subtitle" text-anchor="middle">Vendor-neutral release evidence for deployable AI models</text>
-
-  <!-- 1. Producers -->
-  <g>
-    <rect x="34" y="160" width="286" height="486" class="panel"/>
-    <path d="M50 160 H304 Q320 160 320 176 V220 H34 V176 Q34 160 50 160 Z" class="panel-head"/>
-    <circle cx="70" cy="190" r="20" class="number"/>
-    <text x="70" y="191" class="number-text">1</text>
-    <text x="101" y="197" class="head-text">Producers / Inputs</text>
-
-    <g transform="translate(52 240)"><rect width="250" height="48" class="chip"/><circle cx="25" cy="24" r="10" class="icon"/><path d="M25 8 V15 M13 16 L18 20 M37 16 L32 20" class="icon"/><text x="48" y="25" class="chip-text">PyTorch / HF model</text></g>
-    <g transform="translate(52 300)"><rect width="250" height="48" class="chip"/><circle cx="25" cy="24" r="12" class="icon"/><path d="M13 24 H37 M25 12 C19 18 19 30 25 36 M25 12 C31 18 31 30 25 36" class="icon"/><text x="48" y="25" class="chip-text">API endpoint</text></g>
-    <g transform="translate(52 360)"><rect width="250" height="48" class="chip"/><path d="M13 32 L25 12 L37 32 Z M13 32 L25 25 L37 32 M25 12 V25" class="icon"/><text x="48" y="25" class="chip-text">ONNX artifact</text></g>
-    <g transform="translate(52 420)"><rect width="250" height="48" class="chip"/><path d="M12 31 A14 14 0 0 1 38 31 M25 31 L33 19" class="icon"/><text x="48" y="25" class="chip-text">TensorRT engine</text></g>
-    <g transform="translate(52 480)"><rect width="250" height="48" class="chip"/><path d="M14 34 V25 M22 34 V16 M30 34 V21 M38 34 V11" class="icon"/><text x="48" y="25" class="chip-text">Polygraphy evidence</text></g>
-    <g transform="translate(52 540)"><rect width="250" height="48" class="chip"/><ellipse cx="25" cy="16" rx="13" ry="7" class="icon"/><path d="M12 16 V31 C12 39 38 39 38 31 V16 M12 24 C12 32 38 32 38 24" class="icon"/><text x="48" y="25" class="chip-text">MLflow registry</text></g>
-  </g>
-
-  <path d="M330 403 H356" class="arrow"/>
-
-  <!-- 2. Evidence kernel -->
-  <g>
-    <rect x="372" y="160" width="338" height="486" class="panel"/>
-    <path d="M388 160 H694 Q710 160 710 176 V220 H372 V176 Q372 160 388 160 Z" class="panel-head"/>
-    <circle cx="408" cy="190" r="20" class="number"/>
-    <text x="408" y="191" class="number-text">2</text>
-    <text x="439" y="197" class="head-text">M2RIV Evidence Kernel</text>
-
-    <g transform="translate(392 240)"><rect width="142" height="108" class="card"/><path d="M42 34 H100 M53 34 L45 57 H61 Z M89 34 L81 57 H97 Z M71 22 V70" class="icon"/><text x="71" y="92" class="card-title">Artifact diff</text></g>
-    <g transform="translate(548 240)"><rect width="142" height="108" class="card"/><path d="M27 51 H43 L50 28 L60 70 L70 39 L79 55 H111" class="icon"/><text x="71" y="92" class="card-title">Numerical diff</text></g>
-    <g transform="translate(392 362)"><rect width="142" height="108" class="card"/><path d="M71 21 L92 30 V48 C92 62 82 72 71 78 C60 72 50 62 50 48 V30 Z M62 48 L68 54 L81 40" class="icon"/><text x="71" y="90" class="card-title">Contract checks</text></g>
-    <g transform="translate(548 362)"><rect width="142" height="108" class="card"/><path d="M39 70 V54 M55 70 V40 M71 70 V48 M87 70 V30 M103 70 V22" class="icon"/><text x="71" y="90" class="card-title">Paired statistics</text></g>
-    <g transform="translate(392 484)"><rect width="142" height="108" class="card"/><circle cx="71" cy="48" r="20" class="icon"/><path d="M71 20 V27 M71 69 V76 M43 48 H50 M92 48 H99 M52 29 L57 34 M85 62 L90 67" class="icon"/><text x="71" y="91" class="card-title">Policy engine</text></g>
-    <g transform="translate(548 484)"><rect width="142" height="108" class="card"/><circle cx="49" cy="35" r="6" class="icon"/><circle cx="94" cy="35" r="6" class="icon"/><circle cx="71" cy="69" r="6" class="icon"/><path d="M55 38 L66 64 M88 38 L76 64" class="icon"/><text x="71" y="91" class="card-title">Bisect</text></g>
-    <text x="541" y="624" class="small" text-anchor="middle">compare → quantify → gate → locate</text>
-  </g>
-
-  <path d="M720 403 H744" class="arrow"/>
-
-  <!-- 3. MCR -->
-  <g>
-    <rect x="760" y="160" width="258" height="486" class="panel"/>
-    <path d="M776 160 H1002 Q1018 160 1018 176 V220 H760 V176 Q760 160 776 160 Z" class="panel-head"/>
-    <circle cx="796" cy="190" r="20" class="number"/>
-    <text x="796" y="191" class="number-text">3</text>
-    <text x="827" y="197" class="head-text">MCR Protocol</text>
-    <rect x="780" y="244" width="218" height="332" rx="12" fill="#fff" stroke="#2f65c7" stroke-width="2"/>
-    <path d="M792 244 H986 Q998 244 998 256 V315 H780 V256 Q780 244 792 244 Z" fill="url(#mcr)"/>
-    <text x="889" y="273" class="mcr-title" font-size="20" font-weight="700" text-anchor="middle">Model Change Report</text>
-    <text x="889" y="299" class="mcr-title" font-size="18" text-anchor="middle">MCR 0.4</text>
-    <g><circle cx="805" cy="348" r="4" class="bullet"/><text x="820" y="354" class="bullet-text">content identity</text></g>
-    <g><circle cx="805" cy="390" r="4" class="bullet"/><text x="820" y="396" class="bullet-text">evidence sets</text></g>
-    <g><circle cx="805" cy="432" r="4" class="bullet"/><text x="820" y="438" class="bullet-text">decision semantics</text></g>
-    <g><circle cx="805" cy="474" r="4" class="bullet"/><text x="820" y="480" class="bullet-text">portable bundle</text></g>
-    <g><circle cx="805" cy="516" r="4" class="bullet"/><text x="817" y="522" class="bullet-text bullet-small">independent verification</text></g>
-  </g>
-
-  <path d="M1028 403 H1052" class="arrow"/>
-
-  <!-- 4. Consumers -->
-  <g>
-    <rect x="1068" y="160" width="300" height="486" class="panel"/>
-    <path d="M1084 160 H1352 Q1368 160 1368 176 V220 H1068 V176 Q1068 160 1084 160 Z" class="panel-head"/>
-    <circle cx="1104" cy="190" r="20" class="number"/>
-    <text x="1104" y="191" class="number-text">4</text>
-    <text x="1135" y="197" class="head-text">Consumers / Integrations</text>
-    <g transform="translate(1088 250)"><rect width="260" height="52" class="chip"/><text x="22" y="27" font-size="22">⌁</text><text x="54" y="27" class="chip-text">CI / GitHub Actions</text></g>
-    <g transform="translate(1088 316)"><rect width="260" height="52" class="chip"/><circle cx="28" cy="26" r="11" class="icon"/><path d="M28 9 V15 M28 37 V43 M11 26 H17 M39 26 H45" class="icon"/><text x="54" y="27" class="chip-text">Release controller</text></g>
-    <g transform="translate(1088 382)"><rect width="260" height="52" class="chip"/><text x="20" y="29" font-size="18" font-weight="700" fill="#2f65c7">mlflow</text><text x="88" y="27" class="chip-text">consumer</text></g>
-    <g transform="translate(1088 448)"><rect width="260" height="52" class="chip"/><path d="M28 12 L42 18 V29 C42 38 35 44 28 48 C21 44 14 38 14 29 V18 Z" class="icon"/><text x="54" y="27" class="chip-text">Audit / governance</text></g>
-    <g transform="translate(1088 514)"><rect width="260" height="52" class="chip"/><circle cx="20" cy="20" r="6" class="icon"/><circle cx="38" cy="20" r="6" class="icon"/><path d="M9 40 C10 30 30 30 31 40 M27 40 C28 30 48 30 49 40" class="icon"/><text x="62" y="27" class="chip-text">Third-party verifiers</text></g>
-  </g>
-
-  <path d="M1378 403 H1402" class="arrow"/>
-
-  <!-- 5. Decisions -->
-  <g>
-    <rect x="1418" y="160" width="228" height="486" class="panel"/>
-    <path d="M1434 160 H1630 Q1646 160 1646 176 V220 H1418 V176 Q1418 160 1434 160 Z" class="panel-head"/>
-    <circle cx="1454" cy="190" r="20" class="number"/>
-    <text x="1454" y="191" class="number-text">5</text>
-    <text x="1485" y="197" class="head-text">Release Decision</text>
-    <g transform="translate(1438 254)"><rect width="188" height="58" rx="10" fill="#f3faef" stroke="#75a962"/><circle cx="28" cy="29" r="13" fill="none" stroke="#57933f" stroke-width="3"/><path d="M21 29 L26 34 L36 23" fill="none" stroke="#57933f" stroke-width="3"/><text x="117" y="30" class="status-text pass-text">PASS</text></g>
-    <g transform="translate(1438 326)"><rect width="188" height="58" rx="10" fill="#fff8ed" stroke="#e8a84c"/><path d="M28 14 L43 42 H13 Z" fill="#e8a84c"/><text x="28" y="36" class="mcr-title" font-size="18" font-weight="800" text-anchor="middle">!</text><text x="117" y="30" class="status-text warn-text">WARN</text></g>
-    <g transform="translate(1438 398)"><rect width="188" height="58" rx="10" fill="#fff1f1" stroke="#d95d5d"/><circle cx="28" cy="29" r="14" fill="#d95d5d"/><rect x="23" y="20" width="3" height="18" fill="#fff"/><rect x="29" y="18" width="3" height="20" fill="#fff"/><rect x="35" y="22" width="3" height="16" fill="#fff"/><text x="117" y="30" class="status-text block-text">BLOCK</text></g>
-    <g transform="translate(1438 470)"><rect width="188" height="58" rx="10" fill="#fff4f2" stroke="#df7565"/><circle cx="28" cy="29" r="14" fill="none" stroke="#d55a49" stroke-width="3"/><path d="M21 22 L35 36 M35 22 L21 36" stroke="#d55a49" stroke-width="3"/><text x="117" y="30" class="status-text error-text">ERROR</text></g>
-    <line x1="1442" y1="565" x2="1622" y2="565" stroke="#b7c2d2"/>
-    <text x="1532" y="600" font-size="17" text-anchor="middle" fill="#435674">ship · review · stop · fix</text>
-  </g>
-
-  <!-- NVIDIA vertical -->
-  <g>
-    <rect x="34" y="682" width="1612" height="178" rx="16" fill="#fff" stroke="#a9b9d2" stroke-width="1.5" filter="url(#shadow)"/>
-    <text x="58" y="718" class="lane-title">NVIDIA vertical example</text>
-    <g transform="translate(58 742)"><rect width="160" height="76" class="lane-node"/><text x="80" y="38" class="lane-text">FP16 model</text></g>
-    <path d="M226 780 H252" class="lane-arrow"/>
-    <g transform="translate(264 742)"><rect width="194" height="76" class="lane-node"/><text x="97" y="29" class="lane-text">ModelOpt</text><text x="97" y="52" class="small" text-anchor="middle">quantization</text></g>
-    <path d="M466 780 H492" class="lane-arrow"/>
-    <g transform="translate(504 742)"><rect width="122" height="76" class="lane-node"/><text x="61" y="38" class="lane-text">ONNX</text></g>
-    <path d="M634 780 H660" class="lane-arrow"/>
-    <g transform="translate(672 742)"><rect width="142" height="76" class="lane-node"/><text x="71" y="38" class="lane-text">TensorRT</text></g>
-    <path d="M822 780 H848" class="lane-arrow"/>
-    <g transform="translate(860 742)"><rect width="152" height="76" class="lane-node"/><text x="76" y="38" class="lane-text">Polygraphy</text></g>
-    <path d="M1020 780 H1046" class="lane-arrow"/>
-    <g transform="translate(1058 742)"><rect width="124" height="76" class="lane-node-key"/><text x="62" y="38" class="lane-text" fill="#244f9d">M2RIV</text></g>
-    <path d="M1190 780 H1216" class="lane-arrow"/>
-    <g transform="translate(1228 742)"><rect width="108" height="76" class="lane-node-key"/><text x="54" y="38" class="lane-text" fill="#244f9d">MCR</text></g>
-    <path d="M1344 780 H1370" class="lane-arrow"/>
-    <g transform="translate(1382 742)"><rect width="112" height="76" class="lane-node"/><text x="56" y="38" class="lane-text">Gate</text></g>
-    <path d="M1502 780 H1528" class="lane-arrow"/>
-    <g transform="translate(1540 742)"><rect width="82" height="76" rx="10" fill="#fff1f1" stroke="#d95d5d"/><text x="41" y="38" class="lane-text block-text">BLOCK</text></g>
-  </g>
+  <rect width="1880" height="1050" fill="#fbfcfe"/>
+    <text x="940" y="81" class="page-title" text-anchor="middle">M2RIV</text>
+    <text x="940" y="132" class="subtitle" text-anchor="middle">Vendor-neutral release evidence for deployable AI models</text>
+    <rect x="24" y="190" width="320" height="535" rx="13" class="panel"/>
+    <path d="M37 190 H331 Q344 190 344 203 V256 H24 V203 Q24 190 37 190 Z" class="panel-header"/>
+    <circle cx="64" cy="223" r="22" class="step-circle"/>
+    <text x="64" y="224" class="step-number" text-anchor="middle">1</text>
+    <text x="102" y="224" class="panel-title" text-anchor="start">Producers / Inputs</text>
+    <rect x="400" y="190" width="390" height="535" rx="13" class="panel"/>
+    <path d="M413 190 H777 Q790 190 790 203 V256 H400 V203 Q400 190 413 190 Z" class="panel-header"/>
+    <circle cx="440" cy="223" r="22" class="step-circle"/>
+    <text x="440" y="224" class="step-number" text-anchor="middle">2</text>
+    <text x="478" y="224" class="panel-title" text-anchor="start">M2RIV Evidence Kernel</text>
+    <rect x="840" y="190" width="300" height="535" rx="13" class="panel"/>
+    <path d="M853 190 H1127 Q1140 190 1140 203 V256 H840 V203 Q840 190 853 190 Z" class="panel-header"/>
+    <circle cx="880" cy="223" r="22" class="step-circle"/>
+    <text x="880" y="224" class="step-number" text-anchor="middle">3</text>
+    <text x="918" y="224" class="panel-title" text-anchor="start">MCR Protocol</text>
+    <rect x="1190" y="190" width="340" height="535" rx="13" class="panel"/>
+    <path d="M1203 190 H1517 Q1530 190 1530 203 V256 H1190 V203 Q1190 190 1203 190 Z" class="panel-header"/>
+    <circle cx="1230" cy="223" r="22" class="step-circle"/>
+    <text x="1230" y="224" class="step-number" text-anchor="middle">4</text>
+    <text x="1268" y="224" class="panel-title-compact" text-anchor="start">Consumers / Integrations</text>
+    <rect x="1580" y="190" width="276" height="535" rx="13" class="panel"/>
+    <path d="M1593 190 H1843 Q1856 190 1856 203 V256 H1580 V203 Q1580 190 1593 190 Z" class="panel-header"/>
+    <circle cx="1620" cy="223" r="22" class="step-circle"/>
+    <text x="1620" y="224" class="step-number" text-anchor="middle">5</text>
+    <text x="1658" y="224" class="panel-title" text-anchor="start">Release Decision</text>
+    <rect x="42" y="280" width="284" height="58" rx="8" class="chip"/>
+    <use href="#icon-model_network" x="56" y="292" width="34" height="34"/>
+    <text x="104" y="310" class="chip-label" text-anchor="start">PyTorch / HF model</text>
+    <rect x="42" y="348" width="284" height="58" rx="8" class="chip"/>
+    <use href="#icon-globe" x="56" y="360" width="34" height="34"/>
+    <text x="104" y="378" class="chip-label" text-anchor="start">API endpoint</text>
+    <rect x="42" y="416" width="284" height="58" rx="8" class="chip"/>
+    <use href="#icon-artifact_cube" x="56" y="428" width="34" height="34"/>
+    <text x="104" y="446" class="chip-label" text-anchor="start">ONNX artifact</text>
+    <rect x="42" y="484" width="284" height="58" rx="8" class="chip"/>
+    <use href="#icon-speedometer" x="56" y="496" width="34" height="34"/>
+    <text x="104" y="514" class="chip-label" text-anchor="start">TensorRT engine</text>
+    <rect x="42" y="552" width="284" height="58" rx="8" class="chip"/>
+    <use href="#icon-bar_chart" x="56" y="564" width="34" height="34"/>
+    <text x="104" y="582" class="chip-label" text-anchor="start">Polygraphy evidence</text>
+    <rect x="42" y="620" width="284" height="58" rx="8" class="chip"/>
+    <use href="#icon-database" x="56" y="632" width="34" height="34"/>
+    <text x="104" y="650" class="chip-label" text-anchor="start">MLflow registry</text>
+    <rect x="420" y="280" width="165" height="118" rx="10" class="kernel-card"/>
+    <use href="#icon-scales" x="478" y="295" width="49" height="49"/>
+    <text x="502.5" y="371" class="kernel-label" text-anchor="middle">Artifact diff</text>
+    <rect x="605" y="280" width="165" height="118" rx="10" class="kernel-card"/>
+    <use href="#icon-waveform" x="663" y="295" width="49" height="49"/>
+    <text x="687.5" y="371" class="kernel-label" text-anchor="middle">Numerical diff</text>
+    <rect x="420" y="414" width="165" height="118" rx="10" class="kernel-card"/>
+    <use href="#icon-shield_check" x="478" y="429" width="49" height="49"/>
+    <text x="502.5" y="505" class="kernel-label" text-anchor="middle">Contract checks</text>
+    <rect x="605" y="414" width="165" height="118" rx="10" class="kernel-card"/>
+    <use href="#icon-statistics" x="663" y="429" width="49" height="49"/>
+    <text x="687.5" y="505" class="kernel-label" text-anchor="middle">Paired statistics</text>
+    <rect x="420" y="548" width="165" height="118" rx="10" class="kernel-card"/>
+    <use href="#icon-gear" x="478" y="563" width="49" height="49"/>
+    <text x="502.5" y="639" class="kernel-label" text-anchor="middle">Policy engine</text>
+    <rect x="605" y="548" width="165" height="118" rx="10" class="kernel-card"/>
+    <use href="#icon-bisect_branch" x="663" y="563" width="49" height="49"/>
+    <text x="687.5" y="639" class="kernel-label" text-anchor="middle">Bisect</text>
+    <text x="595" y="698" class="caption" text-anchor="middle">Compare → quantify → gate → locate</text>
+    <rect x="860" y="280" width="260" height="400" rx="18" class="mcr-outline"/>
+    <path d="M878 280 H1102 Q1120 280 1120 298 V374 H860 V298 Q860 280 878 280 Z" class="mcr-header"/>
+    <rect x="876" y="297" width="58" height="58" rx="7" fill="#ffffff"/>
+    <use href="#icon-document_mcr" x="885" y="306" width="40" height="40"/>
+    <text x="946" y="317" class="mcr-title" text-anchor="start">Model Change</text>
+    <text x="946" y="347" class="mcr-subtitle" text-anchor="start">Report (MCR 0.4)</text>
+    <circle cx="889" cy="410" r="5" class="bullet"/>
+    <text x="912" y="411" class="bullet-label" text-anchor="start">content identity</text>
+    <circle cx="889" cy="460" r="5" class="bullet"/>
+    <text x="912" y="461" class="bullet-label" text-anchor="start">evidence sets</text>
+    <circle cx="889" cy="510" r="5" class="bullet"/>
+    <text x="912" y="511" class="bullet-label" text-anchor="start">decision semantics</text>
+    <circle cx="889" cy="560" r="5" class="bullet"/>
+    <text x="912" y="561" class="bullet-label" text-anchor="start">portable bundle</text>
+    <circle cx="889" cy="610" r="5" class="bullet"/>
+    <text x="912" y="611" class="bullet-label" text-anchor="start">independent verification</text>
+    <rect x="1210" y="290" width="300" height="60" rx="8" class="chip"/>
+    <use href="#icon-ci_nodes" x="1226" y="302" width="36" height="36"/>
+    <text x="1278" y="321" class="chip-label" text-anchor="start">CI / GitHub Actions</text>
+    <rect x="1210" y="364" width="300" height="60" rx="8" class="chip"/>
+    <use href="#icon-gear" x="1226" y="376" width="36" height="36"/>
+    <text x="1278" y="395" class="chip-label" text-anchor="start">Release controller</text>
+    <rect x="1210" y="438" width="300" height="60" rx="8" class="chip"/>
+    <use href="#icon-database" x="1226" y="450" width="36" height="36"/>
+    <text x="1278" y="469" class="chip-label" text-anchor="start">MLflow consumer</text>
+    <rect x="1210" y="512" width="300" height="60" rx="8" class="chip"/>
+    <use href="#icon-shield_check" x="1226" y="524" width="36" height="36"/>
+    <text x="1278" y="543" class="chip-label" text-anchor="start">Audit / governance</text>
+    <rect x="1210" y="586" width="300" height="60" rx="8" class="chip"/>
+    <use href="#icon-people" x="1226" y="598" width="36" height="36"/>
+    <text x="1278" y="617" class="chip-label" text-anchor="start">Third-party verifiers</text>
+    <rect x="1600" y="295" width="236" height="64" rx="9" fill="#f3faef" stroke="#75a962" stroke-width="1.5"/>
+    <use href="#icon-pass" x="1616" y="307" width="40" height="40"/>
+    <text x="1746" y="328" class="state-label" text-anchor="middle" style="fill:#4f8739">PASS</text>
+    <rect x="1600" y="374" width="236" height="64" rx="9" fill="#fff8ed" stroke="#e8a84c" stroke-width="1.5"/>
+    <use href="#icon-warn" x="1616" y="386" width="40" height="40"/>
+    <text x="1746" y="407" class="state-label" text-anchor="middle" style="fill:#c77b19">WARN</text>
+    <rect x="1600" y="453" width="236" height="64" rx="9" fill="#fff1f1" stroke="#d95d5d" stroke-width="1.5"/>
+    <use href="#icon-block" x="1616" y="465" width="40" height="40"/>
+    <text x="1746" y="486" class="state-label" text-anchor="middle" style="fill:#b63e3e">BLOCK</text>
+    <rect x="1600" y="532" width="236" height="64" rx="9" fill="#fff4f2" stroke="#df7565" stroke-width="1.5"/>
+    <use href="#icon-error" x="1616" y="544" width="40" height="40"/>
+    <text x="1746" y="565" class="state-label" text-anchor="middle" style="fill:#bd4838">ERROR</text>
+    <line x1="1608" y1="620" x2="1828" y2="620" stroke="#b7c2d2" stroke-width="1.5"/>
+    <text x="1718" y="662" class="caption" text-anchor="middle">ship / review / stop / fix</text>
+    <line x1="354" y1="457" x2="390" y2="457" class="flow-arrow"/>
+    <line x1="800" y1="457" x2="830" y2="457" class="flow-arrow"/>
+    <line x1="1150" y1="457" x2="1180" y2="457" class="flow-arrow"/>
+    <line x1="1540" y1="457" x2="1570" y2="457" class="flow-arrow"/>
+    <rect x="24" y="775" width="1400" height="250" rx="13" class="panel"/>
+    <text x="48" y="816" class="lane-title" text-anchor="start">NVIDIA vertical example</text>
+    <line x1="44" y1="837" x2="1404" y2="837" stroke="#d2dceb"/>
+    <rect x="44" y="860" width="140" height="112" rx="9" class="lane-node"/>
+    <use href="#icon-model_network" x="93" y="874" width="42" height="42"/>
+    <text x="114" y="944" class="lane-label" text-anchor="middle">FP16 model</text>
+    <rect x="220" y="860" width="180" height="112" rx="9" class="lane-node"/>
+    <use href="#icon-sliders" x="289" y="874" width="42" height="42"/>
+    <text x="310" y="938" class="lane-label" text-anchor="middle">ModelOpt /</text>
+    <text x="310" y="957" class="lane-label" text-anchor="middle">quantization</text>
+    <rect x="436" y="860" width="120" height="112" rx="9" class="lane-node"/>
+    <use href="#icon-artifact_cube" x="475" y="874" width="42" height="42"/>
+    <text x="496" y="944" class="lane-label" text-anchor="middle">ONNX</text>
+    <rect x="592" y="860" width="140" height="112" rx="9" class="lane-node"/>
+    <use href="#icon-play_triangle" x="641" y="874" width="42" height="42"/>
+    <text x="662" y="944" class="lane-label" text-anchor="middle">TensorRT</text>
+    <rect x="768" y="860" width="150" height="112" rx="9" class="lane-node"/>
+    <use href="#icon-bar_chart" x="822" y="874" width="42" height="42"/>
+    <text x="843" y="944" class="lane-label" text-anchor="middle">Polygraphy</text>
+    <rect x="954" y="860" width="130" height="112" rx="9" class="lane-key"/>
+    <text x="1019" y="918" class="lane-label" text-anchor="middle">M2RIV</text>
+    <rect x="1120" y="860" width="110" height="112" rx="9" class="lane-key"/>
+    <use href="#icon-document_mcr" x="1154" y="874" width="42" height="42"/>
+    <text x="1175" y="944" class="lane-label" text-anchor="middle">MCR</text>
+    <rect x="1266" y="860" width="120" height="112" rx="9" class="lane-node"/>
+    <use href="#icon-shield_check" x="1305" y="874" width="42" height="42"/>
+    <text x="1326" y="944" class="lane-label" text-anchor="middle">Gate</text>
+    <line x1="192" y1="916" x2="210" y2="916" class="lane-arrow"/>
+    <line x1="408" y1="916" x2="426" y2="916" class="lane-arrow"/>
+    <line x1="564" y1="916" x2="582" y2="916" class="lane-arrow"/>
+    <line x1="740" y1="916" x2="758" y2="916" class="lane-arrow"/>
+    <line x1="926" y1="916" x2="944" y2="916" class="lane-arrow"/>
+    <line x1="1092" y1="916" x2="1110" y2="916" class="lane-arrow"/>
+    <line x1="1238" y1="916" x2="1256" y2="916" class="lane-arrow"/>
+    <rect x="1460" y="775" width="396" height="250" rx="13" fill="#ffffff" stroke="#5d7fb8" stroke-width="2" stroke-dasharray="8 7"/>
+    <use href="#icon-target" x="1492" y="856" width="74" height="74"/>
+    <text x="1590" y="871" class="goal-title" text-anchor="start">Goal: make every</text>
+    <text x="1590" y="911" class="goal-copy" text-anchor="start">model change reviewable</text>
+    <text x="1590" y="947" class="goal-copy" text-anchor="start">before it ships.</text>
 </svg>
