@@ -20,7 +20,7 @@ jobs:
       - run: python -m pip install .
       - name: Compare candidate with champion
         run: |
-          m2riv compare \
+          merriv compare \
             examples/recorded_compare/baseline.jsonl \
             examples/recorded_compare/candidate.jsonl \
             --suite examples/recorded_compare/suite.jsonl \

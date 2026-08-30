@@ -1,6 +1,7 @@
 {
   "schema_version": "1.0.0",
   "cases": [
+    "cases/llamacpp-22544-tensor-type-regression.json",
     "cases/onnx-calibration-range-regression.json",
     "cases/modelopt-tensorrt-calibration-regression.json",
     "cases/recorded-rare-slice-regression.json",

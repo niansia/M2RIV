@@ -1,4 +1,4 @@
-"""Polygraphy data loader for the fixed M2RIV digits suite."""
+"""Polygraphy data loader for the fixed Merriv digits suite."""
 
 from __future__ import annotations
 
@@ -11,12 +11,12 @@ import numpy as np
 
 def load_data() -> list[dict[str, np.ndarray]]:
     """Load a bounded case cohort selected by the vertical orchestrator."""
-    source_value = os.environ.get("M2RIV_NVIDIA_SUITE")
+    source_value = os.environ.get("MERRIV_NVIDIA_SUITE")
     if not source_value:
-        raise ValueError("M2RIV_NVIDIA_SUITE must point to the generated suite.jsonl")
-    limit = int(os.environ.get("M2RIV_NVIDIA_CASES", "128"))
+        raise ValueError("MERRIV_NVIDIA_SUITE must point to the generated suite.jsonl")
+    limit = int(os.environ.get("MERRIV_NVIDIA_CASES", "128"))
     if not 1 <= limit <= 10_000:
-        raise ValueError("M2RIV_NVIDIA_CASES must be between 1 and 10000")
+        raise ValueError("MERRIV_NVIDIA_CASES must be between 1 and 10000")
     source = Path(source_value)
     if source.stat().st_size > 64 * 1024 * 1024:
         raise ValueError("GPU suite exceeds the data-loader size limit")

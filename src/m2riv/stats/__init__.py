@@ -3,6 +3,7 @@
 from m2riv.stats.paired import (
     BinaryFlipMatrix,
     BinaryPairedEvidence,
+    BootstrapThresholdTest,
     ConfidenceInterval,
     PairedEstimate,
     binary_paired_evidence,
@@ -12,6 +13,7 @@ from m2riv.stats.paired import (
 __all__ = [
     "BinaryFlipMatrix",
     "BinaryPairedEvidence",
+    "BootstrapThresholdTest",
     "ConfidenceInterval",
     "PairedEstimate",
     "binary_paired_evidence",

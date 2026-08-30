@@ -284,6 +284,11 @@ def test_mcr_verifier_rejects_duplicate_keys_and_labels_trust_scope(tmp_path: Pa
     assert verified.integrity_valid is True
     assert verified.authenticity_verified is False
     assert verified.trust_scope == "self-consistency-only"
+    assert verified.trust.integrity_verified is True
+    assert verified.trust.producer_authenticated is False
+    assert verified.trust.transparency_verified is False
+    assert verified.trust.independently_reproduced is False
+    assert verified.trust.deployment_authorization == "not-evaluated"
 
     original = bundle.json_path.read_text("utf-8")
     duplicate = original.replace("{", '{"schema_version":"0.4.0",', 1)

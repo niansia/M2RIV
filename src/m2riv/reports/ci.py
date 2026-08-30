@@ -29,7 +29,11 @@ def render_junit(report: ModelChangeReport) -> str:
     test_count = max(1, len(findings))
     failures = sum(
         finding.status is MCRStatus.BLOCK
-        or (finding.status is MCRStatus.WARN and not report.decision.allowed)
+        or finding.status is MCRStatus.INSUFFICIENT_POWER
+        or (
+            finding.status is MCRStatus.WARN
+            and not report.decision.evaluation_policy_satisfied
+        )
         for finding in findings
     )
     errors = sum(finding.status is MCRStatus.ERROR for finding in findings)
@@ -56,8 +60,9 @@ def render_junit(report: ModelChangeReport) -> str:
             "testcase",
             {"classname": "m2riv.gate", "name": _xml_text(finding.rule_id), "time": "0"},
         )
-        if finding.status is MCRStatus.BLOCK or (
-            finding.status is MCRStatus.WARN and not report.decision.allowed
+        if finding.status in {MCRStatus.BLOCK, MCRStatus.INSUFFICIENT_POWER} or (
+            finding.status is MCRStatus.WARN
+            and not report.decision.evaluation_policy_satisfied
         ):
             safe_message = _xml_text(finding.message)
             child = ElementTree.SubElement(case, "failure", {"message": safe_message})
@@ -92,14 +97,19 @@ def render_sarif(report: ModelChangeReport) -> str:
             "ruleId": finding.rule_id,
             "level": (
                 "error"
-                if finding.status in {MCRStatus.BLOCK, MCRStatus.ERROR}
-                or (finding.status is MCRStatus.WARN and not report.decision.allowed)
+                if finding.status
+                in {MCRStatus.BLOCK, MCRStatus.INSUFFICIENT_POWER, MCRStatus.ERROR}
+                or (
+                    finding.status is MCRStatus.WARN
+                    and not report.decision.evaluation_policy_satisfied
+                )
                 else "warning"
             ),
             "message": {"text": finding.message},
             "properties": {
                 "m2rivStatus": finding.status.value,
-                "releaseAllowed": report.decision.allowed,
+                "evaluationPolicySatisfied": report.decision.evaluation_policy_satisfied,
+                "deploymentAuthorization": "not-evaluated",
                 "metricId": finding.metric_id,
                 "reportId": report.id,
             },
@@ -113,14 +123,15 @@ def render_sarif(report: ModelChangeReport) -> str:
             {
                 "tool": {
                     "driver": {
-                        "name": "M2RIV",
-                        "informationUri": "https://github.com/M2RIV/m2riv",
+                        "name": "Merriv",
+                        "informationUri": "https://github.com/niansia/Merriv",
                         "rules": rules,
                     }
                 },
                 "results": results,
                 "properties": {
-                    "decision": report.decision.status.value,
+                    "evaluationDecision": report.decision.status.value,
+                    "deploymentAuthorization": "not-evaluated",
                     "reportId": report.id,
                 },
             }

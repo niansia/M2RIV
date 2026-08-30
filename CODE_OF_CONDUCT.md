@@ -1,6 +1,6 @@
 # Community Code of Conduct
 
-M2RIV is built through precise technical disagreement and respectful collaboration.
+Merriv is built through precise technical disagreement and respectful collaboration.
 Everyone participating in project spaces is expected to make those spaces safe,
 welcoming, and useful regardless of background, identity, experience, employer,
 or communication style.

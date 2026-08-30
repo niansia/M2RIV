@@ -1,5 +1,5 @@
-name: M2RIV model release gate
-description: Install M2RIV, compare recorded model outputs, verify the MCR, and upload evidence.
+name: Merriv model release gate
+description: Install Merriv, compare recorded model outputs, verify the Model Change Report, and upload evidence.
 
 inputs:
   baseline:
@@ -17,7 +17,7 @@ inputs:
   output:
     description: Destination directory for the report bundle.
     required: false
-    default: runs/m2riv-release
+    default: runs/merriv-release
   slice-key:
     description: Optional single slice key to evaluate.
     required: false
@@ -27,7 +27,7 @@ inputs:
     required: false
     default: "2000"
   python-version:
-    description: Python version used to run M2RIV.
+    description: Python version used to run Merriv.
     required: false
     default: "3.12"
   artifact-name:
@@ -37,10 +37,10 @@ inputs:
 
 outputs:
   exit-code:
-    description: M2RIV release decision code (0 pass, 2 block, 3 error, 4 disallowed warn).
+    description: Merriv evaluation code (0 pass, 2 block, 3 error, 4 disallowed warn).
     value: ${{ steps.final.outputs.exit-code }}
   report:
-    description: Path to the generated machine-readable MCR.
+    description: Path to the generated machine-readable Model Change Report.
     value: ${{ inputs.output }}/mcr-report.json
 
 runs:
@@ -50,38 +50,38 @@ runs:
       uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
       with:
         python-version: ${{ inputs.python-version }}
-    - name: Install M2RIV
+    - name: Install Merriv
       shell: bash
       env:
-        M2RIV_ACTION_PATH: ${{ github.action_path }}
+        MERRIV_ACTION_PATH: ${{ github.action_path }}
       run: |
         python -m pip install --require-hashes \
-          -r "$M2RIV_ACTION_PATH/action-requirements.lock"
-        python -m pip install --no-deps --no-build-isolation "$M2RIV_ACTION_PATH"
+          -r "$MERRIV_ACTION_PATH/action-requirements.lock"
+        python -m pip install --no-deps --no-build-isolation "$MERRIV_ACTION_PATH"
     - name: Compare and gate candidate
       id: compare
       shell: bash
       env:
-        M2RIV_BASELINE: ${{ inputs.baseline }}
-        M2RIV_CANDIDATE: ${{ inputs.candidate }}
-        M2RIV_SUITE: ${{ inputs.suite }}
-        M2RIV_POLICY: ${{ inputs.policy }}
-        M2RIV_OUTPUT: ${{ inputs.output }}
-        M2RIV_SLICE_KEY: ${{ inputs.slice-key }}
-        M2RIV_RESAMPLES: ${{ inputs.resamples }}
+        MERRIV_BASELINE: ${{ inputs.baseline }}
+        MERRIV_CANDIDATE: ${{ inputs.candidate }}
+        MERRIV_SUITE: ${{ inputs.suite }}
+        MERRIV_POLICY: ${{ inputs.policy }}
+        MERRIV_OUTPUT: ${{ inputs.output }}
+        MERRIV_SLICE_KEY: ${{ inputs.slice-key }}
+        MERRIV_RESAMPLES: ${{ inputs.resamples }}
       run: |
         arguments=(
-          "$M2RIV_BASELINE" "$M2RIV_CANDIDATE"
-          --suite "$M2RIV_SUITE"
-          --policy "$M2RIV_POLICY"
-          --output "$M2RIV_OUTPUT"
-          --resamples "$M2RIV_RESAMPLES"
+          "$MERRIV_BASELINE" "$MERRIV_CANDIDATE"
+          --suite "$MERRIV_SUITE"
+          --policy "$MERRIV_POLICY"
+          --output "$MERRIV_OUTPUT"
+          --resamples "$MERRIV_RESAMPLES"
         )
-        if [[ -n "$M2RIV_SLICE_KEY" ]]; then
-          arguments+=(--slice-key "$M2RIV_SLICE_KEY")
+        if [[ -n "$MERRIV_SLICE_KEY" ]]; then
+          arguments+=(--slice-key "$MERRIV_SLICE_KEY")
         fi
         set +e
-        m2riv compare "${arguments[@]}"
+        merriv compare "${arguments[@]}"
         result=$?
         set -e
         echo "exit-code=$result" >> "$GITHUB_OUTPUT"
@@ -90,10 +90,10 @@ runs:
       if: steps.compare.outputs.exit-code != '3'
       shell: bash
       env:
-        M2RIV_OUTPUT: ${{ inputs.output }}
+        MERRIV_OUTPUT: ${{ inputs.output }}
       run: |
         set +e
-        m2riv mcr verify "$M2RIV_OUTPUT" --strict
+        merriv mcr verify "$MERRIV_OUTPUT" --strict
         result=$?
         set -e
         echo "exit-code=$result" >> "$GITHUB_OUTPUT"
@@ -102,11 +102,11 @@ runs:
       if: always()
       shell: bash
       env:
-        M2RIV_COMPARE_EXIT_CODE: ${{ steps.compare.outputs.exit-code }}
-        M2RIV_VERIFY_EXIT_CODE: ${{ steps.verify.outputs.exit-code }}
+        MERRIV_COMPARE_EXIT_CODE: ${{ steps.compare.outputs.exit-code }}
+        MERRIV_VERIFY_EXIT_CODE: ${{ steps.verify.outputs.exit-code }}
       run: |
-        final_code="${M2RIV_COMPARE_EXIT_CODE:-3}"
-        if [[ "$final_code" != "3" && "${M2RIV_VERIFY_EXIT_CODE:-3}" != "0" ]]; then
+        final_code="${MERRIV_COMPARE_EXIT_CODE:-3}"
+        if [[ "$final_code" != "3" && "${MERRIV_VERIFY_EXIT_CODE:-3}" != "0" ]]; then
           final_code=3
         fi
         echo "exit-code=$final_code" >> "$GITHUB_OUTPUT"
@@ -128,5 +128,5 @@ runs:
       if: always()
       shell: bash
       env:
-        M2RIV_EXIT_CODE: ${{ steps.final.outputs.exit-code }}
-      run: exit "${M2RIV_EXIT_CODE:-3}"
+        MERRIV_EXIT_CODE: ${{ steps.final.outputs.exit-code }}
+      run: exit "${MERRIV_EXIT_CODE:-3}"

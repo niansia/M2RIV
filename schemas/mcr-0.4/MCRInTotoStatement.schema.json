@@ -1,0 +1,858 @@
+{
+  "$defs": {
+    "EvidenceManifestRef": {
+      "additionalProperties": false,
+      "description": "Bounded MCR pointer to an external evidence manifest.",
+      "properties": {
+        "evidence_count": {
+          "minimum": 1,
+          "title": "Evidence Count",
+          "type": "integer"
+        },
+        "id": {
+          "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "media_type": {
+          "const": "application/vnd.model-change-report.evidence-manifest+json",
+          "default": "application/vnd.model-change-report.evidence-manifest+json",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "set_count": {
+          "minimum": 1,
+          "title": "Set Count",
+          "type": "integer"
+        },
+        "uri": {
+          "default": "evidence-manifest.json",
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Uri",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "evidence_count",
+        "set_count"
+      ],
+      "title": "EvidenceManifestRef",
+      "type": "object"
+    },
+    "EvidenceRef": {
+      "additionalProperties": false,
+      "description": "A content-addressed evidence edge used by claims and decisions.",
+      "properties": {
+        "id": {
+          "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "media_type": {
+          "default": "application/json",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "redacted": {
+          "default": false,
+          "title": "Redacted",
+          "type": "boolean"
+        },
+        "uri": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uri"
+        }
+      },
+      "required": [
+        "id",
+        "kind"
+      ],
+      "title": "EvidenceRef",
+      "type": "object"
+    },
+    "InTotoSubject": {
+      "additionalProperties": false,
+      "description": "Artifact subject covered by an in-toto Statement.",
+      "properties": {
+        "digest": {
+          "additionalProperties": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "propertyNames": {
+            "const": "sha256"
+          },
+          "title": "Digest",
+          "type": "object"
+        },
+        "name": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "digest"
+      ],
+      "title": "InTotoSubject",
+      "type": "object"
+    },
+    "MCRAttestationPredicate": {
+      "additionalProperties": false,
+      "description": "Self-contained MCR predicate; signing belongs to the attestation layer.",
+      "properties": {
+        "predicate_version": {
+          "const": "0.1.0",
+          "default": "0.1.0",
+          "title": "Predicate Version",
+          "type": "string"
+        },
+        "report": {
+          "$ref": "#/$defs/ModelChangeReport"
+        }
+      },
+      "required": [
+        "report"
+      ],
+      "title": "MCRAttestationPredicate",
+      "type": "object"
+    },
+    "MCRDecision": {
+      "additionalProperties": false,
+      "description": "Portable verdict for the evaluation policy bound into this MCR.\n\n``allowed`` is the frozen MCR 0.4 wire name. It means the candidate satisfies\nthis report's evaluation policy; it never grants deployment or promotion\nauthority to the evidence producer.",
+      "properties": {
+        "allowed": {
+          "title": "Allowed",
+          "type": "boolean"
+        },
+        "family_size": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family Size"
+        },
+        "familywise_alpha": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 1,
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Familywise Alpha"
+        },
+        "findings": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/MCRFinding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "multiple_comparison_method": {
+          "default": "none",
+          "enum": [
+            "none",
+            "holm-bonferroni"
+          ],
+          "title": "Multiple Comparison Method",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/MCRStatus"
+        },
+        "target_power": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 1,
+              "exclusiveMinimum": 0.5,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Power"
+        }
+      },
+      "required": [
+        "status",
+        "allowed"
+      ],
+      "title": "MCRDecision",
+      "type": "object"
+    },
+    "MCRExecution": {
+      "additionalProperties": false,
+      "description": "Execution-fabric provenance for one side of a paired comparison.",
+      "properties": {
+        "cache_hits": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Cache Hits",
+          "type": "integer"
+        },
+        "capabilities": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "title": "Capabilities",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "config_fingerprint": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Config Fingerprint",
+          "type": "string"
+        },
+        "executor_id": {
+          "minLength": 1,
+          "title": "Executor Id",
+          "type": "string"
+        },
+        "executor_version": {
+          "minLength": 1,
+          "title": "Executor Version",
+          "type": "string"
+        },
+        "requested_cases": {
+          "minimum": 0,
+          "title": "Requested Cases",
+          "type": "integer"
+        },
+        "returned_observations": {
+          "minimum": 0,
+          "title": "Returned Observations",
+          "type": "integer"
+        },
+        "role": {
+          "enum": [
+            "baseline",
+            "candidate"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "runtime_profile": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeProfile"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "role",
+        "executor_id",
+        "executor_version",
+        "config_fingerprint",
+        "requested_cases",
+        "returned_observations"
+      ],
+      "title": "MCRExecution",
+      "type": "object"
+    },
+    "MCRFinding": {
+      "additionalProperties": false,
+      "properties": {
+        "adjusted_p_value": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Adjusted P Value"
+        },
+        "confidence_level": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 1,
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence Level"
+        },
+        "effective_alpha": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 1,
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Effective Alpha"
+        },
+        "evidence": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          },
+          "maxItems": 128,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "evidence_set_id": {
+          "anyOf": [
+            {
+              "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Set Id"
+        },
+        "interval_lower": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Interval Lower"
+        },
+        "interval_upper": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Interval Upper"
+        },
+        "message": {
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "metric_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Metric Id"
+        },
+        "minimum_detectable_effect": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minimum Detectable Effect"
+        },
+        "raw_p_value": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw P Value"
+        },
+        "rule_id": {
+          "minLength": 1,
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/MCRStatus"
+        },
+        "target_power": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 1,
+              "exclusiveMinimum": 0.5,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Power"
+        }
+      },
+      "required": [
+        "rule_id",
+        "status",
+        "message"
+      ],
+      "title": "MCRFinding",
+      "type": "object"
+    },
+    "MCRMetric": {
+      "additionalProperties": false,
+      "description": "A paired metric change with uncertainty and evidence pointers.",
+      "properties": {
+        "baseline_value": {
+          "title": "Baseline Value",
+          "type": "number"
+        },
+        "candidate_value": {
+          "title": "Candidate Value",
+          "type": "number"
+        },
+        "confidence_level": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 1,
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence Level"
+        },
+        "delta": {
+          "title": "Delta",
+          "type": "number"
+        },
+        "direction": {
+          "default": "higher_is_better",
+          "enum": [
+            "higher_is_better",
+            "lower_is_better",
+            "target"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "effect_size": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Effect Size"
+        },
+        "evidence_set_id": {
+          "anyOf": [
+            {
+              "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Set Id"
+        },
+        "identity_scope": {
+          "default": "evidence",
+          "enum": [
+            "evidence",
+            "run"
+          ],
+          "title": "Identity Scope",
+          "type": "string"
+        },
+        "interval_lower": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Interval Lower"
+        },
+        "interval_upper": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Interval Upper"
+        },
+        "metric_id": {
+          "minLength": 1,
+          "title": "Metric Id",
+          "type": "string"
+        },
+        "sample_size": {
+          "minimum": 0,
+          "title": "Sample Size",
+          "type": "integer"
+        },
+        "scope": {
+          "default": "overall",
+          "title": "Scope",
+          "type": "string"
+        },
+        "unit": {
+          "default": "score",
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "metric_id",
+        "baseline_value",
+        "candidate_value",
+        "delta",
+        "sample_size"
+      ],
+      "title": "MCRMetric",
+      "type": "object"
+    },
+    "MCRStatus": {
+      "enum": [
+        "PASS",
+        "WARN",
+        "INSUFFICIENT_POWER",
+        "BLOCK",
+        "ERROR"
+      ],
+      "title": "MCRStatus",
+      "type": "string"
+    },
+    "ModelChangeReport": {
+      "additionalProperties": false,
+      "description": "The stable envelope Merriv intends other tools to produce and consume.",
+      "properties": {
+        "baseline_snapshot_id": {
+          "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+          "title": "Baseline Snapshot Id",
+          "type": "string"
+        },
+        "candidate_snapshot_id": {
+          "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+          "title": "Candidate Snapshot Id",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "decision": {
+          "$ref": "#/$defs/MCRDecision"
+        },
+        "evidence": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/EvidenceRef"
+          },
+          "maxItems": 128,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "evidence_id": {
+          "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "evidence_manifest": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvidenceManifestRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "executions": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/MCRExecution"
+          },
+          "title": "Executions",
+          "type": "array"
+        },
+        "id": {
+          "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "limitations": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "metrics": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/MCRMetric"
+          },
+          "title": "Metrics",
+          "type": "array"
+        },
+        "release_plan_id": {
+          "anyOf": [
+            {
+              "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Release Plan Id"
+        },
+        "run_id": {
+          "pattern": "^mcr:sha256:[a-f0-9]{64}$",
+          "title": "Run Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "0.4.0",
+          "default": "0.4.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "evidence_id",
+        "run_id",
+        "created_at",
+        "baseline_snapshot_id",
+        "candidate_snapshot_id",
+        "decision"
+      ],
+      "title": "ModelChangeReport",
+      "type": "object"
+    },
+    "RuntimeProfile": {
+      "additionalProperties": false,
+      "description": "Execution-relevant settings that participate in snapshot identity.",
+      "properties": {
+        "architecture": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Architecture"
+        },
+        "deterministic": {
+          "default": true,
+          "title": "Deterministic",
+          "type": "boolean"
+        },
+        "device": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Device"
+        },
+        "dtype": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dtype"
+        },
+        "framework": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Framework"
+        },
+        "framework_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Framework Version"
+        },
+        "operating_system": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Operating System"
+        },
+        "parameters": {
+          "additionalProperties": true,
+          "title": "Parameters",
+          "type": "object"
+        },
+        "python_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Python Version"
+        },
+        "repetitions": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Repetitions",
+          "type": "integer"
+        },
+        "seed": {
+          "default": 0,
+          "title": "Seed",
+          "type": "integer"
+        }
+      },
+      "title": "RuntimeProfile",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Unsigned in-toto Statement ready for cosign or another attestor.",
+  "properties": {
+    "_type": {
+      "const": "https://in-toto.io/Statement/v1",
+      "title": "Type",
+      "type": "string"
+    },
+    "predicate": {
+      "$ref": "#/$defs/MCRAttestationPredicate"
+    },
+    "predicateType": {
+      "const": "https://github.com/niansia/Merriv/attestations/model-change-report/v0.1",
+      "title": "Predicatetype",
+      "type": "string"
+    },
+    "subject": {
+      "items": {
+        "$ref": "#/$defs/InTotoSubject"
+      },
+      "maxItems": 128,
+      "minItems": 1,
+      "title": "Subject",
+      "type": "array"
+    }
+  },
+  "required": [
+    "_type",
+    "subject",
+    "predicateType",
+    "predicate"
+  ],
+  "title": "MCRInTotoStatement",
+  "type": "object"
+}

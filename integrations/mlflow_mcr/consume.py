@@ -1,4 +1,4 @@
-"""Verify and log a portable MCR bundle to MLflow without importing M2RIV."""
+"""Verify and log a Model Change Report bundle to MLflow without importing Merriv."""
 
 from __future__ import annotations
 
@@ -63,8 +63,9 @@ def _log_plan(report: dict[str, Any], verification: dict[str, Any], source: Path
         "mcr.evidence_id": report["evidence_id"],
         "mcr.run_id": report["run_id"],
         "mcr.schema_version": report["schema_version"],
-        "mcr.decision_status": report["decision"]["status"],
-        "mcr.release_allowed": str(report["decision"]["allowed"]).lower(),
+        "mcr.evaluation_status": report["decision"]["status"],
+        "mcr.evaluation_policy_satisfied": str(report["decision"]["allowed"]).lower(),
+        "mcr.deployment_authorization": "not-evaluated",
         "mcr.verification_scope": verification["trust_scope"],
         "mcr.authenticity_verified": str(verification["authenticity_verified"]).lower(),
         "mcr.evidence_body_coverage": str(
@@ -83,7 +84,7 @@ def _log_plan(report: dict[str, Any], verification: dict[str, Any], source: Path
 
 def _emit_receipt(fixtures: Path, output: Path) -> None:
     profiles = []
-    for name in ("pass", "warn", "block", "error"):
+    for name in ("pass", "warn", "insufficient_power", "block", "error"):
         report = _load_report(fixtures / name)
         status = report["decision"]["status"]
         profiles.append(
@@ -92,11 +93,11 @@ def _emit_receipt(fixtures: Path, output: Path) -> None:
                 "report_id": report["id"],
                 "evidence_id": report["evidence_id"],
                 "decision_status": status,
-                "release_authorized": status == "PASS",
+                "evaluation_policy_satisfied": status == "PASS",
             }
         )
     payload = {
-        "schema_version": "0.2.0",
+        "schema_version": "0.3.0",
         "implementation_name": "m2riv.mlflow-consumer",
         "implementation_version": "1.0.0",
         "profiles": profiles,
@@ -115,9 +116,14 @@ def _emit_receipt(fixtures: Path, output: Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("source", type=Path, nargs="?")
-    parser.add_argument("--experiment", default="m2riv-release-evidence")
+    parser.add_argument("--experiment", default="merriv-release-evidence")
     parser.add_argument("--run-name")
-    parser.add_argument("--m2riv-command", default="m2riv")
+    parser.add_argument(
+        "--merriv-command",
+        "--m2riv-command",
+        dest="merriv_command",
+        default="merriv",
+    )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument(
         "--emit-conformance-receipt",
@@ -134,7 +140,7 @@ def main() -> None:
         if arguments.source is None:
             parser.error("source is required unless --emit-conformance-receipt is used")
         report = _load_report(arguments.source)
-        verification = _verify(arguments.source, arguments.m2riv_command)
+        verification = _verify(arguments.source, arguments.merriv_command)
         plan = _log_plan(report, verification, arguments.source)
         if arguments.dry_run:
             print(json.dumps(plan, indent=2, sort_keys=True))

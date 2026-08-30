@@ -43,11 +43,11 @@ jobs:
           uv sync --frozen --extra onnx-demo
           uv pip install --python .venv-tensorrt/Scripts/python.exe --no-deps --require-hashes -r examples/nvidia_tensorrt_vertical/requirements-tensorrt-cu125-windows.lock
           .venv-tensorrt/Scripts/python examples/nvidia_tensorrt_vertical/run_vertical.py --artifacts runs/nvidia/artifact-inputs --suite runs/onnx-quantization/suite.jsonl --output runs/nvidia/live --polygraphy-command .venv-tensorrt/Scripts/polygraphy.exe
-      - name: Verify target receipt and every MCR bundle
+      - name: Verify target receipt and every Model Change Report bundle
         shell: pwsh
         run: |
           .venv-tensorrt/Scripts/python -c "import json,pathlib; p=json.loads(pathlib.Path('runs/nvidia/live/gpu-receipt.json').read_text()); assert p['first_bad_index'] == 2; assert [b['decision'] for b in p['builds']] == ['PASS','PASS','BLOCK','BLOCK']; assert all(b['backend_matched_cases'] == p['case_count'] for b in p['builds'])"
-          .venv-tensorrt/Scripts/m2riv.exe mcr verify-target runs/nvidia/live
+          .venv-tensorrt/Scripts/merriv.exe mcr verify-target runs/nvidia/live
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload exact target evidence
         if: always()

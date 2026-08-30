@@ -86,10 +86,23 @@ class EvidenceBodyCoverage(Contract):
         return self
 
 
+class MCRTrustState(Contract):
+    """Independent trust dimensions established by the current verification run."""
+
+    integrity_verified: bool
+    bundle_complete: bool
+    evidence_retrievable: bool
+    evidence_recomputable: bool
+    producer_authenticated: bool
+    transparency_verified: bool
+    independently_reproduced: bool
+    deployment_authorization: Literal["not-evaluated"] = "not-evaluated"
+
+
 class MCRVerification(Contract):
     """Machine-readable result from verifying one MCR bundle."""
 
-    schema_version: Literal["0.2.0"] = "0.2.0"
+    schema_version: Literal["0.3.0"] = "0.3.0"
     valid: bool = True
     integrity_valid: bool = True
     authenticity_verified: bool = False
@@ -101,6 +114,7 @@ class MCRVerification(Contract):
     evidence_body_coverage: EvidenceBodyCoverage
     metric_recomputable: bool
     observation_bodies_verified: bool
+    trust: MCRTrustState
     report_id: ContentId
     evidence_id: ContentId
     run_id: ContentId
@@ -667,6 +681,9 @@ def verify_report_bundle(
         raise MCRVerificationError(
             f"strict verification requires all linked evidence; found {len(warnings)} warning(s)"
         )
+    evidence_retrievable = (
+        coverage.verified_structured + coverage.verified_opaque == coverage.declared
+    )
     return MCRVerification(
         bundle_verification_complete=not warnings,
         bundle_component_count=bundle_component_count,
@@ -674,6 +691,15 @@ def verify_report_bundle(
         evidence_body_coverage=coverage,
         metric_recomputable=metric_recomputable,
         observation_bodies_verified=observation_bodies_verified,
+        trust=MCRTrustState(
+            integrity_verified=True,
+            bundle_complete=not warnings,
+            evidence_retrievable=evidence_retrievable,
+            evidence_recomputable=metric_recomputable,
+            producer_authenticated=False,
+            transparency_verified=False,
+            independently_reproduced=False,
+        ),
         report_id=report.id,
         evidence_id=report.evidence_id,
         run_id=report.run_id,

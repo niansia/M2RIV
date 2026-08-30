@@ -6,7 +6,7 @@
 
 ## Decision
 
-M2RIV defines the Model Release Engineering layer between model creation or
+Merriv defines the Model Release Engineering layer between model creation or
 registry and production serving. It answers four release questions:
 
 1. What changed?
@@ -14,7 +14,7 @@ registry and production serving. It answers four release questions:
 3. Where did a regression begin?
 4. Should the candidate ship?
 
-M2RIV is local-first, provider-agnostic, and CI-native. It is not a training
+Merriv is local-first, provider-agnostic, and CI-native. It is not a training
 framework, model registry, benchmark collection, or general observability SaaS.
 
 ## Success condition for v0.1

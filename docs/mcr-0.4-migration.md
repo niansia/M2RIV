@@ -16,8 +16,8 @@ original retained inputs whenever possible.
 | `id` treated as evidence identity | new `evidence_id` for stable evidence |
 | verdict omitted from stable `id` | report `id` includes the complete decision |
 | one completeness boolean | bundle completeness, body coverage, and recomputability |
-| PASS/WARN/BLOCK fixtures | PASS/WARN/BLOCK/ERROR plus negative fixtures |
-| M2RIV-branded manifest media type | `application/vnd.model-change-report.evidence-manifest+json` |
+| PASS/WARN/BLOCK fixtures | PASS/WARN/INSUFFICIENT_POWER/BLOCK/ERROR plus negative fixtures |
+| Legacy project-branded manifest media type | `application/vnd.model-change-report.evidence-manifest+json` |
 
 ## Migration procedure
 
@@ -29,7 +29,7 @@ original retained inputs whenever possible.
 4. Rename the canonical report file and update manifest media types/references.
 5. Preserve tool-native output and bind artifact/build provenance where the report
    makes external comparator or target-build claims.
-6. Run `m2riv mcr verify BUNDLE --strict` and the MCR 0.4 producer suite.
+6. Run `merriv mcr verify BUNDLE --strict` and the MCR 0.4 producer suite.
 7. For a target archive, create and verify `target-evidence-manifest.json` only
    after the retained tree is complete.
 

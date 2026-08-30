@@ -6,7 +6,7 @@ edge cases, integer/float distinction, Unicode scalar ordering, typed datetimes,
 paths, sets, escaping, null/default handling, and large integers.
 `float-vectors.json` adds 1,024 exact finite binary64 spellings selected from
 boundary anchors and a reproducible SHA-256 sequence. The Python, Node, and Rust
-verifiers do not import M2RIV.
+verifiers do not import Merriv.
 
 ```console
 python examples/content_identity/verify_golden.py

@@ -176,8 +176,8 @@ def _run_polygraphy(
     if int8:
         arguments.append("--int8")
     environment = os.environ.copy()
-    environment["M2RIV_NVIDIA_SUITE"] = str(work / "suite.jsonl")
-    environment["M2RIV_NVIDIA_CASES"] = str(cases)
+    environment["MERRIV_NVIDIA_SUITE"] = str(work / "suite.jsonl")
+    environment["MERRIV_NVIDIA_CASES"] = str(cases)
     process = subprocess.Popen(  # noqa: S603
         arguments,
         cwd=work,

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1880" height="1050" viewBox="0 0 1880 1050" role="img" aria-labelledby="diagram-title diagram-description">
-  <title id="diagram-title">M2RIV release evidence architecture</title>
-  <desc id="diagram-description">Inputs flow through the M2RIV evidence kernel into the MCR protocol, release consumers, and four release decisions. The lower lane shows an NVIDIA deployment example.</desc>
+  <title id="diagram-title">Merriv release evidence architecture</title>
+  <desc id="diagram-description">Inputs flow through the Merriv evidence kernel into a Model Change Report, release consumers, and four evaluation decisions. The lower lane shows an NVIDIA deployment example.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto">
       <path d="M0 0 L10 5 L0 10 Z" fill="#173B73"/>
@@ -60,7 +60,7 @@
     </style>
   </defs>
   <rect width="1880" height="1050" fill="#fbfcfe"/>
-    <text x="940" y="81" class="page-title" text-anchor="middle">M2RIV</text>
+    <text x="940" y="81" class="page-title" text-anchor="middle">Merriv</text>
     <text x="940" y="132" class="subtitle" text-anchor="middle">Vendor-neutral release evidence for deployable AI models</text>
     <rect x="24" y="190" width="320" height="535" rx="13" class="panel"/>
     <path d="M37 190 H331 Q344 190 344 203 V256 H24 V203 Q24 190 37 190 Z" class="panel-header"/>
@@ -71,12 +71,12 @@
     <path d="M413 190 H777 Q790 190 790 203 V256 H400 V203 Q400 190 413 190 Z" class="panel-header"/>
     <circle cx="440" cy="223" r="22" class="step-circle"/>
     <text x="440" y="224" class="step-number" text-anchor="middle">2</text>
-    <text x="478" y="224" class="panel-title" text-anchor="start">M2RIV Evidence Kernel</text>
+    <text x="478" y="224" class="panel-title" text-anchor="start">Merriv Evidence Kernel</text>
     <rect x="840" y="190" width="300" height="535" rx="13" class="panel"/>
     <path d="M853 190 H1127 Q1140 190 1140 203 V256 H840 V203 Q840 190 853 190 Z" class="panel-header"/>
     <circle cx="880" cy="223" r="22" class="step-circle"/>
     <text x="880" y="224" class="step-number" text-anchor="middle">3</text>
-    <text x="918" y="224" class="panel-title" text-anchor="start">MCR Protocol</text>
+    <text x="918" y="224" class="panel-title" text-anchor="start">Model Change Report</text>
     <rect x="1190" y="190" width="340" height="535" rx="13" class="panel"/>
     <path d="M1203 190 H1517 Q1530 190 1530 203 V256 H1190 V203 Q1190 190 1203 190 Z" class="panel-header"/>
     <circle cx="1230" cy="223" r="22" class="step-circle"/>
@@ -129,7 +129,7 @@
     <rect x="876" y="297" width="58" height="58" rx="7" fill="#ffffff"/>
     <use href="#icon-document_mcr" x="885" y="306" width="40" height="40"/>
     <text x="946" y="317" class="mcr-title" text-anchor="start">Model Change</text>
-    <text x="946" y="347" class="mcr-subtitle" text-anchor="start">Report (MCR 0.4)</text>
+    <text x="946" y="347" class="mcr-subtitle" text-anchor="start">Report (schema 0.4)</text>
     <circle cx="889" cy="410" r="5" class="bullet"/>
     <text x="912" y="411" class="bullet-label" text-anchor="start">content identity</text>
     <circle cx="889" cy="460" r="5" class="bullet"/>
@@ -193,10 +193,10 @@
     <use href="#icon-bar_chart" x="822" y="874" width="42" height="42"/>
     <text x="843" y="944" class="lane-label" text-anchor="middle">Polygraphy</text>
     <rect x="954" y="860" width="130" height="112" rx="9" class="lane-key"/>
-    <text x="1019" y="918" class="lane-label" text-anchor="middle">M2RIV</text>
+    <text x="1019" y="918" class="lane-label" text-anchor="middle">Merriv</text>
     <rect x="1120" y="860" width="110" height="112" rx="9" class="lane-key"/>
     <use href="#icon-document_mcr" x="1154" y="874" width="42" height="42"/>
-    <text x="1175" y="944" class="lane-label" text-anchor="middle">MCR</text>
+    <text x="1175" y="944" class="lane-label" text-anchor="middle">Report</text>
     <rect x="1266" y="860" width="120" height="112" rx="9" class="lane-node"/>
     <use href="#icon-shield_check" x="1305" y="874" width="42" height="42"/>
     <text x="1326" y="944" class="lane-label" text-anchor="middle">Gate</text>

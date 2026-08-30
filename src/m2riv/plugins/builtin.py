@@ -1,4 +1,4 @@
-"""Canonical registry containing dependency-free M2RIV metrics."""
+"""Canonical registry containing dependency-free Merriv metrics."""
 
 from __future__ import annotations
 

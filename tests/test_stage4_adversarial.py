@@ -620,8 +620,8 @@ def test_compare_api_cli_never_echoes_environment_api_keys(tmp_path: Path) -> No
             "100",
         ],
         env={
-            "M2RIV_BASELINE_API_KEY": baseline_secret,
-            "M2RIV_CANDIDATE_API_KEY": candidate_secret,
+            "MERRIV_BASELINE_API_KEY": baseline_secret,
+            "MERRIV_CANDIDATE_API_KEY": candidate_secret,
         },
     )
 
@@ -755,8 +755,8 @@ def test_compare_api_cli_scopes_baseline_and_candidate_cache_identity(
             "100",
         ],
         env={
-            "M2RIV_BASELINE_API_KEY": "sk-baseline-scope",
-            "M2RIV_CANDIDATE_API_KEY": "sk-candidate-scope",
+            "MERRIV_BASELINE_API_KEY": "sk-baseline-scope",
+            "MERRIV_CANDIDATE_API_KEY": "sk-candidate-scope",
         },
     )
 

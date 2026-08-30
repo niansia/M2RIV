@@ -1,4 +1,4 @@
-"""Stable SDK surface for explicit M2RIV plugin registration."""
+"""Stable SDK surface for explicit Merriv plugin registration."""
 
 from m2riv.plugins.builtin import builtin_metric_registry
 from m2riv.plugins.models import PluginKind, PluginManifest

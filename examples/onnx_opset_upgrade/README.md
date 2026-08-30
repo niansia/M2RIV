@@ -15,5 +15,5 @@ PASS: opset 17 -> 18; first numerical divergence = None
 ```
 
 The report links both `artifact-diff.json` and `numerical-diff.json`. This is a
-deliberately safe migration: M2RIV proves that the artifact changed and that the
+deliberately safe migration: Merriv proves that the artifact changed and that the
 declared cases remain numerically identical, rather than assuming either result.

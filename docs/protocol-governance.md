@@ -19,7 +19,7 @@ process reviewable before neutral governance exists.
 Breaking public changes remain open for at least seven calendar days after a
 complete RFC and migration patch, unless delaying a security fix would increase
 risk. The maintainer records unresolved objections and a disposition. A release
-cannot claim compatibility until schemas, four-state and negative conformance,
+cannot claim compatibility until schemas, five-state and negative conformance,
 Python/Node/Rust identity gates, and the compatibility matrix agree.
 
 Vendor-specific requests do not receive kernel privileges. An extension belongs
@@ -31,5 +31,5 @@ without changing common identity, gate, or trust semantics.
 The project will propose a separate protocol working group when there are at
 least two independent producers, two independent consumers, and maintainers from
 more than one organization. Until then, conformance is reproducible
-self-attestation and M2RIV remains the reference implementation—not a standards
+self-attestation and Merriv remains the reference implementation—not a standards
 body.

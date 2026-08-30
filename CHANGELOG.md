@@ -1,20 +1,33 @@
 # Changelog
 
-M2RIV follows semantic versioning for the Python package and explicit semantic
+Merriv follows semantic versioning for the Python package and explicit semantic
 versions for portable JSON contracts. Pre-1.0 APIs may change with migration notes.
 
 ## Unreleased
 
 ### Added
 
-- MCR 0.4 fixed PASS/WARN/BLOCK/ERROR vectors and negative conformance fixtures
+- MCR 0.4 fixed PASS/WARN/INSUFFICIENT_POWER/BLOCK/ERROR vectors and negative
+  conformance fixtures
+- Policy-family Holm-Bonferroni correction, declared family-wise alpha, target
+  power, observed-design MDE, and fail-closed insufficient-power decisions
+- A real llama.cpp #22544 historical regression replay with upstream issue, first
+  bad commit, merged fix, and explicit replay limitations
+- An in-toto v1 Statement schema and MCR predicate emitter for external attestors
+- A complete unsigned in-toto Statement command and deterministic OCI 1.1
+  subject/referrer layout for registry-client interoperability
+- A packaged `merriv import polygraphy` first-mile command over native retained
+  results or an explicitly non-live normalized interchange
+- Machine-readable trust dimensions for integrity, completeness, retrievability,
+  recomputability, producer authentication, transparency, independent
+  reproduction, and consumer-side deployment authorization
 - Tool-native opaque evidence, snapshot-to-artifact bindings, build provenance,
   and a complete target evidence manifest
 - Separate bundle completeness, evidence-body coverage, observation verification,
   and metric recomputability results
 
 - Strict content-addressed model/evidence contracts and exported JSON Schemas
-- Paired runner, atomic cache, bootstrap/McNemar evidence, and four-state gates
+- Paired runner, atomic cache, bootstrap/McNemar evidence, and five-state gates
 - MCR JSON, Markdown, JUnit, SARIF, and compiled release-plan bundles
 - Explicit dispatched, returned, and content-addressed cache-hit provenance in MCRs
 - Recorded-output and bounded OpenAI-compatible adapters
@@ -65,11 +78,16 @@ versions for portable JSON contracts. Pre-1.0 APIs may change with migration not
 - A source-first quickstart, concise repository entry page, and citation metadata
 - Three new public schemas for backend evidence and producer/consumer conformance,
   bringing the exported public surface to 24 contracts
-- Five target/provenance schemas plus expanded verification contracts, bringing
-  the exported public surface to 29 contracts
+- Five target/provenance schemas plus expanded verification contracts, and an
+  OCI MCR artifact manifest, bringing the exported public surface to 31 contracts
 
 ### Changed
 
+- The public name is fixed as Merriv (pronounced "MEH-riv"), with `merriv` as the
+  primary executable. The `m2riv` distribution, Python module, executable alias,
+  and brand-neutral `mcr:` wire identifiers remain stable.
+- Public prose spells out Model Change Report; `MCR` remains only where it is a
+  versioned technical identifier, filename, schema name, or CLI command group.
 - CI and release builds now install from the frozen `uv.lock` rather than
   resolving development and build dependencies from floating ranges
 - Release builds disable shared dependency caches, and Dependabot updates use a
@@ -88,10 +106,16 @@ versions for portable JSON contracts. Pre-1.0 APIs may change with migration not
   exclusively in `effect` / MCR `delta`
 - The reusable action installs its dependency graph from a hash-locked export and
   reports one final exit code; verifier failures are canonical error code `3`
-- `m2riv mcr verify --strict` now fails when any linked local evidence cannot be
+- `merriv mcr verify --strict` now fails when any linked local evidence cannot be
   recognized and rehashed; the reusable action uses strict verification
-- Project positioning now treats MCR as the protocol candidate and M2RIV as its
-  reference implementation, with deployment artifact evidence as the first wedge
+- Project positioning now treats Model Change Report as the protocol candidate
+  and Merriv as its reference implementation, with deployment artifact evidence
+  as the first wedge
+- MCR 0.4 `decision.allowed` is now consistently presented as “evaluation policy
+  satisfied”; CLI, Markdown, SARIF, conformance, and MLflow output explicitly
+  leave deployment authorization to the consumer
+- MCR 0.4.0 is frozen as the external-review envelope; future semantic or identity
+  changes require a new envelope version rather than in-place edits
 
 ### Security
 
@@ -109,7 +133,8 @@ versions for portable JSON contracts. Pre-1.0 APIs may change with migration not
 - Artifact hashing and discovery enforce total-byte, per-file, and traversal budgets
 - Cache format v2 authenticates every observation envelope with HMAC-SHA-256.
   The default key is run-local; intentional shared reuse requires a secret
-  `M2RIV_CACHE_KEY` of at least 32 bytes
+  `MERRIV_CACHE_KEY` of at least 32 bytes; `M2RIV_CACHE_KEY` remains a legacy
+  compatibility fallback
 - The evidence kernel recomputes observation IDs and validates snapshot, case,
   seed, output digest, retention, and executor result cardinality before caching
 - Strict JSON rejects duplicate keys, non-finite values, invalid Unicode, excessive

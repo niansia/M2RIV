@@ -1,6 +1,6 @@
-name: MCR compatibility report
+name: Model Change Report compatibility
 description: Report a producer, consumer, schema, or identity interoperability issue
-title: "[MCR compatibility]: "
+title: "[Model Change Report compatibility]: "
 labels: ["compatibility", "mcr"]
 body:
   - type: markdown
@@ -15,7 +15,7 @@ body:
   - type: input
     id: mcr_version
     attributes:
-      label: Exact MCR version
+      label: Exact Model Change Report version
     validations:
       required: true
   - type: dropdown

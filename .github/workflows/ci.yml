@@ -37,11 +37,11 @@ jobs:
       - if: matrix.python-version == '3.13'
         shell: bash
         run: |
-          uv run --frozen m2riv schema export schemas/mcr-0.4
+          uv run --frozen merriv schema export schemas/mcr-0.4
           git diff --exit-code -- schemas/mcr-0.4
           test -z "$(git status --porcelain --untracked-files=all -- schemas/mcr-0.4)"
           uv run --frozen python tools/verify_regression_corpus.py
-          uv run --frozen m2riv conformance producer examples/mcr_conformance
+          uv run --frozen merriv conformance producer examples/mcr_conformance
       - if: matrix.python-version == '3.13'
         run: uv run --frozen python -m build --wheel --no-isolation --outdir wheelhouse
 
@@ -68,18 +68,18 @@ jobs:
       - name: Assert BLOCK semantics and portable bundle
         if: always()
         env:
-          M2RIV_ACTION_OUTCOME: ${{ steps.gate.outcome }}
-          M2RIV_ACTION_EXIT_CODE: ${{ steps.gate.outputs.exit-code }}
+          MERRIV_ACTION_OUTCOME: ${{ steps.gate.outcome }}
+          MERRIV_ACTION_EXIT_CODE: ${{ steps.gate.outputs.exit-code }}
         run: |
-          test "$M2RIV_ACTION_OUTCOME" = "failure"
-          test "$M2RIV_ACTION_EXIT_CODE" = "2"
+          test "$MERRIV_ACTION_OUTCOME" = "failure"
+          test "$MERRIV_ACTION_EXIT_CODE" = "2"
           test -f runs/action-smoke/mcr-report.json
           test -f runs/action-smoke/evidence-manifest.json
           test -f runs/action-smoke/release-plan.json
           test -f runs/action-smoke/summary.md
           test -f runs/action-smoke/junit.xml
           test -f runs/action-smoke/results.sarif
-          m2riv mcr verify runs/action-smoke --strict
+          merriv mcr verify runs/action-smoke --strict
       - name: Verify cross-language content identity vectors
         run: node examples/content_identity/verify_golden.mjs
 
@@ -110,7 +110,7 @@ jobs:
           cargo test --locked --manifest-path reference/mcr-reference-rust/Cargo.toml
           cargo run --locked --quiet --manifest-path reference/mcr-reference-rust/Cargo.toml -- vectors examples/content_identity/golden-vectors.json
           cargo run --locked --quiet --manifest-path reference/mcr-reference-rust/Cargo.toml -- float-vectors examples/content_identity/float-vectors.json
-      - name: Verify bidirectional Python and Rust MCR interoperability
+      - name: Verify bidirectional Python and Rust Model Change Report interoperability
         run: |
           uv run --frozen python examples/independent_producer/generate_bundle.py --check
           uv run --frozen python tools/verify_rust_interop.py

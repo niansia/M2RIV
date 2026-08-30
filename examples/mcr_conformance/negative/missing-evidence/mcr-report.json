@@ -62,9 +62,21 @@
         "message": "external producer fixture: PASS",
         "metric_id": "accuracy",
         "evidence": [],
-        "evidence_set_id": null
+        "evidence_set_id": null,
+        "confidence_level": null,
+        "interval_lower": null,
+        "interval_upper": null,
+        "raw_p_value": null,
+        "adjusted_p_value": null,
+        "effective_alpha": null,
+        "minimum_detectable_effect": null,
+        "target_power": null
       }
-    ]
+    ],
+    "multiple_comparison_method": "none",
+    "familywise_alpha": null,
+    "family_size": null,
+    "target_power": null
   },
   "evidence_manifest": null,
   "evidence": [

@@ -7,7 +7,7 @@ through Polygraphy, records latency and NVML process VRAM when available, applie
 the rare-slice release gate, and bisects the ordered build sequence.
 
 The source and execution environments are intentionally separate. Neither
-ModelOpt nor TensorRT enters the four-dependency M2RIV kernel.
+ModelOpt nor TensorRT enters the four-dependency Merriv kernel.
 
 ## 1. Build artifacts
 
@@ -71,7 +71,7 @@ Every build retains:
 Verify the archive root rather than checking only individual reports:
 
 ```console
-m2riv mcr verify-target runs/nvidia/live
+merriv mcr verify-target runs/nvidia/live
 ```
 
 The command rejects a changed, missing, or extra retained file. It proves content
@@ -94,8 +94,9 @@ and covers 4,514 retained files. The source `gpu-receipt.json` SHA-256 is
 the target manifest SHA-256 is
 `7a1036ff5aa1541d82678bd3adb74c5160f58ba746c55336964b883c0a940186`.
 The complete engines, Polygraphy outputs, and MCR bundles are distributed as a
-separate [GitHub Release evidence archive](https://github.com/niansia/M2RIV/releases/tag/evidence-rtx4060-20260829)
+separate [GitHub Release evidence archive](https://github.com/niansia/Merriv/releases/tag/evidence-rtx4060-20260829)
 because TensorRT engines are target-specific binaries.
+The historical pre-rename asset
 `M2RIV-nvidia-evidence-RTX4060-MCR0.4-20260829.zip` has SHA-256
 `06a060000afb40cd9dd6e529b08249863d20a91706030d2b505493572fd21a05`.
 The compact receipt is a first-party observation, not independent reproduction.

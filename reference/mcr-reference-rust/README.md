@@ -11,7 +11,7 @@ cargo run --manifest-path reference/mcr-reference-rust/Cargo.toml -- \
   float-vectors examples/content_identity/float-vectors.json
 cargo run --manifest-path reference/mcr-reference-rust/Cargo.toml -- \
   produce reference/mcr-reference-rust/simple-evidence.json runs/rust-mcr
-m2riv mcr verify runs/rust-mcr --strict
+merriv mcr verify runs/rust-mcr --strict
 cargo run --manifest-path reference/mcr-reference-rust/Cargo.toml -- \
   verify examples/mcr_conformance/full
 ```

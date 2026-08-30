@@ -1,6 +1,6 @@
 # FP16-to-INT8 ONNX release regression
 
-This is the deployment-side demo M2RIV is built for. It uses a reviewed FP32
+This is the deployment-side demo Merriv is built for. It uses a reviewed FP32
 fixture from a small sklearn MLP trained on scikit-learn's bundled copy of the
 real UCI handwritten-digits dataset, exports the same fixed weights as FP16 ONNX,
 creates three static INT8 QDQ builds with ONNX Runtime, executes every build on
@@ -38,7 +38,7 @@ Re-run localization from the generated gate statuses:
 m2riv bisect runs/onnx-quantization/checkpoints.jsonl --mode monotonic
 ```
 
-Or ask M2RIV to execute only the checkpoints selected by the localization
+Or ask Merriv to execute only the checkpoints selected by the localization
 strategy and emit an auditable report for each evaluation:
 
 ```console
@@ -91,7 +91,7 @@ python tools/regenerate_onnx_demo_fixture.py
 Verify any generated report directory independently with:
 
 ```console
-m2riv mcr verify runs/onnx-quantization/reports/build-02-int8-calibration-scale-065
+merriv mcr verify runs/onnx-quantization/reports/build-02-int8-calibration-scale-065
 ```
 
 Dataset provenance: [scikit-learn digits documentation](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html)

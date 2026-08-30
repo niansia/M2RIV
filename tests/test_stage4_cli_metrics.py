@@ -189,8 +189,8 @@ rules:
             "100",
         ],
         env={
-            "M2RIV_BASELINE_API_KEY": secret,
-            "M2RIV_CANDIDATE_API_KEY": secret,
+            "MERRIV_BASELINE_API_KEY": secret,
+            "MERRIV_CANDIDATE_API_KEY": secret,
         },
     )
 
@@ -198,4 +198,4 @@ rules:
     assert secrets_seen == [secret, secret]
     assert secret not in result.stdout
     assert secret not in result.stderr
-    assert "DECISION: PASS" in result.stdout
+    assert "EVALUATION DECISION: PASS" in result.stdout

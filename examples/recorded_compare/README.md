@@ -5,7 +5,7 @@ accuracy changes by only 10%, while both low-light rare-class cases regress. The
 release policy blocks the candidate on that slice.
 
 ```console
-m2riv compare \
+merriv compare \
   examples/recorded_compare/baseline.jsonl \
   examples/recorded_compare/candidate.jsonl \
   --suite examples/recorded_compare/suite.jsonl \

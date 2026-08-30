@@ -10,9 +10,9 @@ Identity protocol: [RFC 0012](../rfcs/0012-content-identity-canonicalization.md)
 Normative schemas: [`schemas/mcr-0.4`](../schemas/mcr-0.4)
 
 MCR is a vendor-neutral, language-neutral release-evidence envelope for a change
-between two deployable model snapshots. M2RIV is the reference implementation,
+between two deployable model snapshots. Merriv is the reference implementation,
 not the only permitted producer or consumer. The `mcr:` wire namespace remains
-independent of the provisional M2RIV product name.
+independent of the provisional Merriv product name.
 
 ## Normative producer requirements
 
@@ -21,8 +21,8 @@ An MCR producer MUST:
 1. identify the exact baseline and candidate snapshots with content IDs;
 2. emit three separate identities: replay-stable `evidence_id`, decision-bound
    report `id`, and exact execution `run_id`;
-3. emit one of `PASS`, `WARN`, `BLOCK`, or `ERROR` without collapsing uncertainty
-   or execution failure into `PASS`;
+3. emit one of `PASS`, `WARN`, `INSUFFICIENT_POWER`, `BLOCK`, or `ERROR` without
+   collapsing uncertainty, low power, or execution failure into `PASS`;
 4. link every metric or finding that claims observation support to a resolvable
    evidence set;
 5. state limitations and runtime provenance needed to interpret each claim;
@@ -30,6 +30,11 @@ An MCR producer MUST:
 7. preserve opaque tool-native output when a structured claim names an external
    comparator as its oracle;
 8. avoid claiming producer authenticity from content hashing alone.
+
+MCR 0.4 calls the evaluation-policy disposition `decision.allowed`. This frozen
+wire name MUST be interpreted only as “the evaluation policy bound into this
+report was satisfied.” It MUST NOT be interpreted as deployment or promotion
+authorization.
 
 For identity algorithm v1, producers MUST perform schema-aware typed-contract
 conversion before serialization. A generic JSON parse/stringify round trip is
@@ -61,11 +66,12 @@ An MCR consumer MUST:
 1. validate the exact declared schema version before interpreting fields;
 2. recompute every report, run, manifest, evidence-set, and recognized supplemental
    identity it relies on;
-3. preserve all four decision states;
-4. treat `WARN`, `BLOCK`, and `ERROR` as not release-authorized unless a separate,
-   audited policy explicitly says otherwise;
+3. preserve all five decision states;
+4. preserve `decision.allowed` as the bound evaluation-policy disposition and
+   never translate it directly into organization deployment authorization;
 5. distinguish integrity, bundle completeness, evidence-body coverage, metric
-   recomputability, producer authenticity, and release authorization;
+   recomputability, producer authenticity, transparency verification,
+   independent reproduction, and deployment authorization;
 6. reject unknown required contracts rather than guessing their semantics.
 
 `bundle_verification_complete` means every declared local bundle component was
@@ -74,6 +80,12 @@ structured, opaque, unavailable, remote, redacted, and unrecognized body counts.
 `metric_recomputable` is true only when the retained plan and every observation
 body required by metrics were verified. None of these fields establishes who
 produced the bundle.
+
+After verification, an organization policy engine MAY combine the MCR evaluation
+decision with authenticated producer identity, transparency evidence, provenance,
+BOM, vulnerability, risk, and environment policy to emit its own `ALLOW` or
+`DENY`. That authorization is a separate consumer-side object and is never an
+MCR producer claim.
 
 ## Tool-native and target evidence
 
@@ -96,9 +108,10 @@ vectors plus negative fixtures for tampered identity, missing evidence, unknown
 version, and decision mismatch. A producer cannot claim conformance by merely
 emitting self-consistent arbitrary reports.
 
-MCR is pre-1.0. Contract changes use explicit envelope versions and migration
-notes; no stability promise is implied. Consumers select supported exact versions
-and fail closed on unknown versions. See the
+The MCR 0.4.0 envelope is frozen for external review: fields and identity
+semantics will not be edited in place. A required-field, meaning, or identity
+change requires a new explicit envelope version and migration note. Consumers
+select supported exact versions and fail closed on unknown versions. See the
 [compatibility matrix](mcr-compatibility.md),
 [conformance procedure](mcr-conformance.md),
 [protocol changelog](mcr-changelog.md), and
@@ -106,8 +119,15 @@ and fail closed on unknown versions. See the
 
 ## Trust statement
 
-`m2riv mcr verify` and `verify-target` prove bounded local self-consistency. They
+`merriv mcr verify` and `verify-target` prove bounded local self-consistency. They
 do not prove authorship. A signature, trusted CI identity, transparency record, or
 other external trust root is required for authenticity. Consumers MUST NOT turn a
 successful content verification into an authorship, safety, or universal-release
 claim.
+
+MCR composes with existing supply-chain standards rather than replacing them.
+Use SLSA for build provenance, SPDX/CycloneDX for model and component inventory,
+OpenSSF Model Signing/Sigstore or enterprise PKI for producer authentication,
+in-toto for the attestation Statement, OCI for artifact transport/referrer
+discovery, and consumer policy for deployment authorization. See
+[supply-chain interoperability](supply-chain-interop.md).

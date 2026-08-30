@@ -1,5 +1,5 @@
 # Explicit custom metric plugin
-M2RIV deliberately does not scan and import arbitrary Python entry points. Trusted
+Merriv deliberately does not scan and import arbitrary Python entry points. Trusted
 host code imports a plugin and registers it explicitly:
 
 ```python

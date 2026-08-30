@@ -97,7 +97,7 @@ def _reject_sensitive_config(value: Any, *, field_name: str) -> Any:
 
 
 class Contract(BaseModel):
-    """Strict and immutable base for all portable M2RIV contracts."""
+    """Strict and immutable base for all portable Merriv contracts."""
 
     model_config = ConfigDict(extra="forbid", frozen=True, use_enum_values=False)
 

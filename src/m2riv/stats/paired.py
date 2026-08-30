@@ -32,6 +32,19 @@ class ConfidenceInterval(StatisticalContract):
         return self
 
 
+class BootstrapThresholdTest(StatisticalContract):
+    """Two-sided percentile-bootstrap tail evidence at a policy threshold."""
+
+    threshold: float
+    two_sided_p_value: Annotated[float, Field(ge=0.0, le=1.0)]
+
+    @model_validator(mode="after")
+    def threshold_is_finite(self) -> BootstrapThresholdTest:
+        if not math.isfinite(self.threshold):
+            raise ValueError("bootstrap threshold must be finite")
+        return self
+
+
 class PairedEstimate(StatisticalContract):
     """Mean candidate-minus-baseline effect with paired bootstrap uncertainty."""
 
@@ -40,10 +53,23 @@ class PairedEstimate(StatisticalContract):
     candidate_mean: float
     effect: float
     effect_size: float | None
+    difference_stddev: Annotated[float | None, Field(ge=0.0)] = None
     confidence_interval: ConfidenceInterval
+    additional_confidence_intervals: tuple[ConfidenceInterval, ...] = ()
+    threshold_test: BootstrapThresholdTest | None = None
     method: Literal["paired-percentile-bootstrap"] = "paired-percentile-bootstrap"
     resamples: Annotated[int, Field(ge=1)]
     seed: int
+
+    @model_validator(mode="after")
+    def confidence_levels_are_unique(self) -> PairedEstimate:
+        levels = [
+            self.confidence_interval.confidence_level,
+            *(item.confidence_level for item in self.additional_confidence_intervals),
+        ]
+        if len(levels) != len(set(levels)):
+            raise ValueError("confidence interval levels must be unique")
+        return self
 
 
 class BinaryFlipMatrix(StatisticalContract):
@@ -104,6 +130,8 @@ def paired_bootstrap(
     candidate: Sequence[float],
     *,
     confidence_level: float = 0.95,
+    additional_confidence_levels: Sequence[float] = (),
+    threshold: float | None = None,
     resamples: int = 10_000,
     seed: int = 0,
 ) -> PairedEstimate:
@@ -118,6 +146,15 @@ def paired_bootstrap(
         raise ValueError("confidence_level must be between zero and one")
     if resamples < 1:
         raise ValueError("resamples must be positive")
+    requested_levels = tuple(float(level) for level in additional_confidence_levels)
+    if any(not 0.0 < level < 1.0 for level in requested_levels):
+        raise ValueError("additional confidence levels must be between zero and one")
+    if len(requested_levels) != len(set(requested_levels)):
+        raise ValueError("additional confidence levels must be unique")
+    if confidence_level in requested_levels:
+        raise ValueError("additional confidence levels must exclude confidence_level")
+    if threshold is not None and not math.isfinite(threshold):
+        raise ValueError("threshold must be finite")
     baseline_values, candidate_values = _validate_numeric_pairs(baseline, candidate)
     differences = tuple(
         candidate_value - baseline_value
@@ -131,8 +168,10 @@ def paired_bootstrap(
     # deviation of those differences. It is undefined for a single pair or a
     # non-zero constant difference, and exactly zero for identical pairs.
     effect_size: float | None
+    difference_stddev: float | None
     if n_pairs < 2:
         effect_size = None
+        difference_stddev = None
     else:
         squared_deviations = math.fsum((value - effect) ** 2 for value in differences)
         difference_stddev = math.sqrt(squared_deviations / (n_pairs - 1))
@@ -148,19 +187,35 @@ def paired_bootstrap(
         for _ in range(resamples)
     ]
     bootstrap_effects.sort()
-    alpha = (1.0 - confidence_level) / 2.0
-    interval = ConfidenceInterval(
-        low=_quantile(bootstrap_effects, alpha),
-        high=_quantile(bootstrap_effects, 1.0 - alpha),
-        confidence_level=confidence_level,
-    )
+
+    def interval_at(level: float) -> ConfidenceInterval:
+        alpha = (1.0 - level) / 2.0
+        return ConfidenceInterval(
+            low=_quantile(bootstrap_effects, alpha),
+            high=_quantile(bootstrap_effects, 1.0 - alpha),
+            confidence_level=level,
+        )
+
+    interval = interval_at(confidence_level)
+    additional_intervals = tuple(interval_at(level) for level in requested_levels)
+    threshold_test = None
+    if threshold is not None:
+        lower_tail = sum(value <= threshold for value in bootstrap_effects) / resamples
+        upper_tail = sum(value >= threshold for value in bootstrap_effects) / resamples
+        threshold_test = BootstrapThresholdTest(
+            threshold=threshold,
+            two_sided_p_value=min(1.0, 2.0 * min(lower_tail, upper_tail)),
+        )
     return PairedEstimate(
         n_pairs=n_pairs,
         baseline_mean=baseline_mean,
         candidate_mean=candidate_mean,
         effect=effect,
         effect_size=effect_size,
+        difference_stddev=difference_stddev,
         confidence_interval=interval,
+        additional_confidence_intervals=additional_intervals,
+        threshold_test=threshold_test,
         resamples=resamples,
         seed=seed,
     )
@@ -182,6 +237,8 @@ def binary_paired_evidence(
     candidate: Sequence[bool],
     *,
     confidence_level: float = 0.95,
+    additional_confidence_levels: Sequence[float] = (),
+    threshold: float | None = None,
     resamples: int = 10_000,
     seed: int = 0,
 ) -> BinaryPairedEvidence:
@@ -207,6 +264,8 @@ def binary_paired_evidence(
         [float(value) for value in baseline],
         [float(value) for value in candidate],
         confidence_level=confidence_level,
+        additional_confidence_levels=additional_confidence_levels,
+        threshold=threshold,
         resamples=resamples,
         seed=seed,
     )

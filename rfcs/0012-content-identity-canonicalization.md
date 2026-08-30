@@ -7,7 +7,7 @@
 ## Problem
 
 MCR identities are intended to be recomputable by producers that do not import
-M2RIV. JSON Schema describes the data shape, but it does not define byte-level
+Merriv. JSON Schema describes the data shape, but it does not define byte-level
 canonicalization, domain separation, or the treatment of typed values before
 hashing. Without those rules, two conforming implementations can hash the same
 semantic evidence to different IDs.

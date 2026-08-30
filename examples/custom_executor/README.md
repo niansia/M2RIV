@@ -16,5 +16,5 @@ result = compare_release(
 
 The example still executes in-process. A distributed implementation replaces only
 `execute`; pairing, cache validation, metrics, statistics, gates, and reports stay
-inside the M2RIV kernel. Never place cluster credentials in the manifest or
+inside the Merriv kernel. Never place cluster credentials in the manifest or
 descriptor.

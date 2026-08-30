@@ -63,11 +63,63 @@
       "enum": [
         "PASS",
         "WARN",
+        "INSUFFICIENT_POWER",
         "BLOCK",
         "ERROR"
       ],
       "title": "MCRStatus",
       "type": "string"
+    },
+    "MCRTrustState": {
+      "additionalProperties": false,
+      "description": "Independent trust dimensions established by the current verification run.",
+      "properties": {
+        "bundle_complete": {
+          "title": "Bundle Complete",
+          "type": "boolean"
+        },
+        "deployment_authorization": {
+          "const": "not-evaluated",
+          "default": "not-evaluated",
+          "title": "Deployment Authorization",
+          "type": "string"
+        },
+        "evidence_recomputable": {
+          "title": "Evidence Recomputable",
+          "type": "boolean"
+        },
+        "evidence_retrievable": {
+          "title": "Evidence Retrievable",
+          "type": "boolean"
+        },
+        "independently_reproduced": {
+          "title": "Independently Reproduced",
+          "type": "boolean"
+        },
+        "integrity_verified": {
+          "title": "Integrity Verified",
+          "type": "boolean"
+        },
+        "producer_authenticated": {
+          "title": "Producer Authenticated",
+          "type": "boolean"
+        },
+        "transparency_verified": {
+          "title": "Transparency Verified",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "integrity_verified",
+        "bundle_complete",
+        "evidence_retrievable",
+        "evidence_recomputable",
+        "producer_authenticated",
+        "transparency_verified",
+        "independently_reproduced"
+      ],
+      "title": "MCRTrustState",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -131,10 +183,13 @@
       "type": "string"
     },
     "schema_version": {
-      "const": "0.2.0",
-      "default": "0.2.0",
+      "const": "0.3.0",
+      "default": "0.3.0",
       "title": "Schema Version",
       "type": "string"
+    },
+    "trust": {
+      "$ref": "#/$defs/MCRTrustState"
     },
     "trust_scope": {
       "const": "self-consistency-only",
@@ -175,6 +230,7 @@
     "evidence_body_coverage",
     "metric_recomputable",
     "observation_bodies_verified",
+    "trust",
     "report_id",
     "evidence_id",
     "run_id",

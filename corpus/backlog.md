@@ -15,3 +15,7 @@ These are acquisition targets, not verified cases and not adoption claims:
 Promotion into `index.json` requires exact artifacts or immutable revisions,
 reproduction commands, expected decision, retained evidence, limitations, and an
 independent rerun when external hardware is involved.
+
+Source-anchored historical replays may be indexed separately when an upstream
+issue and merged fix publish the exact observed outputs. They must say that they
+are replays, not fresh executions or independent reproductions.

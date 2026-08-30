@@ -10,7 +10,7 @@ Use this procedure for a CPU corpus case or target-GPU run.
    after observing failures.
 4. Preserve raw tool-native output, native exit code, exact artifact bytes, build
    inputs/parameters, runtime profile, MCR bundles, and bisect boundary.
-5. Run strict verification for every MCR and `m2riv mcr verify-target` for a target
+5. Run strict verification for every MCR and `merriv mcr verify-target` for a target
    archive. Record the target evidence ID and archive SHA-256 externally.
 6. Report deviations, missing measurements, and failed commands. An unavailable
    VRAM counter or non-recomputable metric is a limitation, not zero or PASS.

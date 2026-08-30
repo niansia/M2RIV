@@ -18,6 +18,7 @@ from m2riv.reports.models import (
 )
 from m2riv.reports.render import render_json, render_markdown
 from m2riv.reports.verify import (
+    MCRTrustState,
     MCRVerification,
     MCRVerificationError,
     verify_report_bundle,
@@ -32,6 +33,7 @@ __all__ = [
     "MCRFinding",
     "MCRMetric",
     "MCRStatus",
+    "MCRTrustState",
     "MCRVerification",
     "MCRVerificationError",
     "ModelChangeReport",

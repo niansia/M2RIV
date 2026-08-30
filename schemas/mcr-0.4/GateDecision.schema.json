@@ -5,16 +5,40 @@
       "enum": [
         "pass",
         "warn",
+        "insufficient_power",
         "block",
         "error"
       ],
       "title": "GateStatus",
       "type": "string"
     },
+    "MultipleComparisonMethod": {
+      "description": "Policy-wide correction applied to the complete rule family.",
+      "enum": [
+        "none",
+        "holm-bonferroni"
+      ],
+      "title": "MultipleComparisonMethod",
+      "type": "string"
+    },
     "RuleDecision": {
       "additionalProperties": false,
       "description": "Auditable outcome of exactly one policy rule.",
       "properties": {
+        "adjusted_p_value": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Adjusted P Value"
+        },
         "confidence_high": {
           "anyOf": [
             {
@@ -26,6 +50,18 @@
           ],
           "default": null,
           "title": "Confidence High"
+        },
+        "confidence_level": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence Level"
         },
         "confidence_low": {
           "anyOf": [
@@ -51,6 +87,20 @@
           "default": null,
           "title": "Effect"
         },
+        "effective_alpha": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 1.0,
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Effective Alpha"
+        },
         "margin": {
           "title": "Margin",
           "type": "number"
@@ -59,6 +109,19 @@
           "minLength": 1,
           "title": "Metric",
           "type": "string"
+        },
+        "minimum_detectable_effect": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minimum Detectable Effect"
         },
         "n_pairs": {
           "anyOf": [
@@ -72,6 +135,20 @@
           "default": null,
           "title": "N Pairs"
         },
+        "raw_p_value": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw P Value"
+        },
         "reason": {
           "minLength": 1,
           "title": "Reason",
@@ -84,6 +161,20 @@
         },
         "status": {
           "$ref": "#/$defs/GateStatus"
+        },
+        "target_power": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 1.0,
+              "exclusiveMinimum": 0.5,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Power"
         }
       },
       "required": [
@@ -108,6 +199,20 @@
       },
       "title": "Critical Failures",
       "type": "array"
+    },
+    "family_size": {
+      "minimum": 1,
+      "title": "Family Size",
+      "type": "integer"
+    },
+    "familywise_alpha": {
+      "exclusiveMaximum": 1.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Familywise Alpha",
+      "type": "number"
+    },
+    "multiple_comparison_method": {
+      "$ref": "#/$defs/MultipleComparisonMethod"
     },
     "policy_id": {
       "minLength": 1,
@@ -134,12 +239,22 @@
       "minLength": 1,
       "title": "Summary",
       "type": "string"
+    },
+    "target_power": {
+      "exclusiveMaximum": 1.0,
+      "exclusiveMinimum": 0.5,
+      "title": "Target Power",
+      "type": "number"
     }
   },
   "required": [
     "policy_id",
     "status",
     "rule_decisions",
+    "multiple_comparison_method",
+    "familywise_alpha",
+    "family_size",
+    "target_power",
     "summary"
   ],
   "title": "GateDecision",

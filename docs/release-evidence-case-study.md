@@ -4,7 +4,7 @@
 
 Status: reproducible first-party case study, revision 2026-08-29
 
-Scope: MCR 0.4 protocol candidate and M2RIV reference implementation
+Scope: Model Change Report 0.4 and the Merriv reference implementation
 
 ## Summary
 
@@ -12,14 +12,15 @@ Deployable model releases cross optimizer, compiler, runtime, hardware, registry
 and CI boundaries. Native tools can produce excellent local answers while still
 leaving organizations without a portable object that binds the exact artifacts,
 evidence cohort, statistical interpretation, release policy, and first bad build.
-M2RIV proposes the Model Change Report (MCR) as that vendor-neutral evidence
+Merriv proposes the Model Change Report as that vendor-neutral evidence
 envelope. The reference implementation separates replay-stable evidence identity,
 decision-bound report identity, and volatile run identity; requires fail-closed
-PASS/WARN/BLOCK/ERROR semantics;
-and supports producer and consumer conformance without importing M2RIV Python.
+PASS/WARN/INSUFFICIENT_POWER/BLOCK/ERROR semantics;
+and supports producer and consumer conformance without importing Merriv Python.
 
 This case study exercises the approach with a CPU ONNX quantization regression, an
-ONNX opset negative control, an independently implemented standard-library MCR
+ONNX opset negative control, an independently implemented standard-library Model
+Change Report
 producer, a repository-owned Polygraphy producer and MLflow consumer, and a live
 NVIDIA ModelOpt → TensorRT execution on an RTX 4060 Laptop GPU. In the live GPU
 case, all four 629-case ONNX Runtime/TensorRT comparisons matched under the
@@ -38,29 +39,32 @@ question is therefore not whether evaluation or gating exists. It is whether
 release evidence can cross these tools without collapsing into screenshots,
 vendor-specific status fields, or unauditable prose.
 
-MCR does not replace a producer's native oracle. It records the producer's exact
+The report does not replace a producer's native oracle. It records the producer's exact
 evidence and gives downstream CI, promotion, audit, and bisect systems shared
-semantics. M2RIV is one reference producer, verifier, and conformance suite; the
+semantics. Merriv is one reference producer, verifier, and conformance suite; the
 CLI is optional at the protocol boundary.
 
 ## 2. Contract
 
-An MCR binds:
+A Model Change Report binds:
 
 - immutable baseline and candidate snapshot identities;
 - executor/runtime/platform provenance;
 - paired metrics, direction, sample size, uncertainty, and slice scope;
-- a versioned release policy and explicit release authorization;
+- a versioned evaluation policy and explicit policy disposition;
 - content-addressed evidence-set and supplemental-evidence references;
 - a replay-stable `evidence_id`, decision-bound report `id`, and volatile `run_id`;
 - a bounded release plan and, when applicable, ordered-build localization.
 
-`m2riv mcr verify --strict` rehashes every recognized local component and rejects
+`merriv mcr verify --strict` rehashes every recognized local component and rejects
 missing, traversing, symlinked, or identity-inconsistent evidence. It separately
 reports bundle completeness, evidence-body coverage, observation verification,
 and metric recomputability. A valid result means internal integrity; it does not
 mean the producer is authentic. The verifier therefore reports
-`authenticity_verified: false` and `trust_scope: self-consistency-only`.
+`authenticity_verified: false` and `trust_scope: self-consistency-only`, plus
+separate machine-readable trust fields for retrievability, recomputability,
+producer authentication, transparency verification, independent reproduction,
+and deployment authorization.
 
 ## 3. Conformance
 
@@ -68,15 +72,17 @@ The normative producer profile contains fixed PASS, WARN, BLOCK, and ERROR bundl
 plus four mandatory negative fixtures. A producer must match every semantic vector
 and reject tampered identity, missing evidence, unknown version, and decision
 mismatch. A consumer receipt preserves evidence/report identity and decision
-status, and authorizes only PASS; WARN, BLOCK, and ERROR remain fail-closed.
+status, and satisfies the fixed evaluation policy only on PASS; deployment
+authorization remains a separate consumer-side decision.
 
 ```console
-m2riv conformance producer examples/mcr_conformance
-m2riv conformance consumer consumer-receipt.json --fixtures examples/mcr_conformance
+merriv conformance producer examples/mcr_conformance
+merriv conformance consumer consumer-receipt.json --fixtures examples/mcr_conformance
 ```
 
 The repository includes a standard-library-only independent producer, Python ↔
-Rust MCR interoperability, typed Python/Node/Rust identity vectors, a Polygraphy
+Rust Model Change Report interoperability, typed Python/Node/Rust identity
+vectors, a Polygraphy
 reference producer, and an MLflow reference consumer. These are implementation
 evidence, not claims of external adoption or vendor endorsement.
 
@@ -121,7 +127,7 @@ The reviewed fixed MLP weights are exported through a mathematically equivalent
 PyTorch Conv1d graph. ModelOpt 0.46 quantizes the Conv operators. The orchestrator
 then builds target-specific TensorRT engines and asks Polygraphy to run ONNX
 Runtime and TensorRT sequentially for every case. Polygraphy remains the backend
-comparison oracle. M2RIV retains the opaque native RunResults and exit code,
+comparison oracle. Merriv retains the opaque native RunResults and exit code,
 derives its structured per-output verdict through Polygraphy's own Comparator API,
 binds ONNX/engine bytes and build inputs, then applies release policy to the
 TensorRT observations.
@@ -136,7 +142,7 @@ TensorRT observations.
 | ModelOpt INT8 scale 0.60 | 92.85% | 74.47% | 629/629 | BLOCK |
 
 Monotonic localization returned first bad index 2, `build-02-modelopt-int8-
-scale-065`. Four strict MCR verifications succeeded. Every structured backend
+scale-065`. Four strict report verifications succeeded. Every structured backend
 claim links a verified native body and matching exit code; snapshot/build evidence
 binds retained artifact bytes, source revision, calibration cohort, and tool
 versions. A target evidence manifest covers every retained file and strict report.
@@ -145,7 +151,7 @@ The root is
 over 4,514 retained files produced from source revision
 `073d55b95116e5ef2f420de2e424d5d1c5c29061`. The complete archive SHA-256 is
 `06a060000afb40cd9dd6e529b08249863d20a91706030d2b505493572fd21a05`.
-The [GitHub Release evidence pack](https://github.com/niansia/M2RIV/releases/tag/evidence-rtx4060-20260829)
+The [GitHub Release evidence pack](https://github.com/niansia/Merriv/releases/tag/evidence-rtx4060-20260829)
 publishes the exact target root plus a separate checksum file; the repository
 retains the compact receipt and reproduction source.
 
@@ -173,7 +179,7 @@ secret canaries for remote responses; authenticated persistent cache envelopes;
 atomic writes; explicit plugin registration; and fail-closed missing evidence.
 
 HMAC protects a cache only from writers who do not possess the key. It does not
-establish producer identity for an MCR. Trusted release pipelines still need
+establish producer identity for a Model Change Report. Trusted release pipelines still need
 isolated runners, protected secrets/environments, immutable source revisions,
 artifact attestations, and an organizational trust policy above self-consistency
 verification.
@@ -201,8 +207,8 @@ remain reference implementations and are not presented as external adoption.
 
 ## References
 
-- [MCR specification candidate](mcr-specification.md)
-- [MCR conformance suite](mcr-conformance.md)
+- [Model Change Report specification candidate](mcr-specification.md)
+- [Model Change Report conformance suite](mcr-conformance.md)
 - [MLflow model evaluation and validation](https://mlflow.org/docs/latest/ml/evaluation)
 - [MLflow validation implementation](https://mlflow.org/docs/latest/api_reference/_modules/mlflow/models/evaluation/validation.html)
 - [NVIDIA Polygraphy comparator](https://docs.nvidia.com/deeplearning/tensorrt/latest/_static/polygraphy/comparator/toc.html)

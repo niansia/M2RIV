@@ -115,6 +115,8 @@ EvaluateCallback = Callable[[int], StatusLike]
 def _normalize_status(value: StatusLike) -> BisectStatus:
     if isinstance(value, BisectStatus):
         return value
+    if value is GateStatus.INSUFFICIENT_POWER:
+        return BisectStatus.WARN
     raw_value = value.value if isinstance(value, GateStatus) else value
     try:
         return BisectStatus(raw_value.lower())

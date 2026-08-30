@@ -1,24 +1,27 @@
 # Quickstart
 
-This guide runs a complete release gate without downloading a model or calling a
+This guide runs a complete release evaluation without downloading a model or calling a
 remote service. The fixture is intentionally bad so that a correct run returns
 `BLOCK`.
 
-## Install from source
+## Run without cloning
 
 ```console
-git clone https://github.com/niansia/M2RIV.git
-cd M2RIV
-python -m pip install -e .
+uvx --python 3.13 --from git+https://github.com/niansia/Merriv.git merriv demo --output runs/quickstart
 ```
 
 Python 3.11, 3.12, and 3.13 are supported. The base install contains no ONNX,
-GPU, MLflow, or Polygraphy dependency.
+GPU, MLflow, or Polygraphy dependency. Once the first tagged PyPI release is
+published, the equivalent command is
+`uvx --from m2riv merriv demo --output runs/quickstart`.
 
-## Run the recorded-output gate
+## Run the repository fixture
+
+The following variant requires a repository checkout because it uses editable
+JSONL and YAML fixtures:
 
 ```console
-m2riv compare \
+merriv compare \
   examples/recorded_compare/baseline.jsonl \
   examples/recorded_compare/candidate.jsonl \
   --suite examples/recorded_compare/suite.jsonl \
@@ -30,17 +33,20 @@ m2riv compare \
 Expected decision:
 
 ```text
-DECISION: BLOCK
+EVALUATION DECISION: BLOCK
+EVALUATION POLICY SATISFIED: false
+DEPLOYMENT AUTHORIZATION: NOT EVALUATED (consumer-side)
 ```
 
-Metric values remain in the generated MCR rather than being duplicated here.
+Metric values remain in the generated Model Change Report rather than being
+duplicated here.
 The exact console formatting may evolve; the decision, evidence identity, and
 bounded output contracts are covered by tests and schemas.
 
 ## Verify the bundle
 
 ```console
-m2riv mcr verify runs/quickstart --strict
+merriv mcr verify runs/quickstart --strict
 ```
 
 Strict verification rehashes every recognized local component. It checks bundle
@@ -67,17 +73,19 @@ fixtures and reproducible examples are retained in the repository.
 | `0` | PASS |
 | `2` | BLOCK |
 | `3` | Invalid, incomplete, or unsafe evidence |
-| `4` | WARN not explicitly authorized by policy |
+| `4` | WARN or INSUFFICIENT_POWER |
 
-WARN is fail-closed by default.
+WARN is fail-closed by default. INSUFFICIENT_POWER is always fail-closed, even
+when a policy explicitly allows WARN.
 
 ## Next examples
 
+- [Real historical llama.cpp #22544 replay](../examples/historical_llamacpp_22544/README.md)
 - [CPU ONNX quantization regression](../examples/onnx_quantization/README.md)
 - [ONNX opset control](../examples/onnx_opset_upgrade/README.md)
 - [NVIDIA ModelOpt/TensorRT vertical](../examples/nvidia_tensorrt_vertical/README.md)
 - [OpenAI-compatible endpoint comparison](../examples/api_compare/README.md)
-- [Independent MCR producer](../examples/independent_producer/README.md)
+- [Independent Model Change Report producer](../examples/independent_producer/README.md)
 
 ## Development environment
 

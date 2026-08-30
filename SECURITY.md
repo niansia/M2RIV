@@ -1,15 +1,15 @@
 # Security Policy
 
-M2RIV is pre-alpha release-engineering software. It processes model artifacts,
+Merriv is pre-alpha release-engineering software. It processes model artifacts,
 evaluation inputs and outputs, policies, cache records, remote responses, and
 optional plugin code. Treat all of those as sensitive and untrusted unless your
-deployment establishes otherwise. Do not use M2RIV as the sole control for a
+deployment establishes otherwise. Do not use Merriv as the sole control for a
 safety-critical release.
 
 ## Reporting a vulnerability
 
 Do not open a public issue for a suspected vulnerability. Submit a
-[private security advisory](https://github.com/niansia/M2RIV/security/advisories/new)
+[private security advisory](https://github.com/niansia/Merriv/security/advisories/new)
 for this repository. If that control is unavailable, contact the repository owner
 privately through the [verified GitHub profile](https://github.com/niansia) and
 include the affected version, reproduction steps, impact, and any suggested
@@ -41,22 +41,24 @@ owner-side release checklist items before public v0.1.
   for self-hosted inference when no credential is sent.
 - Cache envelopes are HMAC-authenticated. With no configuration the HMAC key is
   random and process-local, so a new process treats old entries as misses. Set a
-  secret `M2RIV_CACHE_KEY` of at least 32 bytes only when deliberate cross-run or
-  multi-worker reuse is required. Anyone who can read that key can forge entries;
-  do not place it in reports, logs, command lines, or repository variables.
-- Reports attest what M2RIV observed under a named policy and runtime. They do not
+  secret `MERRIV_CACHE_KEY` of at least 32 bytes only when deliberate cross-run or
+  multi-worker reuse is required. The legacy `M2RIV_CACHE_KEY` name remains a
+  compatibility fallback. Anyone who can read that key can forge entries; do not
+  place it in reports, logs, command lines, or repository variables.
+- Reports attest what Merriv observed under a named policy and runtime. They do not
   prove that an artifact is safe, unbiased, or suitable for every distribution.
-  `m2riv mcr verify` proves contract validity and content self-consistency only.
+  `merriv mcr verify` proves contract validity and content self-consistency only.
   Its machine-readable result therefore reports `authenticity_verified: false`
   and `trust_scope: self-consistency-only`; producer signatures are not yet part
-  of the MCR contract. Use `--strict` for a release gate so omitted linked local
+  of the Model Change Report contract. Use `--strict` for a release gate so omitted linked local
   evidence is an error rather than a warning.
 
 ## Fail-closed controls
 
-- `PASS` is the only release-allowed status by default. `WARN` requires the policy
-  author to set `allow_warn: true`; `BLOCK`, execution errors, missing pairs,
-  malformed inputs, and unresolved evidence are not release-allowed.
+- `PASS` is the only status that satisfies the default evaluation policy. `WARN`
+  requires the policy author to set `allow_warn: true`; `INSUFFICIENT_POWER`,
+  `BLOCK`, execution errors, missing pairs, malformed inputs, and unresolved
+  evidence do not satisfy it. Deployment authorization remains consumer-side.
 - JSONL/YAML parsing, cache envelopes, network responses, retry/time budgets,
   plugin cardinality, evidence cardinality, and execution plans are bounded.
 - JSON rejects duplicate keys, non-finite numbers, excessive nesting, and invalid
@@ -72,7 +74,7 @@ owner-side release checklist items before public v0.1.
 - Execution-driven bisect manifests accept only `checkpoint` and `artifact`.
   Commands and unknown fields are rejected.
 - Report bundles verify content identities and evidence-set references before
-  atomically publishing the MCR and its evidence manifest. Report paths, local
+  atomically publishing the Model Change Report and its evidence manifest. Report paths, local
   evidence references, and ONNX inputs are read or written without following
   symbolic links or Windows reparse points; inspected ONNX bytes are the bytes
   subsequently parsed or executed.

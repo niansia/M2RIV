@@ -1,6 +1,6 @@
-# Contributing to M2RIV
+# Contributing to Merriv
 
-M2RIV is contract-first infrastructure. Before proposing a large feature, open an
+Merriv is contract-first infrastructure. Before proposing a large feature, open an
 RFC that describes the user problem, compatibility impact, evidence semantics,
 security boundary, and acceptance tests.
 
@@ -17,11 +17,13 @@ For code changes:
 5. Do not add telemetry, remote execution, or untrusted-code loading by default.
 6. Treat public schemas, report formats, and plugin contracts as compatibility
    boundaries.
-7. Run MCR conformance and cross-language identity checks for protocol changes.
+7. Run Model Change Report conformance and cross-language identity checks for
+   protocol changes.
 8. Add migration and protocol-changelog entries for any breaking public change.
 
 See [SUPPORT.md](SUPPORT.md) for issue routing,
-[docs/protocol-governance.md](docs/protocol-governance.md) for MCR changes, and
+[docs/protocol-governance.md](docs/protocol-governance.md) for Model Change Report
+changes, and
 [docs/external-reproduction-guide.md](docs/external-reproduction-guide.md) for
 corpus or GPU evidence.
 
@@ -37,3 +39,25 @@ Artifact parser or runtime-adapter contributions must additionally document:
 - the exact fields that enter snapshot/cache identity;
 - malformed-artifact and secret-canary tests;
 - the isolation recommendation for hostile artifacts.
+
+## Bootstrap project stewardship
+
+`@niansia` is the current bootstrap maintainer for the evidence kernel, releases,
+and security. This is a single-maintainer risk, not a claim of mature governance.
+Review authority should follow sustained public work and compatibility/security
+judgment; breaking protocol changes need a public rationale and review window,
+and two approvals once a second maintainer exists.
+
+The project has no publicly verified external production adopter or independently
+maintained Model Change Report implementation. Repository-owned Python, Node,
+Rust, Polygraphy,
+and MLflow references are conformance evidence only. An external-use claim must
+link a real release, independent implementation, or reproduction with its exact
+revision, role, evidence, date, and limitations; stars, downloads, plans, and
+repository-owned dry runs do not qualify.
+
+Routine reversible work uses pull-request review. Public schema, identity, gate,
+trust-boundary, or protocol changes require a short decision record stating the
+problem, alternatives tried, trade-offs, migration, and acceptance evidence.
+Security reports continue to follow [SECURITY.md](SECURITY.md), including private
+reporting and embargo handling.

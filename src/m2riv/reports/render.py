@@ -34,7 +34,11 @@ def render_markdown(report: ModelChangeReport) -> str:
     lines = [
         "# Model Change Report",
         "",
-        f"**Decision: {report.decision.status.value}**",
+        f"**Evaluation decision: {report.decision.status.value}**",
+        "",
+        "- Evaluation policy satisfied: "
+        f"`{str(report.decision.evaluation_policy_satisfied).lower()}`",
+        "- Deployment authorization: `not-evaluated` (consumer-side)",
         "",
         f"- Baseline: `{report.baseline_snapshot_id}`",
         f"- Candidate: `{report.candidate_snapshot_id}`",
@@ -44,17 +48,18 @@ def render_markdown(report: ModelChangeReport) -> str:
         "",
         "## Metric changes",
         "",
-        "| Metric | Scope | Direction | Unit | Baseline | Candidate | Delta | 95% interval | n |",
+        "| Metric | Scope | Direction | Unit | Baseline | Candidate | Delta | CI | n |",
         "|---|---|---|---|---:|---:|---:|---:|---:|",
     ]
     if report.release_plan_id is not None:
-        lines.insert(8, f"- Release plan: `{report.release_plan_id}`")
+        lines.insert(12, f"- Release plan: `{report.release_plan_id}`")
     for metric in report.metrics:
         interval = "-"
         if metric.interval_lower is not None and metric.interval_upper is not None:
             interval = (
                 f"[{_format_metric(metric.interval_lower)}, "
-                f"{_format_metric(metric.interval_upper)}]"
+                f"{_format_metric(metric.interval_upper)}] "
+                f"({metric.confidence_level:.1%})"
             )
         lines.append(
             f"| {_markdown_text(metric.metric_id, table=True)} | "
@@ -127,7 +132,18 @@ def render_markdown(report: ModelChangeReport) -> str:
         )
 
     if report.decision.findings:
-        lines.extend(["", "## Gate findings", ""])
+        lines.extend(
+            [
+                "",
+                "## Gate findings",
+                "",
+                f"Multiplicity: `{report.decision.multiple_comparison_method}` · "
+                f"family alpha: `{report.decision.familywise_alpha}` · "
+                f"family size: `{report.decision.family_size}` · "
+                f"target power: `{report.decision.target_power}`",
+                "",
+            ]
+        )
         lines.extend(
             f"- **{finding.status.value}** "
             f"{_markdown_text(finding.rule_id)}: {_markdown_text(finding.message)}"

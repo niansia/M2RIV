@@ -17,7 +17,7 @@ A reproducible self-certification record must include:
 
 Results expire when the implementation, MCR minor/major version, canonical
 identity rules, or relevant decision semantics change. A failing or skipped
-profile cannot be represented as passing. M2RIV names and marks remain governed
+profile cannot be represented as passing. Merriv names and marks remain governed
 by the project brand policy; passing the suite grants no trademark license.
 
 The future path to neutral certification is: two independent implementations,

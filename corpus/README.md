@@ -9,8 +9,9 @@ or locally and are not silently treated as committed evidence.
 python tools/verify_regression_corpus.py
 ```
 
-The initial corpus contains two CI-verified regressions, one CI-verified negative
-control, and one target-verified ModelOpt/TensorRT regression. Target-verified is
-not the same as independently reproduced: the target is still ten independently
-reproduced real cases, and planned cases do not count. See
+The corpus contains two CI-verified regressions, one CI-verified negative control,
+one target-verified ModelOpt/TensorRT regression, and one source-anchored replay of
+a real llama.cpp regression. A historical replay is not a fresh upstream binary
+execution, and target-verified is not independently reproduced. The target is
+still ten independently reproduced real cases; planned cases do not count. See
 [`backlog.md`](backlog.md).

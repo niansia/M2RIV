@@ -147,6 +147,65 @@ def test_insufficient_evidence_never_passes_and_policy_can_error() -> None:
     assert error.status is GateStatus.ERROR
 
 
+def test_holm_bonferroni_uses_one_family_and_adjusted_intervals() -> None:
+    policy = GatePolicy(
+        policy_id="two-metric-family",
+        rules=(
+            GateRule(rule_id="quality", metric="quality", margin=0.1),
+            GateRule(rule_id="safety", metric="safety", margin=0.1),
+        ),
+        familywise_alpha=0.05,
+    )
+    evidence = GateEvaluation(
+        evidence=tuple(
+            MetricEvidence(
+                metric=metric,
+                estimate=paired_bootstrap(
+                    [1.0] * 20,
+                    [1.0] * 20,
+                    confidence_level=0.95,
+                    additional_confidence_levels=(0.975,),
+                    threshold=-0.1,
+                    resamples=200,
+                ),
+            )
+            for metric in ("quality", "safety")
+        )
+    )
+
+    decision = evaluate_gate(policy, evidence)
+
+    assert decision.status is GateStatus.PASS
+    assert decision.family_size == 2
+    assert decision.familywise_alpha == 0.05
+    assert {item.confidence_level for item in decision.rule_decisions} == {0.975, 0.95}
+    assert all(item.adjusted_p_value == 0.0 for item in decision.rule_decisions)
+
+
+def test_explicit_mde_requirement_returns_insufficient_power() -> None:
+    policy = GatePolicy(
+        policy_id="powered-slice",
+        rules=(
+            GateRule(
+                rule_id="rare-slice",
+                metric="quality",
+                margin=0.05,
+                max_mde=0.05,
+            ),
+        ),
+        insufficient_evidence_status=GateStatus.WARN,
+    )
+    evidence = _evaluation([0.0, 1.0, 0.0, 1.0], [1.0, 0.0, 1.0, 0.0])
+
+    decision = evaluate_gate(policy, evidence)
+
+    rule = decision.rule_decisions[0]
+    assert decision.status is GateStatus.INSUFFICIENT_POWER
+    assert rule.minimum_detectable_effect is not None
+    assert rule.minimum_detectable_effect > 0.05
+    assert "MDE" in rule.reason
+
+
 def test_missing_evidence_is_error() -> None:
     decision = evaluate_gate(_policy(), GateEvaluation())
 

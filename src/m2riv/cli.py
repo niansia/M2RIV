@@ -31,6 +31,7 @@ from m2riv.artifacts import (
     compare_onnx_numerics,
     inspect_artifact,
 )
+from m2riv.attestation import create_mcr_predicate, create_mcr_statement
 from m2riv.bisect import (
     BisectMode,
     BisectOutcome,
@@ -52,12 +53,19 @@ from m2riv.core.schema import export_schemas
 from m2riv.demo import run_rare_slice_demo
 from m2riv.engine import ObservationCache
 from m2riv.gate import GateStatus
+from m2riv.importers import (
+    load_normalized_polygraphy,
+    normalize_polygraphy_results,
+    write_recorded_inputs,
+)
 from m2riv.io import load_policy, load_suite
+from m2riv.oci import OCI_IMAGE_MANIFEST_MEDIA_TYPE, create_mcr_oci_layout
 from m2riv.pipeline import ReleaseComparison, compare_exact_match
 from m2riv.planning import compile_release_plan
 from m2riv.plugins import builtin_metric_registry
 from m2riv.reports import (
     MCRVerificationError,
+    ModelChangeReport,
     ReportBundle,
     render_markdown,
     verify_report_bundle,
@@ -66,18 +74,24 @@ from m2riv.reports import (
 from m2riv.target import verify_target_evidence_manifest
 
 app = typer.Typer(
-    name="m2riv",
+    name="merriv",
     no_args_is_help=True,
-    help="Inspect every model change before it ships.",
+    help='Merriv ("MEH-riv"): inspect every model change before it ships.',
 )
-schema_app = typer.Typer(help="Manage public M2RIV contracts.")
+schema_app = typer.Typer(help="Manage public Merriv contracts.")
 artifact_app = typer.Typer(help="Inspect and compare deployment artifacts without inference.")
 mcr_app = typer.Typer(help="Validate portable Model Change Report bundles.")
-conformance_app = typer.Typer(help="Test independent MCR producers and consumers.")
+conformance_app = typer.Typer(
+    help="Test independent Model Change Report producers and consumers."
+)
+import_app = typer.Typer(
+    help="Translate retained external-tool evidence into Model Change Report inputs."
+)
 app.add_typer(schema_app, name="schema")
 app.add_typer(artifact_app, name="artifact")
 app.add_typer(mcr_app, name="mcr")
 app.add_typer(conformance_app, name="conformance")
+app.add_typer(import_app, name="import")
 
 
 class BisectAdapterKind(StrEnum):
@@ -90,9 +104,14 @@ class OnnxOutputMode(StrEnum):
     ARGMAX = "argmax"
 
 
+class PolygraphySourceFormat(StrEnum):
+    NATIVE = "native"
+    NORMALIZED = "normalized"
+
+
 @app.command()
 def version() -> None:
-    """Print the installed M2RIV version."""
+    """Print the installed Merriv version."""
     typer.echo(__version__)
 
 
@@ -104,7 +123,7 @@ def mcr_verify_command(
         typer.Option("--strict", help="Fail when any linked evidence cannot be rehashed."),
     ] = False,
 ) -> None:
-    """Verify MCR self-consistency, identities, manifests, and linked evidence."""
+    """Verify Model Change Report identities, manifests, and linked evidence."""
     try:
         result = verify_report_bundle(source, require_complete=strict)
     except (OSError, MCRVerificationError) as error:
@@ -117,7 +136,7 @@ def mcr_verify_command(
 def mcr_verify_target_command(
     source: Annotated[Path, typer.Argument(exists=True, readable=True)],
 ) -> None:
-    """Verify a target evidence root, every retained file, and every MCR bundle."""
+    """Verify a target evidence root, every retained file, and every report bundle."""
     try:
         result = verify_target_evidence_manifest(source)
     except (OSError, MCRVerificationError) as error:
@@ -126,11 +145,93 @@ def mcr_verify_target_command(
     typer.echo(result.model_dump_json(indent=2))
 
 
+@mcr_app.command("predicate")
+def mcr_predicate_command(
+    source: Annotated[Path, typer.Argument(exists=True, readable=True)],
+) -> None:
+    """Emit a Model Change Report predicate for an in-toto attestor."""
+    try:
+        predicate = create_mcr_predicate(_load_strict_mcr(source))
+    except (OSError, ValueError, MCRVerificationError) as error:
+        typer.echo(f"ERROR: {error}", err=True)
+        raise typer.Exit(code=3) from error
+    typer.echo(predicate.model_dump_json(indent=2))
+
+
+def _load_strict_mcr(source: Path) -> ModelChangeReport:
+    verify_report_bundle(source, require_complete=True)
+    report_path = source / "mcr-report.json" if source.is_dir() else source
+    return ModelChangeReport.model_validate_json(report_path.read_text("utf-8"))
+
+
+@mcr_app.command("statement")
+def mcr_statement_command(
+    source: Annotated[Path, typer.Argument(exists=True, readable=True)],
+    subject_name: Annotated[str, typer.Option("--subject-name")],
+    subject_sha256: Annotated[str, typer.Option("--subject-sha256")],
+) -> None:
+    """Emit an unsigned in-toto v1 Statement bound to an artifact digest."""
+
+    try:
+        report = _load_strict_mcr(source)
+        statement = create_mcr_statement(
+            report,
+            subject_name=subject_name,
+            subject_sha256=subject_sha256,
+        )
+    except (OSError, ValueError, MCRVerificationError) as error:
+        typer.echo(f"ERROR: {error}", err=True)
+        raise typer.Exit(code=3) from error
+    typer.echo(statement.model_dump_json(indent=2, by_alias=True))
+
+
+@mcr_app.command("oci-layout")
+def mcr_oci_layout_command(
+    source: Annotated[Path, typer.Argument(exists=True, readable=True)],
+    subject_name: Annotated[str, typer.Option("--subject-name")],
+    subject_digest: Annotated[str, typer.Option("--subject-digest")],
+    subject_size: Annotated[int, typer.Option("--subject-size", min=0)],
+    destination: Annotated[Path, typer.Option("--output", "-o")],
+    subject_media_type: Annotated[
+        str,
+        typer.Option("--subject-media-type"),
+    ] = OCI_IMAGE_MANIFEST_MEDIA_TYPE,
+) -> None:
+    """Build an OCI 1.1 layout with an unsigned report Statement referrer."""
+
+    try:
+        report = _load_strict_mcr(source)
+        result = create_mcr_oci_layout(
+            report,
+            destination,
+            subject_name=subject_name,
+            subject_digest=subject_digest,
+            subject_size=subject_size,
+            subject_media_type=subject_media_type,
+        )
+    except (OSError, ValueError, MCRVerificationError) as error:
+        typer.echo(f"ERROR: {error}", err=True)
+        raise typer.Exit(code=3) from error
+    typer.echo(
+        json.dumps(
+            {
+                "oci_layout": str(result.destination),
+                "manifest_digest": result.manifest_digest,
+                "statement_digest": result.statement_digest,
+                "artifact_type": result.manifest.artifact_type,
+                "deployment_authorization": "not-evaluated",
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+
+
 @conformance_app.command("producer")
 def conformance_producer_command(
     source: Annotated[Path, typer.Argument(exists=True, file_okay=False, readable=True)],
 ) -> None:
-    """Verify fixed four-state and must-reject producer conformance vectors."""
+    """Verify fixed decision-state and must-reject producer conformance vectors."""
     try:
         result = verify_producer_conformance(source)
     except (OSError, MCRConformanceError) as error:
@@ -149,7 +250,7 @@ def conformance_consumer_command(
             exists=True,
             file_okay=False,
             readable=True,
-            help="Normative PASS/WARN/BLOCK/ERROR producer fixture directory.",
+            help="Normative five-state producer fixture directory.",
         ),
     ] = Path("examples/mcr_conformance"),
 ) -> None:
@@ -283,8 +384,12 @@ def _print_comparison(result: ReleaseComparison, bundle: ReportBundle) -> None:
             else f"{metric.delta:+.3f} {metric.unit}"
         )
         typer.echo(f"{metric_id:<32} {delta}  n={metric.sample_size}")
-    typer.echo(f"DECISION: {result.report.decision.status.value}")
-    typer.echo(f"RELEASE ALLOWED: {str(result.report.decision.allowed).lower()}")
+    typer.echo(f"EVALUATION DECISION: {result.report.decision.status.value}")
+    typer.echo(
+        "EVALUATION POLICY SATISFIED: "
+        f"{str(result.report.decision.evaluation_policy_satisfied).lower()}"
+    )
+    typer.echo("DEPLOYMENT AUTHORIZATION: NOT EVALUATED (consumer-side)")
     typer.echo(f"REPORT: {bundle.markdown_path}")
 
 
@@ -299,9 +404,9 @@ def _write_github_summary(result: ReleaseComparison) -> None:
         typer.echo("WARN: could not write GitHub Step Summary", err=True)
 
 
-def _raise_for_release_decision(result: ReleaseComparison) -> None:
-    """Map a non-allowed release decision to a stable CI exit code."""
-    if result.report.decision.allowed:
+def _raise_for_evaluation_decision(result: ReleaseComparison) -> None:
+    """Map an unsatisfied evaluation policy to a stable CI exit code."""
+    if result.report.decision.evaluation_policy_satisfied:
         return
     if result.gate.status is GateStatus.BLOCK:
         raise typer.Exit(code=2)
@@ -309,7 +414,63 @@ def _raise_for_release_decision(result: ReleaseComparison) -> None:
         raise typer.Exit(code=3)
     if result.gate.status is GateStatus.WARN:
         raise typer.Exit(code=4)
+    if result.gate.status is GateStatus.INSUFFICIENT_POWER:
+        raise typer.Exit(code=4)
     raise typer.Exit(code=3)
+
+
+def _run_recorded_comparison(
+    *,
+    baseline: Path,
+    candidate: Path,
+    suite: Path,
+    policy: Path,
+    destination: Path,
+    slice_keys: tuple[str, ...],
+    family: ModelFamily,
+    resamples: int,
+    confidence_level: float,
+) -> tuple[ReleaseComparison, ReportBundle]:
+    cases = load_suite(suite)
+    gate_policy = load_policy(policy)
+    baseline_snapshot = build_local_snapshot(
+        baseline,
+        model_family=family,
+        execution_config={"adapter": "recorded-output-v1"},
+        labels={"role": "baseline"},
+    )
+    candidate_snapshot = build_local_snapshot(
+        candidate,
+        model_family=family,
+        execution_config={"adapter": "recorded-output-v1"},
+        labels={"role": "candidate"},
+    )
+    result = compare_exact_match(
+        baseline=RecordedAdapter.from_jsonl(baseline, baseline_snapshot),
+        candidate=RecordedAdapter.from_jsonl(candidate, candidate_snapshot),
+        cases=cases,
+        policy=gate_policy,
+        cache=ObservationCache(destination / ".cache"),
+        profile=RuntimeProfile(seed=0),
+        slice_keys=slice_keys,
+        baseline_adapter_fingerprint="m2riv.recorded@1",
+        candidate_adapter_fingerprint="m2riv.recorded@1",
+        resamples=resamples,
+        confidence_level=confidence_level,
+    )
+    bundle = write_report_bundle(
+        result.report,
+        destination,
+        release_plan=result.plan,
+        evidence_manifest=result.evidence_manifest,
+    )
+    return result, bundle
+
+
+def _finish_comparison(result: ReleaseComparison, bundle: ReportBundle) -> None:
+    _print_comparison(result, bundle)
+    _write_github_summary(result)
+    _raise_for_evaluation_decision(result)
 
 
 @app.command("compare")
@@ -324,48 +485,79 @@ def compare_command(
     resamples: Annotated[int, typer.Option(min=100)] = 2_000,
     confidence_level: Annotated[float, typer.Option(min=0.000001, max=0.999999)] = 0.95,
 ) -> None:
-    """Compare two recorded-output JSONL artifacts and apply a release policy."""
+    """Compare two recorded-output JSONL artifacts and apply an evaluation policy."""
+
     try:
-        cases = load_suite(suite)
-        gate_policy = load_policy(policy)
-        baseline_snapshot = build_local_snapshot(
-            baseline,
-            model_family=family,
-            execution_config={"adapter": "recorded-output-v1"},
-            labels={"role": "baseline"},
-        )
-        candidate_snapshot = build_local_snapshot(
-            candidate,
-            model_family=family,
-            execution_config={"adapter": "recorded-output-v1"},
-            labels={"role": "candidate"},
-        )
-        result = compare_exact_match(
-            baseline=RecordedAdapter.from_jsonl(baseline, baseline_snapshot),
-            candidate=RecordedAdapter.from_jsonl(candidate, candidate_snapshot),
-            cases=cases,
-            policy=gate_policy,
-            cache=ObservationCache(destination / ".cache"),
-            profile=RuntimeProfile(seed=0),
+        result, bundle = _run_recorded_comparison(
+            baseline=baseline,
+            candidate=candidate,
+            suite=suite,
+            policy=policy,
+            destination=destination,
             slice_keys=tuple(slice_key or ()),
-            baseline_adapter_fingerprint="m2riv.recorded@1",
-            candidate_adapter_fingerprint="m2riv.recorded@1",
+            family=family,
             resamples=resamples,
             confidence_level=confidence_level,
-        )
-        bundle = write_report_bundle(
-            result.report,
-            destination,
-            release_plan=result.plan,
-            evidence_manifest=result.evidence_manifest,
         )
     except (OSError, OpenAICompatibleError, ValueError) as error:
         typer.echo(f"ERROR: {error}", err=True)
         raise typer.Exit(code=3) from error
+    _finish_comparison(result, bundle)
 
-    _print_comparison(result, bundle)
-    _write_github_summary(result)
-    _raise_for_release_decision(result)
+
+@import_app.command("polygraphy")
+def import_polygraphy_command(
+    source: Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True)],
+    policy: Annotated[Path, typer.Option("--policy", exists=True, readable=True)],
+    destination: Annotated[Path, typer.Option("--output", "-o")] = Path(
+        "runs/polygraphy-import"
+    ),
+    source_format: Annotated[PolygraphySourceFormat, typer.Option("--format")] = (
+        PolygraphySourceFormat.NATIVE
+    ),
+    baseline_runner: Annotated[str, typer.Option("--baseline-runner")] = "onnxrt-runner",
+    candidate_runner: Annotated[str, typer.Option("--candidate-runner")] = "trt-runner",
+    absolute_tolerance: Annotated[float, typer.Option("--atol", min=0)] = 1e-5,
+    relative_tolerance: Annotated[float, typer.Option("--rtol", min=0)] = 1e-5,
+    translate_only: Annotated[bool, typer.Option("--translate-only")] = False,
+    resamples: Annotated[int, typer.Option(min=100)] = 2_000,
+    confidence_level: Annotated[float, typer.Option(min=0.000001, max=0.999999)] = 0.95,
+) -> None:
+    """Import retained Polygraphy results and produce a Model Change Report."""
+
+    try:
+        if source_format is PolygraphySourceFormat.NORMALIZED:
+            payload = load_normalized_polygraphy(source)
+        else:
+            payload = normalize_polygraphy_results(
+                source,
+                baseline_runner=baseline_runner,
+                candidate_runner=candidate_runner,
+                absolute_tolerance=absolute_tolerance,
+                relative_tolerance=relative_tolerance,
+            )
+        translated = destination / "translated"
+        baseline, candidate, suite = write_recorded_inputs(payload, translated)
+        if translate_only:
+            typer.echo(str(translated))
+            return
+        result, bundle = _run_recorded_comparison(
+            baseline=baseline,
+            candidate=candidate,
+            suite=suite,
+            policy=policy,
+            destination=destination,
+            slice_keys=(),
+            family=ModelFamily.CUSTOM,
+            resamples=resamples,
+            confidence_level=confidence_level,
+        )
+    except (OSError, RuntimeError, ValueError) as error:
+        typer.echo(f"ERROR: {error}", err=True)
+        raise typer.Exit(code=3) from error
+    if source_format is PolygraphySourceFormat.NORMALIZED:
+        typer.echo("SOURCE TRUST: normalized interchange (not live TensorRT evidence)")
+    _finish_comparison(result, bundle)
 
 
 @app.command("plan")
@@ -406,8 +598,8 @@ def compare_api_command(
     policy: Annotated[Path, typer.Option("--policy", exists=True, readable=True)],
     destination: Annotated[Path, typer.Option("--output", "-o")] = Path("runs/api-compare"),
     slice_key: Annotated[list[str] | None, typer.Option("--slice-key")] = None,
-    baseline_api_key_env: Annotated[str, typer.Option()] = "M2RIV_BASELINE_API_KEY",
-    candidate_api_key_env: Annotated[str, typer.Option()] = "M2RIV_CANDIDATE_API_KEY",
+    baseline_api_key_env: Annotated[str, typer.Option()] = "MERRIV_BASELINE_API_KEY",
+    candidate_api_key_env: Annotated[str, typer.Option()] = "MERRIV_CANDIDATE_API_KEY",
     baseline_credential_scope: Annotated[str, typer.Option()] = "baseline",
     candidate_credential_scope: Annotated[str, typer.Option()] = "candidate",
     baseline_revision: Annotated[str | None, typer.Option()] = None,
@@ -475,7 +667,7 @@ def compare_api_command(
 
     _print_comparison(result, bundle)
     _write_github_summary(result)
-    _raise_for_release_decision(result)
+    _raise_for_evaluation_decision(result)
 
 
 @app.command("bisect")

@@ -1,6 +1,6 @@
 # Plugin SDK and execution contracts
 
-M2RIV exposes three narrow extension boundaries:
+Merriv exposes three narrow extension boundaries:
 
 1. `ModelAdapter` resolves a model snapshot and produces observations.
 2. `PairedMetric` maps paired observations to numeric baseline/candidate samples.
@@ -75,5 +75,5 @@ identity and dispatched/returned counts for baseline and candidate.
 The SDK is not a Python sandbox. Do not import untrusted plugin packages into a
 privileged CI process. Use signed/reviewed packages, pinned hashes, a restricted
 worker, network deny-by-default, filesystem isolation, and an external secret
-manager. M2RIV validates outputs and provenance but cannot undo arbitrary code
+manager. Merriv validates outputs and provenance but cannot undo arbitrary code
 execution already granted by the host.

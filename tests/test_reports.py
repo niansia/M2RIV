@@ -212,7 +212,8 @@ def test_opposite_verdicts_share_evidence_but_never_report_identity() -> None:
 
 def test_markdown_surfaces_decision_and_slice() -> None:
     markdown = render_markdown(sample_report())
-    assert "**Decision: BLOCK**" in markdown
+    assert "**Evaluation decision: BLOCK**" in markdown
+    assert "Deployment authorization: `not-evaluated`" in markdown
     assert "rare_class_recall" in markdown
     assert "slice:rare" in markdown
 
@@ -241,7 +242,7 @@ def test_partial_or_reversed_interval_is_rejected() -> None:
 
 
 def test_release_disposition_matches_terminal_statuses() -> None:
-    for status in (MCRStatus.ERROR, MCRStatus.BLOCK):
+    for status in (MCRStatus.ERROR, MCRStatus.BLOCK, MCRStatus.INSUFFICIENT_POWER):
         with pytest.raises(ValidationError, match="allowed must be False"):
             MCRDecision(status=status, allowed=True)
     with pytest.raises(ValidationError, match="allowed must be True"):
@@ -260,7 +261,7 @@ def test_report_bundle_is_written_with_canonical_names(tmp_path: Path) -> None:
     assert bundle.junit_path.name == "junit.xml"
     assert bundle.sarif_path.name == "results.sarif"
     assert ModelChangeReport.model_validate_json(bundle.json_path.read_text("utf-8")) == report
-    assert "Decision: BLOCK" in bundle.markdown_path.read_text("utf-8")
+    assert "Evaluation decision: BLOCK" in bundle.markdown_path.read_text("utf-8")
     with pytest.raises(ValueError, match="MCR identity"):
         write_report_bundle(
             report.model_copy(update={"run_id": content_id("tampered-run")}),
@@ -808,4 +809,6 @@ def test_warn_ci_rendering_respects_release_disposition(
     sarif = json.loads(render_sarif(report))
     assert junit.attrib["failures"] == junit_failures
     assert sarif["runs"][0]["results"][0]["level"] == sarif_level
-    assert sarif["runs"][0]["results"][0]["properties"]["releaseAllowed"] is allowed
+    properties = sarif["runs"][0]["results"][0]["properties"]
+    assert properties["evaluationPolicySatisfied"] is allowed
+    assert properties["deploymentAuthorization"] == "not-evaluated"

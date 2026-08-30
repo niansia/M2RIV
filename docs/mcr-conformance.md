@@ -6,13 +6,14 @@ fixtures with fixed semantic/content vectors and mandatory rejection tests.
 
 ## Producer profile
 
-The normative suite contains exact `PASS`, `WARN`, `BLOCK`, and `ERROR` reports.
+The normative suite contains exact `PASS`, `WARN`, `INSUFFICIENT_POWER`, `BLOCK`,
+and `ERROR` reports.
 The command verifies each fixture strictly, recomputes report/evidence/run IDs,
-compares the entire normalized report to the fixed vector, and requires all four
+compares the entire normalized report to the fixed vector, and requires all five
 decision states:
 
 ```console
-m2riv conformance producer examples/mcr_conformance
+merriv conformance producer examples/mcr_conformance
 ```
 
 The same profile MUST reject four negative fixtures:
@@ -28,29 +29,32 @@ execution against an external runtime.
 
 ## Consumer profile
 
-A consumer reads all four normative fixtures and emits a deterministic
+A consumer reads all five normative fixtures and emits a deterministic
 `ConsumerConformanceReceipt`. Every observation preserves profile, report ID,
-evidence ID, decision, and authorization. Only PASS may authorize release.
+evidence ID, decision, and whether the fixed fail-closed evaluation policy is
+satisfied. Only PASS satisfies that conformance policy; the receipt never
+authorizes deployment.
 
 ```console
 python integrations/mlflow_mcr/consume.py --emit-conformance-receipt \
   examples/mcr_conformance integrations/mlflow_mcr/consumer-receipt.json
-m2riv conformance consumer integrations/mlflow_mcr/consumer-receipt.json \
+merriv conformance consumer integrations/mlflow_mcr/consumer-receipt.json \
   --fixtures examples/mcr_conformance
 ```
 
 The verifier rehashes the receipt and independently verifies the referenced
-fixture semantics. A consumer that authorizes WARN, BLOCK, or ERROR fails.
+fixture semantics. A consumer that marks WARN, INSUFFICIENT_POWER, BLOCK, or
+ERROR as satisfying the fixed conformance policy fails.
 
 ## Full identity and cross-language profile
 
 The standard-library-only independent producer covers report/evidence/run
 identity, release plan, evidence manifest/set, artifact diff, and numerical diff
-without importing M2RIV:
+without importing Merriv:
 
 ```console
 python examples/independent_producer/generate_bundle.py --check
-m2riv mcr verify examples/mcr_conformance/full --strict
+merriv mcr verify examples/mcr_conformance/full --strict
 node examples/content_identity/verify_golden.mjs
 cargo run --manifest-path reference/mcr-reference-rust/Cargo.toml -- \
   vectors examples/content_identity/golden-vectors.json
@@ -58,7 +62,7 @@ cargo run --manifest-path reference/mcr-reference-rust/Cargo.toml -- \
   float-vectors examples/content_identity/float-vectors.json
 cargo run --manifest-path reference/mcr-reference-rust/Cargo.toml -- \
   produce reference/mcr-reference-rust/simple-evidence.json runs/rust-reference
-m2riv mcr verify runs/rust-reference --strict
+merriv mcr verify runs/rust-reference --strict
 cargo run --manifest-path reference/mcr-reference-rust/Cargo.toml -- \
   verify examples/mcr_conformance/full
 ```

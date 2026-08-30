@@ -7,9 +7,9 @@ name = "m2riv"
 version = "0.1.0a1"
 description = "Vendor-neutral release evidence for deployable AI models."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.14"
 license = { text = "Apache-2.0" }
-authors = [{ name = "M2RIV contributors" }]
+authors = [{ name = "Merriv contributors" }]
 keywords = [
   "model-release-engineering",
   "model-regression",
@@ -67,12 +67,13 @@ action-build = [
 ]
 
 [project.scripts]
+merriv = "m2riv.cli:app"
 m2riv = "m2riv.cli:app"
 
 [project.urls]
-Documentation = "https://github.com/niansia/M2RIV"
-Issues = "https://github.com/niansia/M2RIV/issues"
-Source = "https://github.com/niansia/M2RIV"
+Documentation = "https://github.com/niansia/Merriv"
+Issues = "https://github.com/niansia/Merriv/issues"
+Source = "https://github.com/niansia/Merriv"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/m2riv"]

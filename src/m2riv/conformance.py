@@ -28,10 +28,11 @@ from m2riv.reports.models import (
 )
 from m2riv.reports.verify import MCRVerificationError, verify_report_bundle
 
-ConformanceProfileName = Literal["pass", "warn", "block", "error"]
+ConformanceProfileName = Literal["pass", "warn", "insufficient_power", "block", "error"]
 _EXPECTED_STATUSES: tuple[tuple[ConformanceProfileName, MCRStatus], ...] = (
     ("pass", MCRStatus.PASS),
     ("warn", MCRStatus.WARN),
+    ("insufficient_power", MCRStatus.INSUFFICIENT_POWER),
     ("block", MCRStatus.BLOCK),
     ("error", MCRStatus.ERROR),
 )
@@ -49,50 +50,53 @@ class MCRConformanceError(ValueError):
 
 
 class ConformanceProfile(Contract):
-    """One normative four-state interoperability observation."""
+    """One normative evaluation-decision interoperability observation."""
 
     profile: ConformanceProfileName
     report_id: ContentId
     evidence_id: ContentId
     decision_status: MCRStatus
-    release_authorized: bool
+    evaluation_policy_satisfied: bool
 
     @model_validator(mode="after")
-    def authorization_matches_status(self) -> ConformanceProfile:
+    def disposition_matches_status(self) -> ConformanceProfile:
         expected = self.decision_status is MCRStatus.PASS
-        if self.release_authorized is not expected:
-            raise ValueError("only PASS may be release-authorized by the conformance profile")
+        if self.evaluation_policy_satisfied is not expected:
+            raise ValueError("only PASS satisfies the fail-closed conformance policy")
         return self
 
 
 class ConsumerConformanceReceipt(Contract):
     """Portable receipt emitted by an MCR consumer over the normative fixtures."""
 
-    schema_version: Literal["0.2.0"] = "0.2.0"
+    schema_version: Literal["0.3.0"] = "0.3.0"
     id: ContentId
     implementation_name: SafePluginName
     implementation_version: SafePluginVersion
-    profiles: tuple[ConformanceProfile, ...] = Field(min_length=4, max_length=4)
+    profiles: tuple[ConformanceProfile, ...] = Field(min_length=5, max_length=5)
 
     @model_validator(mode="after")
     def profiles_are_unique_and_complete(self) -> ConsumerConformanceReceipt:
         names = tuple(profile.profile for profile in self.profiles)
-        expected = {"pass", "warn", "block", "error"}
+        expected = {"pass", "warn", "insufficient_power", "block", "error"}
         if len(names) != len(set(names)) or set(names) != expected:
-            raise ValueError("consumer receipt must contain PASS, WARN, BLOCK, and ERROR once")
+            raise ValueError(
+                "consumer receipt must contain PASS, WARN, INSUFFICIENT_POWER, BLOCK, "
+                "and ERROR once"
+            )
         return self
 
 
 class MCRConformanceResult(Contract):
     """Machine-readable outcome for one producer or consumer conformance run."""
 
-    schema_version: Literal["0.2.0"] = "0.2.0"
+    schema_version: Literal["0.3.0"] = "0.3.0"
     id: ContentId
     subject: Literal["producer", "consumer"]
     conformant: Literal[True] = True
     implementation_name: SafePluginName | None = None
     implementation_version: SafePluginVersion | None = None
-    profiles: tuple[ConformanceProfile, ...] = Field(min_length=4, max_length=4)
+    profiles: tuple[ConformanceProfile, ...] = Field(min_length=5, max_length=5)
     checks: tuple[str, ...] = Field(min_length=1, max_length=64)
     warnings: tuple[str, ...] = Field(default=(), max_length=64)
 
@@ -107,7 +111,7 @@ def _result(
     warnings: tuple[str, ...] = (),
 ) -> MCRConformanceResult:
     payload = {
-        "schema_version": "0.2.0",
+        "schema_version": "0.3.0",
         "subject": subject,
         "conformant": True,
         "implementation_name": implementation_name,
@@ -137,7 +141,7 @@ def create_consumer_receipt(
 ) -> ConsumerConformanceReceipt:
     """Create a deterministic receipt that an independent consumer can reproduce."""
     payload = {
-        "schema_version": "0.2.0",
+        "schema_version": "0.3.0",
         "implementation_name": implementation_name,
         "implementation_version": implementation_version,
         "profiles": profiles,
@@ -182,7 +186,12 @@ def normative_profile_report(status: MCRStatus) -> ModelChangeReport:
         metrics = ()
         metric_id = None
     else:
-        delta = {MCRStatus.PASS: 0.0, MCRStatus.WARN: -0.02, MCRStatus.BLOCK: -0.2}[status]
+        delta = {
+            MCRStatus.PASS: 0.0,
+            MCRStatus.WARN: -0.02,
+            MCRStatus.INSUFFICIENT_POWER: -0.02,
+            MCRStatus.BLOCK: -0.2,
+        }[status]
         metrics = (
             MCRMetric(
                 metric_id="accuracy",
@@ -219,7 +228,7 @@ def _load_profile_report(path: Path) -> ModelChangeReport:
 
 
 def verify_producer_conformance(source: str | Path) -> MCRConformanceResult:
-    """Verify fixed-output four-state and must-reject MCR test vectors."""
+    """Verify fixed-output decision and must-reject MCR test vectors."""
     root = Path(source)
     profiles: list[ConformanceProfile] = []
     warnings: list[str] = []
@@ -251,7 +260,7 @@ def verify_producer_conformance(source: str | Path) -> MCRConformanceResult:
                 report_id=verification.report_id,
                 evidence_id=verification.evidence_id,
                 decision_status=verification.decision_status,
-                release_authorized=verification.decision_status is MCRStatus.PASS,
+                evaluation_policy_satisfied=verification.decision_status is MCRStatus.PASS,
             )
         )
         warnings.extend(verification.warnings)
@@ -273,7 +282,7 @@ def verify_producer_conformance(source: str | Path) -> MCRConformanceResult:
             "mcr-contracts",
             "content-identities",
             "fixed-semantic-and-content-id-vectors",
-            "pass-warn-block-error-preserved",
+            "pass-warn-insufficient-power-block-error-preserved",
             "negative-vectors-rejected",
             "complete-local-bundle",
         ),
@@ -320,7 +329,7 @@ def verify_consumer_conformance(
         checks=(
             "receipt-id",
             "report-and-evidence-ids",
-            "pass-warn-block-error-preserved",
-            "warn-block-error-fail-closed",
+            "pass-warn-insufficient-power-block-error-preserved",
+            "warn-insufficient-power-block-error-fail-closed",
         ),
     )

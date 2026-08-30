@@ -18,16 +18,36 @@
           "title": "Margin",
           "type": "number"
         },
+        "max_mde": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Mde"
+        },
         "metric": {
           "minLength": 1,
           "title": "Metric",
           "type": "string"
         },
         "min_pairs": {
-          "default": 30,
-          "minimum": 1,
-          "title": "Min Pairs",
-          "type": "integer"
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Pairs"
         },
         "rule_id": {
           "minLength": 1,
@@ -51,6 +71,15 @@
       ],
       "title": "MetricDirection",
       "type": "string"
+    },
+    "MultipleComparisonMethod": {
+      "description": "Policy-wide correction applied to the complete rule family.",
+      "enum": [
+        "none",
+        "holm-bonferroni"
+      ],
+      "title": "MultipleComparisonMethod",
+      "type": "string"
     }
   },
   "additionalProperties": false,
@@ -66,14 +95,26 @@
       "title": "Block On Any Critical Failure",
       "type": "boolean"
     },
+    "familywise_alpha": {
+      "default": 0.05,
+      "exclusiveMaximum": 1.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Familywise Alpha",
+      "type": "number"
+    },
     "insufficient_evidence_status": {
-      "default": "warn",
+      "default": "insufficient_power",
       "enum": [
+        "insufficient_power",
         "warn",
         "error"
       ],
       "title": "Insufficient Evidence Status",
       "type": "string"
+    },
+    "multiple_comparison_method": {
+      "$ref": "#/$defs/MultipleComparisonMethod",
+      "default": "holm-bonferroni"
     },
     "policy_id": {
       "minLength": 1,
@@ -93,6 +134,13 @@
       "default": "1.0.0",
       "title": "Schema Version",
       "type": "string"
+    },
+    "target_power": {
+      "default": 0.8,
+      "exclusiveMaximum": 1.0,
+      "exclusiveMinimum": 0.5,
+      "title": "Target Power",
+      "type": "number"
     }
   },
   "required": [

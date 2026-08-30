@@ -8,6 +8,7 @@ from m2riv.gate.policy import (
     GateStatus,
     MetricDirection,
     MetricEvidence,
+    MultipleComparisonMethod,
     RuleDecision,
     evaluate_gate,
 )
@@ -20,6 +21,7 @@ __all__ = [
     "GateStatus",
     "MetricDirection",
     "MetricEvidence",
+    "MultipleComparisonMethod",
     "RuleDecision",
     "evaluate_gate",
 ]

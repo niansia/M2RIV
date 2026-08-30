@@ -1,4 +1,4 @@
-"""Capability-negotiated boundary between model sources and the M2RIV kernel."""
+"""Capability-negotiated boundary between model sources and the Merriv kernel."""
 
 from __future__ import annotations
 

@@ -1,0 +1,131 @@
+{
+  "$defs": {
+    "OCIDescriptor": {
+      "additionalProperties": false,
+      "description": "Content descriptor used by OCI manifests and indexes.",
+      "properties": {
+        "annotations": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "maxLength": 4096,
+                "type": "string"
+              },
+              "propertyNames": {
+                "maxLength": 255,
+                "minLength": 1
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Annotations"
+        },
+        "artifactType": {
+          "anyOf": [
+            {
+              "maxLength": 255,
+              "minLength": 3,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Artifacttype"
+        },
+        "digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "mediaType": {
+          "maxLength": 255,
+          "minLength": 3,
+          "title": "Mediatype",
+          "type": "string"
+        },
+        "size": {
+          "minimum": 0,
+          "title": "Size",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "mediaType",
+        "digest",
+        "size"
+      ],
+      "title": "OCIDescriptor",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "OCI 1.1 manifest that attaches one MCR Statement to a model subject.",
+  "properties": {
+    "annotations": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "maxLength": 4096,
+            "type": "string"
+          },
+          "propertyNames": {
+            "maxLength": 255,
+            "minLength": 1
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Annotations"
+    },
+    "artifactType": {
+      "const": "application/vnd.in-toto.mcr+json",
+      "default": "application/vnd.in-toto.mcr+json",
+      "title": "Artifacttype",
+      "type": "string"
+    },
+    "config": {
+      "$ref": "#/$defs/OCIDescriptor"
+    },
+    "layers": {
+      "items": {
+        "$ref": "#/$defs/OCIDescriptor"
+      },
+      "maxItems": 2,
+      "minItems": 1,
+      "title": "Layers",
+      "type": "array"
+    },
+    "mediaType": {
+      "const": "application/vnd.oci.image.manifest.v1+json",
+      "default": "application/vnd.oci.image.manifest.v1+json",
+      "title": "Mediatype",
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": 2,
+      "default": 2,
+      "title": "Schemaversion",
+      "type": "integer"
+    },
+    "subject": {
+      "$ref": "#/$defs/OCIDescriptor"
+    }
+  },
+  "required": [
+    "config",
+    "layers",
+    "subject"
+  ],
+  "title": "MCRArtifactManifest",
+  "type": "object"
+}

@@ -47,7 +47,7 @@ def test_release_build_has_provenance_sbom_and_gated_trusted_publish() -> None:
     assert publish["needs"] == ["build", "attest"]
     assert publish["permissions"] == {"contents": "read", "id-token": "write"}
     assert publish["environment"]["name"] == "pypi"
-    assert "M2RIV_BRAND_CLEARED" in publish["if"]
+    assert "MERRIV_BRAND_CLEARED" in publish["if"]
     assert "pypa/gh-action-pypi-publish@" in source
     assert "secrets." not in source
 
@@ -93,7 +93,7 @@ def test_reusable_action_verifies_and_uploads_before_enforcing_decision() -> Non
     names = [step["name"] for step in steps]
 
     assert action["runs"]["using"] == "composite"
-    assert "m2riv mcr verify" in source
+    assert "merriv mcr verify" in source
     assert (
         names.index("Verify portable report identities")
         < names.index("Resolve final action result")
@@ -101,7 +101,7 @@ def test_reusable_action_verifies_and_uploads_before_enforcing_decision() -> Non
         < names.index("Enforce release decision")
     )
     assert action["outputs"]["exit-code"]["value"] == "${{ steps.final.outputs.exit-code }}"
-    assert "M2RIV_VERIFY_EXIT_CODE" in source
+    assert "MERRIV_VERIFY_EXIT_CODE" in source
     assert "final_code=3" in source
     assert "--require-hashes" in source
     assert "--no-deps" in source
@@ -118,8 +118,8 @@ def test_ci_executes_the_local_composite_action_and_checks_its_outputs() -> None
     source = (WORKFLOWS / "ci.yml").read_text("utf-8")
     assert "uses: ./" in source
     assert "steps.gate.outputs.exit-code" in source
-    assert 'test "$M2RIV_ACTION_EXIT_CODE" = "2"' in source
-    assert "m2riv mcr verify runs/action-smoke" in source
+    assert 'test "$MERRIV_ACTION_EXIT_CODE" = "2"' in source
+    assert "merriv mcr verify runs/action-smoke" in source
 
 
 def test_release_build_backend_is_exact_and_preinstalled() -> None:
@@ -131,6 +131,14 @@ def test_release_build_backend_is_exact_and_preinstalled() -> None:
     assert "--group action-build" in release
     assert "python -m build --no-isolation" in release
     assert "python -m build --no-isolation" in ci
+
+
+def test_merriv_is_primary_cli_without_renaming_the_distribution() -> None:
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+
+    assert 'name = "m2riv"' in pyproject
+    assert 'merriv = "m2riv.cli:app"' in pyproject
+    assert 'm2riv = "m2riv.cli:app"' in pyproject
 
 
 def test_nvidia_runner_uses_isolated_cache_and_hash_locked_dependencies() -> None:

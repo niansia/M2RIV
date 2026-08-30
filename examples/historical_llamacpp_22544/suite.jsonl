@@ -1,0 +1,2 @@
+{"case_id":"blk.0.attn_qkv.weight","input":{"tensor":"blk.0.attn_qkv.weight","requested_type":"iq4_xs"},"expected":"iq4_xs","tags":["llama.cpp","quantization","tensor-type-override"],"slices":{"contract":"manual-override"},"critical":true}
+{"case_id":"blk.1.attn_qkv.weight","input":{"tensor":"blk.1.attn_qkv.weight","requested_type":"iq4_xs"},"expected":"iq4_xs","tags":["llama.cpp","quantization","tensor-type-override"],"slices":{"contract":"manual-override"},"critical":true}

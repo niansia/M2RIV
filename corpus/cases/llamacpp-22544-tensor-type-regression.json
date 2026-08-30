@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "llamacpp-22544-tensor-type-regression",
+  "title": "llama.cpp ignored an explicit tensor-type override during quantization",
+  "kind": "regression",
+  "axis": "llamacpp-quantization-contract",
+  "status": "historical-replay",
+  "expected_decision": "BLOCK",
+  "expected_first_bad": "1dab5f5",
+  "reproduction": "m2riv compare examples/historical_llamacpp_22544/baseline.jsonl examples/historical_llamacpp_22544/candidate.jsonl --suite examples/historical_llamacpp_22544/suite.jsonl --policy examples/historical_llamacpp_22544/policy.yaml --output runs/historical-llamacpp-22544",
+  "verification": "m2riv mcr verify runs/historical-llamacpp-22544 --strict",
+  "upstream_issue": "https://github.com/ggml-org/llama.cpp/issues/22544",
+  "upstream_fix": "https://github.com/ggml-org/llama.cpp/pull/22572",
+  "source_paths": [
+    "examples/historical_llamacpp_22544/suite.jsonl",
+    "examples/historical_llamacpp_22544/baseline.jsonl",
+    "examples/historical_llamacpp_22544/candidate.jsonl",
+    "examples/historical_llamacpp_22544/policy.yaml",
+    "examples/historical_llamacpp_22544/README.md"
+  ],
+  "limitations": "Source-anchored replay of two tensor assignments published in upstream issue #22544; it does not rerun the 27B model and does not claim a measured model-quality effect."
+}

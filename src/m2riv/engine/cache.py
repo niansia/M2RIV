@@ -25,7 +25,8 @@ from m2riv.execution.local import LOCAL_EXECUTOR_FINGERPRINT
 from m2riv.io.json import StrictJSONError, parse_strict_json
 
 MAX_CACHE_ENTRY_BYTES = 64 * 1024 * 1024
-CACHE_KEY_ENV = "M2RIV_CACHE_KEY"
+CACHE_KEY_ENV = "MERRIV_CACHE_KEY"
+LEGACY_CACHE_KEY_ENV = "M2RIV_CACHE_KEY"
 MIN_CACHE_KEY_BYTES = 32
 CacheAuthenticationMode = Literal["run-local-hmac", "shared-hmac"]
 _PROCESS_LOCAL_KEY_MATERIAL = secrets.token_bytes(32)
@@ -104,6 +105,8 @@ class ObservationCache:
         supplied = authentication_key
         if supplied is None:
             supplied = os.environ.get(CACHE_KEY_ENV)
+        if supplied is None:
+            supplied = os.environ.get(LEGACY_CACHE_KEY_ENV)
         if supplied is None:
             key_material = _PROCESS_LOCAL_KEY_MATERIAL
             self.authentication_mode: CacheAuthenticationMode = "run-local-hmac"

@@ -21,9 +21,11 @@ from m2riv.gate import (
     GateDecision,
     GateEvaluation,
     GatePolicy,
+    GateRule,
     GateStatus,
     MetricDirection,
     MetricEvidence,
+    MultipleComparisonMethod,
     evaluate_gate,
 )
 from m2riv.metrics import PairedMetric
@@ -98,6 +100,7 @@ def _status(status: GateStatus) -> MCRStatus:
     return {
         GateStatus.PASS: MCRStatus.PASS,
         GateStatus.WARN: MCRStatus.WARN,
+        GateStatus.INSUFFICIENT_POWER: MCRStatus.INSUFFICIENT_POWER,
         GateStatus.BLOCK: MCRStatus.BLOCK,
         GateStatus.ERROR: MCRStatus.ERROR,
     }[status]
@@ -161,6 +164,8 @@ def _analyze_group(
     resamples: int,
     seed: int,
     confidence_level: float,
+    additional_confidence_levels: Sequence[float] = (),
+    threshold: float | None = None,
 ) -> PairedMetricEvidence | None:
     identity_scope = getattr(metric, "identity_scope", "evidence")
     if identity_scope not in {"evidence", "run"}:
@@ -183,6 +188,8 @@ def _analyze_group(
             resamples=resamples,
             seed=seed,
             confidence_level=confidence_level,
+            additional_confidence_levels=additional_confidence_levels,
+            threshold=threshold,
         )
         estimate = binary_evidence.estimate
     else:
@@ -192,6 +199,8 @@ def _analyze_group(
             resamples=resamples,
             seed=seed,
             confidence_level=confidence_level,
+            additional_confidence_levels=additional_confidence_levels,
+            threshold=threshold,
         )
     return PairedMetricEvidence(
         metric_id=metric_id,
@@ -230,6 +239,7 @@ def _metric_groups(
 
 def _analyze_metrics(
     plan: CompiledReleasePlan,
+    policy: GatePolicy,
     metrics: Sequence[PairedMetric],
     run: PairedRunResult,
     slice_keys: Sequence[str],
@@ -242,9 +252,32 @@ def _analyze_metrics(
     if len(declarations) != len(metrics):
         raise AssertionError("compiled plan lost a declared base metric")
 
+    rules_by_metric = {rule.metric: rule for rule in policy.rules}
+    family_size = len(policy.rules)
+    if policy.multiple_comparison_method is MultipleComparisonMethod.HOLM_BONFERRONI:
+        required_levels = tuple(
+            1.0 - policy.familywise_alpha / denominator
+            for denominator in range(family_size, 0, -1)
+        )
+    else:
+        required_levels = (1.0 - policy.familywise_alpha,)
+
     analyzed: list[PairedMetricEvidence] = []
     for metric, declaration in zip(metrics, declarations, strict=True):
         for metric_id, scope, pairs in _metric_groups(declaration, run.cases, slice_keys):
+            rule: GateRule | None = rules_by_metric.get(metric_id)
+            additional_levels = tuple(
+                level
+                for level in required_levels
+                if not math.isclose(level, confidence_level, rel_tol=0.0, abs_tol=1e-12)
+            )
+            threshold = None
+            if rule is not None:
+                threshold = (
+                    -rule.margin
+                    if rule.direction is MetricDirection.HIGHER_IS_BETTER
+                    else rule.margin
+                )
             evidence = _analyze_group(
                 metric,
                 declaration,
@@ -254,6 +287,8 @@ def _analyze_metrics(
                 resamples=resamples,
                 seed=seed,
                 confidence_level=confidence_level,
+                additional_confidence_levels=additional_levels,
+                threshold=threshold,
             )
             if evidence is not None:
                 analyzed.append(evidence)
@@ -333,6 +368,14 @@ def _report_findings(gate: GateDecision, evidence: _ReportEvidence) -> tuple[MCR
             status=_status(decision.status),
             message=decision.reason,
             evidence_set_id=evidence.metric_set_ids.get(decision.metric),
+            confidence_level=decision.confidence_level,
+            interval_lower=decision.confidence_low,
+            interval_upper=decision.confidence_high,
+            raw_p_value=decision.raw_p_value,
+            adjusted_p_value=decision.adjusted_p_value,
+            effective_alpha=decision.effective_alpha,
+            minimum_detectable_effect=decision.minimum_detectable_effect,
+            target_power=decision.target_power,
         )
         for decision in gate.rule_decisions
     ]
@@ -421,7 +464,7 @@ def _report_limitations(run: PairedRunResult) -> tuple[str, str]:
         "Cache entries used a process-local HMAC key; no cache evidence was trusted "
         "across processes."
         if run.cache_authentication == "run-local-hmac"
-        else "Shared cache entries were HMAC-authenticated with M2RIV_CACHE_KEY; this "
+        else "Shared cache entries were HMAC-authenticated with MERRIV_CACHE_KEY; this "
         "authenticates cache writers, not the MCR producer."
     )
     return (
@@ -477,6 +520,7 @@ def compare_release(
 
     metric_evidence = _analyze_metrics(
         plan,
+        policy,
         declared_metrics,
         run,
         slice_keys,
@@ -508,6 +552,10 @@ def compare_release(
                 or (gate.status is GateStatus.WARN and policy.allow_warn)
             ),
             findings=_report_findings(gate, report_evidence),
+            multiple_comparison_method=gate.multiple_comparison_method.value,
+            familywise_alpha=gate.familywise_alpha,
+            family_size=gate.family_size,
+            target_power=gate.target_power,
         ),
         evidence_manifest=report_evidence.manifest_ref,
         evidence=_supplemental_evidence(

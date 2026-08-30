@@ -1,4 +1,4 @@
-"""Public M2RIV contracts."""
+"""Public Merriv contracts (installed from the ``m2riv`` distribution)."""
 
 from m2riv.core.identity import build_local_snapshot, fingerprint, hash_artifact
 from m2riv.core.models import (

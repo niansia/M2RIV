@@ -89,7 +89,7 @@ def test_compare_cli_blocks_and_writes_all_ci_artifacts(tmp_path: Path) -> None:
     )
 
     assert result.exit_code == 2
-    assert "DECISION: BLOCK" in result.stdout
+    assert "EVALUATION DECISION: BLOCK" in result.stdout
     assert {path.name for path in output.iterdir() if path.is_file()} == {
         "evidence-manifest.json",
         "junit.xml",
@@ -102,7 +102,7 @@ def test_compare_cli_blocks_and_writes_all_ci_artifacts(tmp_path: Path) -> None:
     assert junit.attrib["failures"] == "1"
     sarif = json.loads((output / "results.sarif").read_text("utf-8"))
     assert sarif["runs"][0]["results"][0]["level"] == "error"
-    assert "Decision: BLOCK" in github_summary.read_text("utf-8")
+    assert "Evaluation decision: BLOCK" in github_summary.read_text("utf-8")
 
 
 def test_compare_cli_passes_and_returns_zero(tmp_path: Path) -> None:
@@ -126,10 +126,10 @@ def test_compare_cli_passes_and_returns_zero(tmp_path: Path) -> None:
         ],
     )
     assert result.exit_code == 0
-    assert "DECISION: PASS" in result.stdout
+    assert "EVALUATION DECISION: PASS" in result.stdout
 
 
-@pytest.mark.parametrize(("allow_warn", "expected_exit"), [(False, 4), (True, 0)])
+@pytest.mark.parametrize(("allow_warn", "expected_exit"), [(False, 4), (True, 4)])
 def test_compare_cli_warn_is_fail_closed_unless_policy_opts_in(
     tmp_path: Path, allow_warn: bool, expected_exit: int
 ) -> None:
@@ -172,15 +172,14 @@ rules:
 
     assert result.exit_code == expected_exit
     report = json.loads((output / "mcr-report.json").read_text("utf-8"))
-    assert report["decision"]["status"] == "WARN"
-    assert report["decision"]["allowed"] is allow_warn
-    assert f"RELEASE ALLOWED: {str(allow_warn).lower()}" in result.stdout
+    assert report["decision"]["status"] == "INSUFFICIENT_POWER"
+    assert report["decision"]["allowed"] is False
+    assert "EVALUATION POLICY SATISFIED: false" in result.stdout
+    assert "DEPLOYMENT AUTHORIZATION: NOT EVALUATED" in result.stdout
     junit = ElementTree.parse(output / "junit.xml").getroot()
-    assert junit.attrib["failures"] == ("0" if allow_warn else "2")
+    assert junit.attrib["failures"] == "2"
     sarif = json.loads((output / "results.sarif").read_text("utf-8"))
-    assert {item["level"] for item in sarif["runs"][0]["results"]} == {
-        "warning" if allow_warn else "error"
-    }
+    assert {item["level"] for item in sarif["runs"][0]["results"]} == {"error"}
 
 
 def test_compare_cli_returns_error_for_missing_record(tmp_path: Path) -> None:
@@ -222,3 +221,28 @@ def test_loaders_reject_duplicates_and_unsafe_yaml(tmp_path: Path) -> None:
     policy.write_text("!!python/object/apply:os.system ['echo unsafe']\n", encoding="utf-8")
     with pytest.raises(InputFormatError, match="invalid policy YAML"):
         load_policy(policy)
+
+
+def test_historical_llamacpp_regression_replay_blocks(tmp_path: Path) -> None:
+    fixture = Path("examples/historical_llamacpp_22544")
+    result = runner.invoke(
+        app,
+        [
+            "compare",
+            str(fixture / "baseline.jsonl"),
+            str(fixture / "candidate.jsonl"),
+            "--suite",
+            str(fixture / "suite.jsonl"),
+            "--policy",
+            str(fixture / "policy.yaml"),
+            "--output",
+            str(tmp_path / "llamacpp-22544"),
+            "--resamples",
+            "100",
+        ],
+    )
+
+    assert result.exit_code == 2
+    report = json.loads((tmp_path / "llamacpp-22544" / "mcr-report.json").read_text("utf-8"))
+    assert report["decision"]["status"] == "BLOCK"
+    assert len(report["decision"]["findings"]) == 3

@@ -1,6 +1,6 @@
 {
-  "schema_version": "0.2.0",
-  "id": "mcr:sha256:6d1cdca6a8ac32da4d0d3ab86b8c4973a1b2f8036b21353ba5db59dac3b8fc0d",
+  "schema_version": "0.3.0",
+  "id": "mcr:sha256:6f61d05553262e9063a2dba67e4e98c3d819b905570381be24a5f1652ce216a2",
   "implementation_name": "m2riv.mlflow-consumer",
   "implementation_version": "1.0.0",
   "profiles": [
@@ -9,28 +9,35 @@
       "report_id": "mcr:sha256:3e51a6d5ccb569e237dfc0c81af1c1f209b58bb0ebe66c53e90dfe01c472caa7",
       "evidence_id": "mcr:sha256:46c77c2b127ad505a68626937e886891a17e903c5d5ce0b0557cb76c5c84d8bb",
       "decision_status": "PASS",
-      "release_authorized": true
+      "evaluation_policy_satisfied": true
     },
     {
       "profile": "warn",
       "report_id": "mcr:sha256:57ccd1c93c1764fbc1e3d94a2504bab3b7ca959dbfb1b63c42d1119cd9419a62",
       "evidence_id": "mcr:sha256:bedfab7eb1e857372afe199935c703294dc8764704f7e1d1ebfd9af2e035beb8",
       "decision_status": "WARN",
-      "release_authorized": false
+      "evaluation_policy_satisfied": false
+    },
+    {
+      "profile": "insufficient_power",
+      "report_id": "mcr:sha256:47c75af80eba363ddac662fc9285005e127f015dee08e78d2749be460728e719",
+      "evidence_id": "mcr:sha256:3d13bb1fedc122fee5489d428d01d73cefc130695b0410ae5d3de67d9a8930c0",
+      "decision_status": "INSUFFICIENT_POWER",
+      "evaluation_policy_satisfied": false
     },
     {
       "profile": "block",
       "report_id": "mcr:sha256:60d5797cdf52ae1102a16c4d0dfdf6b53097c188e5a41549a31d9823d906d706",
       "evidence_id": "mcr:sha256:41cd4c841e66337ae6c48f753ce46de2530e6cf357497e52c6a8297062dbe9da",
       "decision_status": "BLOCK",
-      "release_authorized": false
+      "evaluation_policy_satisfied": false
     },
     {
       "profile": "error",
       "report_id": "mcr:sha256:bf4c828c955cc24e0d599628f9e84e719a43d3496f8ca5fbf20690eb70e1740d",
       "evidence_id": "mcr:sha256:41b5fd039e714ea1d583cb24d1737675afd98f96c309f2697e395bd7c802604a",
       "decision_status": "ERROR",
-      "release_authorized": false
+      "evaluation_policy_satisfied": false
     }
   ]
 }

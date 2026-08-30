@@ -1,4 +1,4 @@
-"""Translate Polygraphy comparison results into an MCR release bundle."""
+"""Translate Polygraphy comparison results into a Model Change Report bundle."""
 
 from __future__ import annotations
 
@@ -98,7 +98,7 @@ def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
 
 
 def produce_inputs(payload: dict[str, Any], destination: Path) -> tuple[Path, Path, Path]:
-    """Write M2RIV's public recorded-output boundary from normalized results."""
+    """Write Merriv's public recorded-output boundary from normalized results."""
     destination.mkdir(parents=True, exist_ok=True)
     suite_rows: list[dict[str, Any]] = []
     baseline_rows: list[dict[str, Any]] = []
@@ -144,7 +144,12 @@ def main() -> None:
     parser.add_argument("--relative-tolerance", type=float, default=1e-5)
     parser.add_argument("--policy", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--m2riv-command", default="m2riv")
+    parser.add_argument(
+        "--merriv-command",
+        "--m2riv-command",
+        dest="merriv_command",
+        default="merriv",
+    )
     parser.add_argument("--translate-only", action="store_true")
     arguments = parser.parse_args()
 
@@ -164,7 +169,7 @@ def main() -> None:
             print(arguments.output / "translated")
             return
         command = [
-            arguments.m2riv_command,
+            arguments.merriv_command,
             "compare",
             str(baseline),
             str(candidate),
@@ -175,7 +180,7 @@ def main() -> None:
             "--output",
             str(arguments.output / "mcr"),
         ]
-        # Executing the explicitly selected local M2RIV reference binary is the
+        # Executing the explicitly selected local Merriv reference binary is the
         # integration boundary; arguments remain an argv list, never a shell.
         completed = subprocess.run(command, check=False)  # noqa: S603
         raise SystemExit(completed.returncode)

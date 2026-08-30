@@ -20,6 +20,7 @@ SafeExecutionCapability = Annotated[
 class MCRStatus(StrEnum):
     PASS = "PASS"  # nosec B105  # noqa: S105 - release status, not a credential
     WARN = "WARN"
+    INSUFFICIENT_POWER = "INSUFFICIENT_POWER"
     BLOCK = "BLOCK"
     ERROR = "ERROR"
 
@@ -132,6 +133,29 @@ class MCRFinding(Contract):
     metric_id: str | None = None
     evidence: tuple[EvidenceRef, ...] = Field(default=(), max_length=128)
     evidence_set_id: ContentId | None = None
+    confidence_level: FiniteFloat | None = Field(default=None, gt=0, lt=1)
+    interval_lower: FiniteFloat | None = None
+    interval_upper: FiniteFloat | None = None
+    raw_p_value: FiniteFloat | None = Field(default=None, ge=0, le=1)
+    adjusted_p_value: FiniteFloat | None = Field(default=None, ge=0, le=1)
+    effective_alpha: FiniteFloat | None = Field(default=None, gt=0, lt=1)
+    minimum_detectable_effect: FiniteFloat | None = Field(default=None, ge=0)
+    target_power: FiniteFloat | None = Field(default=None, gt=0.5, lt=1)
+
+    @model_validator(mode="after")
+    def statistical_interval_is_complete(self) -> MCRFinding:
+        interval = (self.confidence_level, self.interval_lower, self.interval_upper)
+        if any(value is None for value in interval) and not all(
+            value is None for value in interval
+        ):
+            raise ValueError("finding confidence level and interval bounds must be complete")
+        if (
+            self.interval_lower is not None
+            and self.interval_upper is not None
+            and self.interval_lower > self.interval_upper
+        ):
+            raise ValueError("finding interval_lower must not exceed interval_upper")
+        return self
 
 
 class MCRExecution(Contract):
@@ -157,23 +181,49 @@ class MCRExecution(Contract):
 
 
 class MCRDecision(Contract):
-    """Portable gate verdict with an explicit release disposition."""
+    """Portable verdict for the evaluation policy bound into this MCR.
+
+    ``allowed`` is the frozen MCR 0.4 wire name. It means the candidate satisfies
+    this report's evaluation policy; it never grants deployment or promotion
+    authority to the evidence producer.
+    """
 
     status: MCRStatus
     allowed: bool
     findings: tuple[MCRFinding, ...] = ()
+    multiple_comparison_method: Literal["none", "holm-bonferroni"] = "none"
+    familywise_alpha: FiniteFloat | None = Field(default=None, gt=0, lt=1)
+    family_size: int | None = Field(default=None, ge=1)
+    target_power: FiniteFloat | None = Field(default=None, gt=0.5, lt=1)
+
+    @property
+    def evaluation_policy_satisfied(self) -> bool:
+        """Return the unambiguous local name for the MCR 0.4 ``allowed`` field."""
+
+        return self.allowed
 
     @model_validator(mode="after")
     def status_matches_allowed(self) -> MCRDecision:
         if self.status is MCRStatus.PASS and not self.allowed:
             raise ValueError("allowed must be True when status is PASS")
-        if self.status in {MCRStatus.BLOCK, MCRStatus.ERROR} and self.allowed:
+        if self.status in {
+            MCRStatus.INSUFFICIENT_POWER,
+            MCRStatus.BLOCK,
+            MCRStatus.ERROR,
+        } and self.allowed:
             raise ValueError(f"allowed must be False when status is {self.status.value}")
+        family = (self.familywise_alpha, self.family_size, self.target_power)
+        if any(value is None for value in family) and not all(value is None for value in family):
+            raise ValueError("family-wise alpha, family size, and target power are one contract")
+        if self.multiple_comparison_method == "holm-bonferroni" and any(
+            value is None for value in family
+        ):
+            raise ValueError("Holm-Bonferroni decisions require complete family metadata")
         return self
 
 
 class ModelChangeReport(Contract):
-    """The stable envelope M2RIV intends other tools to produce and consume."""
+    """The stable envelope Merriv intends other tools to produce and consume."""
 
     schema_version: Literal["0.4.0"] = "0.4.0"
     id: ContentId
@@ -228,6 +278,70 @@ def create_report(
     timestamp, timing metrics, cache provenance, and limitations.
     """
     timestamp = created_at or datetime.now(UTC)
+    finding_payloads: tuple[dict[str, object], ...] = tuple(
+        {
+            "rule_id": finding.rule_id,
+            "status": finding.status,
+            "message": finding.message,
+            "metric_id": finding.metric_id,
+            "evidence": finding.evidence,
+            "evidence_set_id": finding.evidence_set_id,
+            **(
+                {"confidence_level": finding.confidence_level}
+                if finding.confidence_level is not None
+                else {}
+            ),
+            **(
+                {"interval_lower": finding.interval_lower}
+                if finding.interval_lower is not None
+                else {}
+            ),
+            **(
+                {"interval_upper": finding.interval_upper}
+                if finding.interval_upper is not None
+                else {}
+            ),
+            **(
+                {"raw_p_value": finding.raw_p_value}
+                if finding.raw_p_value is not None
+                else {}
+            ),
+            **(
+                {"adjusted_p_value": finding.adjusted_p_value}
+                if finding.adjusted_p_value is not None
+                else {}
+            ),
+            **(
+                {"effective_alpha": finding.effective_alpha}
+                if finding.effective_alpha is not None
+                else {}
+            ),
+            **(
+                {"minimum_detectable_effect": finding.minimum_detectable_effect}
+                if finding.minimum_detectable_effect is not None
+                else {}
+            ),
+            **(
+                {"target_power": finding.target_power}
+                if finding.target_power is not None
+                else {}
+            ),
+        }
+        for finding in decision.findings
+    )
+    decision_payload: dict[str, object] = {
+        "status": decision.status,
+        "allowed": decision.allowed,
+        "findings": finding_payloads,
+    }
+    if decision.multiple_comparison_method != "none":
+        decision_payload["multiple_comparison_method"] = decision.multiple_comparison_method
+    if decision.familywise_alpha is not None:
+        decision_payload["familywise_alpha"] = decision.familywise_alpha
+    if decision.family_size is not None:
+        decision_payload["family_size"] = decision.family_size
+    if decision.target_power is not None:
+        decision_payload["target_power"] = decision.target_power
     stable_metric_ids = {
         metric.metric_id for metric in metrics if metric.identity_scope == "evidence"
     }
@@ -255,7 +369,7 @@ def create_report(
         "schema_version": "0.4.0",
         "evidence_id": f"mcr:sha256:{evidence_id}",
         "release_plan_id": release_plan_id,
-        "decision": decision,
+        "decision": decision_payload,
     }
     report_id = fingerprint(report_payload, namespace="model-change-report")
     run_payload = {
@@ -268,7 +382,7 @@ def create_report(
         "release_plan_id": release_plan_id,
         "executions": executions,
         "metrics": metrics,
-        "decision": decision,
+        "decision": decision_payload,
         "evidence_manifest": evidence_manifest,
         "evidence": evidence,
         "limitations": limitations,

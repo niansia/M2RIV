@@ -6,14 +6,14 @@ test suite does not satisfy these account-level controls.
 
 ## One-time owner gates
 
-- Complete the brand decision in RFC-0008. The preliminary scan is evidence, not
-  legal clearance.
-- Reserve or create the chosen PyPI project and configure its GitHub Trusted
+- Confirm the recorded [Merriv brand decision](brand.md). The collision scan is
+  evidence, not legal clearance.
+- Reserve or create the `m2riv` PyPI project and configure its GitHub Trusted
   Publisher for this repository, workflow filename `release.yml`, environment
   `pypi`.
 - Create the protected GitHub environment `pypi` with at least one required human
   reviewer and no long-lived package token.
-- Set repository variable `M2RIV_BRAND_CLEARED=true` only after the chosen package,
+- Set repository variable `MERRIV_BRAND_CLEARED=true` only after the chosen package,
   repository, content-ID namespace, action reference, and documentation name agree.
 - Enable GitHub private vulnerability reporting; subscribe at least two monitored
   maintainer accounts to security alerts and test the notification path.
@@ -40,5 +40,6 @@ and [security model](https://docs.pypi.org/trusted-publishers/security-model/).
 4. Approve the `pypi` environment only after the build job produces wheel, source
    distribution, SHA256SUMS, SPDX SBOM, and GitHub provenance.
 5. Verify the published project metadata, attestations, hashes, installation, and
-   `m2riv --help` from a clean environment.
+   `merriv --help` and the compatibility alias `m2riv --help` from a clean
+   environment.
 6. Confirm private vulnerability-report notifications remain monitored.

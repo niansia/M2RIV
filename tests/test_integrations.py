@@ -7,7 +7,12 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
+from typer.testing import CliRunner
+
+from m2riv.cli import app
 from m2riv.conformance import verify_consumer_conformance
+
+runner = CliRunner()
 
 
 def _load_module(name: str, path: Path) -> ModuleType:
@@ -27,6 +32,44 @@ def test_polygraphy_reference_producer_translates_normalized_results(tmp_path: P
     candidate_rows = [json.loads(line) for line in candidate.read_text().splitlines()]
     assert sum(row["output"] == "mismatch" for row in candidate_rows) == 1
     assert len(suite.read_text(encoding="utf-8").splitlines()) == 10
+
+
+def test_polygraphy_first_mile_cli_imports_normalized_evidence(tmp_path: Path) -> None:
+    policy = tmp_path / "policy.yaml"
+    policy.write_text(
+        """schema_version: 1.0.0
+policy_id: importer-smoke
+rules:
+  - rule_id: parity
+    metric: accuracy
+    margin: 1.0
+    min_pairs: 10
+""",
+        encoding="utf-8",
+    )
+    output = tmp_path / "imported"
+    result = runner.invoke(
+        app,
+        [
+            "import",
+            "polygraphy",
+            "integrations/polygraphy_mcr/normalized-results.json",
+            "--format",
+            "normalized",
+            "--policy",
+            str(policy),
+            "--output",
+            str(output),
+            "--resamples",
+            "100",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert "SOURCE TRUST: normalized interchange" in result.stdout
+    assert "EVALUATION DECISION: PASS" in result.stdout
+    assert (output / "mcr-report.json").is_file()
+    assert (output / "translated" / "candidate.jsonl").is_file()
 
 
 def test_mlflow_consumer_emits_a_conformant_receipt(tmp_path: Path) -> None:

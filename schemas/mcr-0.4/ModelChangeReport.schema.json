@@ -87,11 +87,38 @@
     },
     "MCRDecision": {
       "additionalProperties": false,
-      "description": "Portable gate verdict with an explicit release disposition.",
+      "description": "Portable verdict for the evaluation policy bound into this MCR.\n\n``allowed`` is the frozen MCR 0.4 wire name. It means the candidate satisfies\nthis report's evaluation policy; it never grants deployment or promotion\nauthority to the evidence producer.",
       "properties": {
         "allowed": {
           "title": "Allowed",
           "type": "boolean"
+        },
+        "family_size": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family Size"
+        },
+        "familywise_alpha": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 1,
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Familywise Alpha"
         },
         "findings": {
           "default": [],
@@ -101,8 +128,31 @@
           "title": "Findings",
           "type": "array"
         },
+        "multiple_comparison_method": {
+          "default": "none",
+          "enum": [
+            "none",
+            "holm-bonferroni"
+          ],
+          "title": "Multiple Comparison Method",
+          "type": "string"
+        },
         "status": {
           "$ref": "#/$defs/MCRStatus"
+        },
+        "target_power": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 1,
+              "exclusiveMinimum": 0.5,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Power"
         }
       },
       "required": [
@@ -191,6 +241,48 @@
     "MCRFinding": {
       "additionalProperties": false,
       "properties": {
+        "adjusted_p_value": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Adjusted P Value"
+        },
+        "confidence_level": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 1,
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence Level"
+        },
+        "effective_alpha": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 1,
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Effective Alpha"
+        },
         "evidence": {
           "default": [],
           "items": {
@@ -213,6 +305,30 @@
           "default": null,
           "title": "Evidence Set Id"
         },
+        "interval_lower": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Interval Lower"
+        },
+        "interval_upper": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Interval Upper"
+        },
         "message": {
           "minLength": 1,
           "title": "Message",
@@ -230,6 +346,33 @@
           "default": null,
           "title": "Metric Id"
         },
+        "minimum_detectable_effect": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minimum Detectable Effect"
+        },
+        "raw_p_value": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw P Value"
+        },
         "rule_id": {
           "minLength": 1,
           "title": "Rule Id",
@@ -237,6 +380,20 @@
         },
         "status": {
           "$ref": "#/$defs/MCRStatus"
+        },
+        "target_power": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 1,
+              "exclusiveMinimum": 0.5,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Power"
         }
       },
       "required": [
@@ -381,6 +538,7 @@
       "enum": [
         "PASS",
         "WARN",
+        "INSUFFICIENT_POWER",
         "BLOCK",
         "ERROR"
       ],
@@ -502,7 +660,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "The stable envelope M2RIV intends other tools to produce and consume.",
+  "description": "The stable envelope Merriv intends other tools to produce and consume.",
   "properties": {
     "baseline_snapshot_id": {
       "pattern": "^mcr:sha256:[a-f0-9]{64}$",

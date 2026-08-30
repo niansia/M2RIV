@@ -102,7 +102,11 @@ def main() -> None:
         raise ValueError("corpus index is invalid")
     seen: set[str] = set()
     counts = {"regression": 0, "negative-control": 0}
-    status_counts = {"verified-in-ci": 0, "verified-on-target": 0}
+    status_counts = {
+        "verified-in-ci": 0,
+        "verified-on-target": 0,
+        "historical-replay": 0,
+    }
     for relative_case in index["cases"]:
         case_path = _safe_relative(f"corpus/{relative_case}")
         case = _load(case_path)
@@ -110,7 +114,7 @@ def main() -> None:
         if missing:
             raise ValueError(f"{case_path.name} is missing fields: {sorted(missing)}")
         if case["schema_version"] != "1.0.0" or case["status"] not in status_counts:
-            raise ValueError(f"{case_path.name} is not a verified v1 corpus case")
+            raise ValueError(f"{case_path.name} is not a recognized v1 corpus case")
         if case["case_id"] in seen:
             raise ValueError(f"duplicate corpus case_id: {case['case_id']}")
         if case["kind"] not in counts or case["expected_decision"] not in {"PASS", "BLOCK"}:

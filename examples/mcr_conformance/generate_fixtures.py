@@ -55,7 +55,13 @@ def _expected_files() -> dict[Path, str]:
         ROOT / status.value.lower() / "mcr-report.json": render_json(
             normative_profile_report(status)
         )
-        for status in (MCRStatus.PASS, MCRStatus.WARN, MCRStatus.BLOCK, MCRStatus.ERROR)
+        for status in (
+            MCRStatus.PASS,
+            MCRStatus.WARN,
+            MCRStatus.INSUFFICIENT_POWER,
+            MCRStatus.BLOCK,
+            MCRStatus.ERROR,
+        )
     }
     files[ROOT / "negative" / "missing-evidence" / "mcr-report.json"] = (
         _missing_evidence_report()

@@ -2,10 +2,14 @@
   "$defs": {
     "ConformanceProfile": {
       "additionalProperties": false,
-      "description": "One normative four-state interoperability observation.",
+      "description": "One normative evaluation-decision interoperability observation.",
       "properties": {
         "decision_status": {
           "$ref": "#/$defs/MCRStatus"
+        },
+        "evaluation_policy_satisfied": {
+          "title": "Evaluation Policy Satisfied",
+          "type": "boolean"
         },
         "evidence_id": {
           "pattern": "^mcr:sha256:[a-f0-9]{64}$",
@@ -16,15 +20,12 @@
           "enum": [
             "pass",
             "warn",
+            "insufficient_power",
             "block",
             "error"
           ],
           "title": "Profile",
           "type": "string"
-        },
-        "release_authorized": {
-          "title": "Release Authorized",
-          "type": "boolean"
         },
         "report_id": {
           "pattern": "^mcr:sha256:[a-f0-9]{64}$",
@@ -37,7 +38,7 @@
         "report_id",
         "evidence_id",
         "decision_status",
-        "release_authorized"
+        "evaluation_policy_satisfied"
       ],
       "title": "ConformanceProfile",
       "type": "object"
@@ -46,6 +47,7 @@
       "enum": [
         "PASS",
         "WARN",
+        "INSUFFICIENT_POWER",
         "BLOCK",
         "ERROR"
       ],
@@ -75,14 +77,14 @@
       "items": {
         "$ref": "#/$defs/ConformanceProfile"
       },
-      "maxItems": 4,
-      "minItems": 4,
+      "maxItems": 5,
+      "minItems": 5,
       "title": "Profiles",
       "type": "array"
     },
     "schema_version": {
-      "const": "0.2.0",
-      "default": "0.2.0",
+      "const": "0.3.0",
+      "default": "0.3.0",
       "title": "Schema Version",
       "type": "string"
     }

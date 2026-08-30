@@ -4,10 +4,10 @@ This example gates two chat-completions endpoints with the same paired suite. It
 does not put API keys in a config file or command argument.
 
 ```console
-export M2RIV_BASELINE_API_KEY=...
-export M2RIV_CANDIDATE_API_KEY=...
+export MERRIV_BASELINE_API_KEY=...
+export MERRIV_CANDIDATE_API_KEY=...
 
-m2riv compare-api https://baseline.example/v1 https://candidate.example/v1 \
+merriv compare-api https://baseline.example/v1 https://candidate.example/v1 \
   --baseline-model model-v1 \
   --candidate-model model-v2 \
   --baseline-revision deploy-v1 \
@@ -32,7 +32,7 @@ does not expose it so credentials cannot be downgraded accidentally.
 Remote observations are cached only for this command invocation. Persistent reuse
 is unsafe unless the deployment revision and non-secret credential scope are part
 of model identity. SDK callers that deliberately reuse a cache across processes
-must also provide the same secret `M2RIV_CACHE_KEY` (at least 32 bytes). Without it,
+must also provide the same secret `MERRIV_CACHE_KEY` (at least 32 bytes). Without it,
 each process uses a new HMAC key and entries from older processes are misses.
 
 Exit code `0` is release-allowed, `2` is `BLOCK`, `3` means the evaluation was

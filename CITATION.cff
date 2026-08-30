@@ -1,20 +1,20 @@
 cff-version: 1.2.0
-message: "If you use M2RIV or the MCR protocol candidate, cite this software."
-title: "M2RIV: Model-to-Release Inspection & Verification"
+message: "If you use Merriv or produce or consume Model Change Reports, cite this software."
+title: "Merriv: Model Release Evidence"
 type: software
 authors:
-  - name: "M2RIV contributors"
+  - name: "Merriv contributors"
 abstract: >-
   A vendor-neutral release-evidence layer and reference implementation for
   deployable AI model changes.
 version: 0.1.0a1
 license: Apache-2.0
-repository-code: "https://github.com/niansia/M2RIV"
-url: "https://github.com/niansia/M2RIV"
+repository-code: "https://github.com/niansia/Merriv"
+url: "https://github.com/niansia/Merriv"
 keywords:
   - model release engineering
   - release evidence
   - model regression
-  - MCR
+  - Model Change Report
   - ONNX
   - TensorRT

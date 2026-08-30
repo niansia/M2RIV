@@ -1,0 +1,10 @@
+schema_version: 1.0.0
+policy_id: llamacpp-tensor-type-contract
+multiple_comparison_method: holm-bonferroni
+familywise_alpha: 0.05
+target_power: 0.8
+rules:
+  - rule_id: requested-tensor-type-is-honored
+    metric: accuracy
+    margin: 0
+    min_pairs: 2

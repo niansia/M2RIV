@@ -1,5 +1,5 @@
 name: Plugin or integration proposal
-description: Propose an adapter, paired metric, executor, or MCR integration
+description: Propose an adapter, paired metric, executor, or Model Change Report integration
 title: "[Plugin]: "
 labels: ["plugin", "proposal"]
 body:
@@ -7,7 +7,7 @@ body:
     id: kind
     attributes:
       label: Extension kind
-      options: [Adapter, Paired metric, Executor, MCR producer/consumer]
+      options: [Adapter, Paired metric, Executor, Model Change Report producer/consumer]
     validations:
       required: true
   - type: textarea
