@@ -365,15 +365,20 @@ rules:
             f"{rare:.2%} | {rare_delta:+.2%} | {comparison.gate.status.value.upper()} |"
         )
     first_bad = bisect_payload["first_failing_checkpoint"]
-    if first_bad is None:
-        interval = bisect_payload["confirmed_interval"]
+    interval = bisect_payload["confirmed_interval"]
+    if first_bad is not None:
+        localization = f"First conclusive bad build: `{first_bad}`."
+    elif interval is not None:
         localization = (
-            "Localization: inconclusive because build 02 is WARN; the confirmed "
-            f"PASS/BLOCK interval is build {interval['lower_pass_index']} through "
+            "Localization: inconclusive; the confirmed PASS/BLOCK interval is "
+            f"build {interval['lower_pass_index']} through "
             f"build {interval['upper_block_index']}."
         )
     else:
-        localization = f"First conclusive bad build: `{first_bad}`."
+        localization = (
+            f"Localization: inconclusive; {bisect_payload['reason']}. "
+            "No first bad build is claimed."
+        )
     lines.extend(
         (
             "",

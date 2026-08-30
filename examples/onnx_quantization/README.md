@@ -57,13 +57,16 @@ Expected platform-bounded decisions:
 PASS build-00-fp16
 PASS build-01-int8-balanced
 WARN or BLOCK build-02-int8-calibration-scale-065
-BLOCK build-03-int8-calibration-scale-060
+WARN or BLOCK build-03-int8-calibration-scale-060
 ```
 
-Build 02 always fails closed, but platform-specific INT8 kernels can leave its
-Holm-adjusted interval inconclusive. When it is `WARN`, localization correctly
-returns the confirmed interval from build 01 to build 03 instead of inventing a
-first bad build. When it is `BLOCK`, build 02 is the conclusive first bad build.
+Both under-scaled builds fail closed, but platform- and runtime-specific INT8
+kernels can leave their Holm-adjusted evidence inconclusive. The current pinned
+Python 3.11 CI artifacts on Linux and Windows classify both as `WARN`;
+localization therefore returns no first bad build and no PASS/BLOCK interval. If
+build 03 is `BLOCK` while build 02 is `WARN`, the result is the build 01–03
+uncertainty interval. Only a `BLOCK` at build 02 makes build 02 the conclusive
+first bad build.
 
 The demo is fully local after dependency installation. It downloads neither a
 model nor a dataset, uses only `CPUExecutionProvider`, and writes the artifact

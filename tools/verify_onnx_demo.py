@@ -12,11 +12,11 @@ from merriv.reports import verify_report_bundle
 EXPECTED_STATUSES = {
     "build-00-fp16": frozenset({"PASS"}),
     "build-01-int8-balanced": frozenset({"PASS"}),
-    # ORT's platform-specific INT8 kernels move two borderline cases. Under the
-    # current Holm family, build 02 is either a conclusive BLOCK or fail-closed
-    # WARN; both preserve the release boundary honestly.
+    # ORT's platform-specific INT8 kernels move borderline cases. Under the
+    # current formal paired test and Holm family, either degraded build can be a
+    # conclusive BLOCK or fail-closed WARN.
     "build-02-int8-calibration-scale-065": frozenset({"WARN", "BLOCK"}),
-    "build-03-int8-calibration-scale-060": frozenset({"BLOCK"}),
+    "build-03-int8-calibration-scale-060": frozenset({"WARN", "BLOCK"}),
 }
 EXPECTED_ACCURACY_RANGES = {
     "build-00-fp16": ((596 / 629, 596 / 629), (43 / 47, 43 / 47)),
@@ -115,13 +115,14 @@ def verify(destination: Path) -> None:
                 )
 
     bisect = _object(root / "bisect-result.json")
+    terminal_status = observed_statuses["build-03-int8-calibration-scale-060"]
     if observed_statuses[REGRESSION_ONSET] == "BLOCK":
         if (
             bisect.get("outcome") != "first_failing"
             or bisect.get("first_failing_checkpoint") != REGRESSION_ONSET
         ):
             raise ValueError("demo bisect did not locate the conclusive first bad build")
-    else:
+    elif terminal_status == "BLOCK":
         if (
             bisect.get("outcome") != "inconclusive"
             or bisect.get("first_failing_checkpoint") is not None
@@ -129,6 +130,12 @@ def verify(destination: Path) -> None:
             != {"lower_pass_index": 1, "upper_block_index": 3}
         ):
             raise ValueError("demo bisect did not preserve the WARN uncertainty interval")
+    elif (
+        bisect.get("outcome") != "inconclusive"
+        or bisect.get("first_failing_checkpoint") is not None
+        or bisect.get("confirmed_interval") is not None
+    ):
+        raise ValueError("demo bisect claimed an onset without a conclusive BLOCK endpoint")
     artifact_diff = _object(root / "reports" / REGRESSION_ONSET / "artifact-diff.json")
     if not artifact_diff.get("quantization_format_changed"):
         raise ValueError("regression-onset build has no machine-readable quantization change")

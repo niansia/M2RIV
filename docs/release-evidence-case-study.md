@@ -107,12 +107,14 @@ the critical slice with a 1.5% margin over paired evidence.
 The CPU path exports the fixed model to FP16 ONNX and creates QDQ INT8 builds
 with ONNX Runtime. Linux and Windows CI retain separate evidence because numerical
 diff magnitudes and latency are run-scoped. Across the bounded platform results,
-the release story remains fail-closed: baseline and balanced builds PASS, build
-02 is WARN or BLOCK, and build 03 is BLOCK. When build 02 is WARN, localization
-retains a build 01–03 uncertainty interval instead of claiming a first bad build.
-A separate opset 17 → 18 control changes artifact structure while preserving all
-declared shared tensors and emits PASS. This prevents the corpus from equating
-every structural change with failure.
+the release story remains fail-closed: baseline and balanced builds PASS, while
+builds 02 and 03 are WARN or BLOCK. The current pinned Python 3.11 CI artifacts on
+Linux and Windows classify both degraded builds as WARN, so localization claims
+neither a first bad build nor a confirmed PASS/BLOCK interval. A run with a
+conclusive BLOCK may report only the onset or interval its observed statuses
+establish. A separate opset 17 → 18 control changes artifact structure while
+preserving all declared shared tensors and emits PASS. This prevents the corpus
+from equating every structural change with failure.
 
 ## 6. Live NVIDIA ModelOpt → TensorRT case
 

@@ -5,8 +5,8 @@
 [![Python 3.11–3.14](https://img.shields.io/badge/Python-3.11%E2%80%933.14-3776AB.svg)](pyproject.toml)
 
 An optimized model can match backend outputs and still become a worse release.
-Merriv catches the regression, records the evidence, and identifies the first bad
-build before a promotion controller acts.
+Merriv catches the regression, records the evidence, and localizes the first bad
+build when the evidence is decisive—before a promotion controller acts.
 
 Merriv is the **vendor-neutral release-evidence layer for deployable AI models**.
 It turns a change between model builds into a portable, content-addressed, and
@@ -106,7 +106,7 @@ calibration range, so it is a controlled regression test—not the headline proo
 | FP16 baseline | 94.8% | 91.5% | PASS |
 | INT8 balanced | 94.8–94.9% | 91.5–93.6% | PASS |
 | INT8 scale 0.65 | 92.9–93.2% | 74.5–78.7% | WARN–BLOCK |
-| INT8 scale 0.60 | 92.4–92.9% | 70.2–76.6% | BLOCK |
+| INT8 scale 0.60 | 92.4–92.9% | 70.2–76.6% | WARN–BLOCK |
 
 For the retained NVIDIA scale-0.65 run, the critical-slice paired change is
 `-12.77` percentage points with a raw 95% percentile-bootstrap CI of
@@ -115,10 +115,12 @@ size, CI level, family-wise alpha, Holm-adjusted evidence, target power, and MDE
 Its archived report predates multiplicity correction; the current two-rule Holm
 family classifies the same 43/47 to 37/47 outcomes as `WARN`, not `BLOCK`.
 
-Scale 0.65 always fails closed, but its Holm-adjusted interval is platform
-dependent: some kernels produce `WARN`, others `BLOCK`. Scale 0.60 is the first
-cross-platform conclusive `BLOCK`; localization reports build 02 only when its
-evidence is decisive, otherwise it retains the build 01–03 uncertainty interval.
+Both under-scaled builds fail closed, but their formal paired-test evidence is
+platform dependent: borderline kernel outcomes can produce `WARN` or `BLOCK`.
+The current pinned Python 3.11 CI artifacts on Linux and Windows classify both as
+`WARN`, so localization honestly reports no first bad build and no confirmed
+PASS/BLOCK interval. If another supported runtime produces a conclusive `BLOCK`,
+localization reports only the onset or interval justified by that run's evidence.
 The example also records ONNX semantic diff, per-tensor numerical divergence,
 gate evidence, and executed bisect. Run it with:
 
