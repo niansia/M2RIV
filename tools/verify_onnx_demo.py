@@ -20,7 +20,10 @@ EXPECTED_STATUSES = {
 EXPECTED_ACCURACY_RANGES = {
     "build-00-fp16": ((596 / 629, 596 / 629), (369 / 386, 369 / 386)),
     "build-01-int8-balanced": ((596 / 629, 597 / 629), (368 / 386, 369 / 386)),
-    "build-02-int8-calibration-scale-055": ((568 / 629, 572 / 629), (344 / 386, 348 / 386)),
+    # ONNX Runtime's CPU kernels differ by a few predictions across the
+    # hosted Linux and Windows runners. The gate verdict remains BLOCK on
+    # both; this range records the observed cross-platform accuracy envelope.
+    "build-02-int8-calibration-scale-055": ((568 / 629, 574 / 629), (344 / 386, 348 / 386)),
     "build-03-int8-calibration-scale-050": ((565 / 629, 570 / 629), (343 / 386, 348 / 386)),
 }
 CALIBRATION_REGRESSION_BUILD = "build-02-int8-calibration-scale-055"
