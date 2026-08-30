@@ -13,9 +13,10 @@ The corpus contains two CI-exercised regression fixtures, one CI-verified negati
 control, one target-observed ModelOpt/TensorRT regression, and one source-anchored
 replay of a real llama.cpp regression. The ONNX and ModelOpt accuracy cases retain
 real metric and artifact evidence. Their current non-zero-margin matched-binary
-Holm profile uses Tango score inference and returns BLOCK for both
-contracted-calibration candidates. The historical NVIDIA receipt remains
-immutable and is explicitly separated from the current re-evaluation. A
+Holm profile uses Tango score inference. The CPU case is WARN on pinned Ubuntu
+and BLOCK on pinned Windows for both contracted-calibration candidates; the
+retained NVIDIA target re-evaluation is BLOCK. The historical NVIDIA receipt
+remains immutable and is explicitly separated from the current re-evaluation. A
 historical replay is not a fresh upstream
 binary execution, and target-observed is not independently reproduced. The
 target is still ten independently reproduced real cases; planned cases do not

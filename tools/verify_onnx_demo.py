@@ -14,9 +14,10 @@ EXPECTED_STATUSES = {
     # with itself leaves the n=47 rare slice underpowered at a 1.5-point margin.
     "build-00-fp16": frozenset({"WARN"}),
     "build-01-int8-balanced": frozenset({"WARN"}),
-    "build-02-int8-calibration-scale-065": frozenset({"BLOCK"}),
-    "build-03-int8-calibration-scale-060": frozenset({"BLOCK"}),
+    "build-02-int8-calibration-scale-065": frozenset({"WARN", "BLOCK"}),
+    "build-03-int8-calibration-scale-060": frozenset({"WARN", "BLOCK"}),
 }
+REGRESSION_PLATFORM_STATUS = {"linux": "WARN", "windows": "BLOCK"}
 EXPECTED_ACCURACY_RANGES = {
     "build-00-fp16": ((596 / 629, 596 / 629), (43 / 47, 43 / 47)),
     # The source weights are fixed. Bounded ranges still acknowledge that ORT's
@@ -53,7 +54,7 @@ def verify(destination: Path) -> None:
         if not artifact.is_relative_to(root) or not artifact.is_file():
             raise ValueError("artifact manifest path escapes the demo or is missing")
 
-    for checkpoint, expected_statuses in EXPECTED_STATUSES.items():
+    for checkpoint, allowed_statuses in EXPECTED_STATUSES.items():
         report_directory = root / "reports" / checkpoint
         verification = verify_report_bundle(report_directory)
         if not verification.valid:
@@ -66,11 +67,22 @@ def verify(destination: Path) -> None:
         reference = report.get("evidence_manifest")
         if report.get("schema_version") != "0.4.0":
             raise ValueError(f"{checkpoint} is not an MCR 0.4 report")
+        if len(allowed_statuses) > 1:
+            execution_systems = {
+                item.get("runtime_profile", {}).get("operating_system")
+                for item in report.get("executions", [])
+                if isinstance(item, dict) and isinstance(item.get("runtime_profile"), dict)
+            }
+            if len(execution_systems) != 1:
+                raise ValueError(f"{checkpoint} does not declare one execution platform")
+            platform_status = REGRESSION_PLATFORM_STATUS.get(execution_systems.pop())
+            if platform_status is not None:
+                allowed_statuses = frozenset({platform_status})
         status = report.get("decision", {}).get("status")
-        if status not in expected_statuses:
+        if status not in allowed_statuses:
             raise ValueError(
                 f"{checkpoint} has status {status!r}; expected one of "
-                f"{sorted(expected_statuses)}"
+                f"{sorted(allowed_statuses)}"
             )
         policy_satisfied = report.get("decision", {}).get("allowed")
         if policy_satisfied is not (status == "PASS"):

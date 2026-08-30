@@ -109,10 +109,11 @@ The CPU path exports the fixed model to FP16 ONNX and creates QDQ INT8 builds
 with ONNX Runtime. Linux and Windows CI retain separate evidence because numerical
 diff magnitudes and latency are run-scoped. The accuracy policy uses non-zero
 margins over matched-binary outcomes. Tango score inference returns WARN for the
-balanced INT8 candidate and BLOCK for both contracted-calibration candidates.
-The FP16 row is the declared reference, not a candidate gate. Localization claims
-no first bad build because the reference-side endpoint is not a decisive PASS. A
-separate opset 17 → 18 control explicitly selects an
+balanced INT8 candidate. The contracted-calibration candidates are WARN with the
+pinned Ubuntu toolchain and BLOCK with the pinned Windows toolchain. The FP16 row
+is the declared reference, not a candidate gate. Localization claims no first bad
+build because the reference-side endpoint is not a decisive PASS. A separate
+opset 17 → 18 control explicitly selects an
 interval-only policy, changes artifact structure while preserving all declared
 shared tensors, and emits PASS. It is a structural and numerical negative
 control, not a rejected zero-effect McNemar null. This prevents the corpus from

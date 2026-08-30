@@ -59,9 +59,9 @@ Expected platform-bounded decisions:
 
 ```text
 REFERENCE build-00-fp16 (declared baseline; not a candidate gate)
-WARN      build-01-int8-balanced
-BLOCK     build-02-int8-calibration-scale-065
-BLOCK     build-03-int8-calibration-scale-060
+WARN       build-01-int8-balanced
+WARN/BLOCK build-02-int8-calibration-scale-065 (Linux/Windows)
+WARN/BLOCK build-03-int8-calibration-scale-060 (Linux/Windows)
 ```
 
 The accuracy rules are matched-binary risk differences with non-zero
@@ -71,8 +71,9 @@ sign-randomization assumption. The mechanically generated baseline self-check is
 WARN because the 47-case critical slice cannot prove the declared 1.5-point
 margin, but the table correctly presents it as reference context rather than a
 candidate regression. Localization returns no first bad build because its
-reference-side endpoint is not a decisive PASS. The two contracted-calibration
-builds still produce formal BLOCK evidence.
+reference-side endpoint is not a decisive PASS. With the pinned toolchain, the
+two contracted-calibration builds are WARN on Ubuntu and BLOCK on Windows; the
+generated report for the executing platform is authoritative.
 
 The demo is fully local after dependency installation. It downloads neither a
 model nor a dataset, uses only `CPUExecutionProvider`, and writes the artifact

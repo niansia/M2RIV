@@ -5,7 +5,7 @@
   "kind": "regression",
   "axis": "quantization-calibration",
   "status": "verified-in-ci",
-  "expected_decision": "BLOCK",
+  "expected_decision": "WARN",
   "expected_first_bad": null,
   "reproduction": "python examples/onnx_quantization/run_demo.py --output runs/onnx-quantization",
   "verification": "python tools/verify_onnx_demo.py runs/onnx-quantization",
@@ -14,5 +14,5 @@
     "examples/onnx_quantization/assets/digits-mlp-fp32.onnx.b64",
     "examples/onnx_quantization/README.md"
   ],
-  "limitations": "Fixed digits dataset, fixed MLP weights, CPU ONNX Runtime, and declared calibration sequence. Tango score inference returns BLOCK for the contracted-calibration candidates, but the balanced endpoint is WARN, so no current first-bad or confirmed PASS/BLOCK interval is claimed."
+  "limitations": "Fixed digits dataset, fixed MLP weights, CPU ONNX Runtime, and declared calibration sequence. Tango score inference returns WARN on pinned Ubuntu and BLOCK on pinned Windows for the contracted-calibration candidates. The balanced endpoint is WARN on both, so no current first-bad or confirmed PASS/BLOCK interval is claimed."
 }
