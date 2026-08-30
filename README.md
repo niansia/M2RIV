@@ -124,9 +124,14 @@ localization reports only the onset or interval justified by that run's evidence
 The example also records ONNX semantic diff, per-tensor numerical divergence,
 gate evidence, and executed bisect. Run it with:
 
+> [!NOTE]
+> The retained ONNX evidence toolchain currently requires Python 3.11–3.13.
+> Merriv's base package supports Python 3.14, but the `onnx-demo` extra
+> intentionally does not install its older retained dependencies on 3.14.
+
 ```console
-python -m pip install -e ".[onnx-demo]"
-python examples/onnx_quantization/run_demo.py --output runs/onnx-quantization
+uv sync --python 3.13 --frozen --extra onnx-demo
+uv run --frozen python examples/onnx_quantization/run_demo.py --output runs/onnx-quantization
 ```
 
 The [NVIDIA vertical](examples/nvidia_tensorrt_vertical/README.md) exercises the

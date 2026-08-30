@@ -14,9 +14,13 @@ test. The critical slice is declared from inputs as digit 1 with normalized ink
 sum at least 18; it is not selected from model outcomes. The regression is caused
 by an under-scaled calibration input range, not by editing candidate predictions.
 
+The retained evidence toolchain currently requires Python 3.11–3.13. Merriv's
+base package supports Python 3.14, but the `onnx-demo` extra intentionally omits
+these older retained dependencies on Python 3.14.
+
 ```console
-python -m pip install -e ".[onnx-demo]"
-python examples/onnx_quantization/run_demo.py --output runs/onnx-quantization
+uv sync --python 3.13 --frozen --extra onnx-demo
+uv run --frozen python examples/onnx_quantization/run_demo.py --output runs/onnx-quantization
 ```
 
 Inspect the actual deployment artifacts:

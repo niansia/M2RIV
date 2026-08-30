@@ -95,9 +95,13 @@ sha256sum -c SHA256SUMS
 gh attestation verify PATH/TO/ARTIFACT -R OWNER/REPOSITORY
 ```
 
-PyPI publishing is intentionally disabled until the package namespace and GitHub
-Trusted Publisher are configured and the explicit brand-clearance variable is set.
-The guarded workflow and remaining account-side steps are documented in the
+Tagged releases are published through the protected PyPI Trusted Publisher path
+when the explicit brand-clearance gate is satisfied. Version `0.1.0a2`
+successfully exercised that path without a long-lived package token. After a
+successful publish, the workflow creates a permanent GitHub Release containing
+the wheel, source distribution, SPDX SBOM, and `SHA256SUMS`; the separate
+attestation job signs the same inert build outputs. Account controls and
+per-release checks are documented in the
 [public release checklist](docs/release-checklist.md). A generated SBOM or
 provenance attestation says where an artifact came from; it is not a claim that
 the artifact has no vulnerabilities.

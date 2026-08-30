@@ -10,9 +10,17 @@ import argparse
 import base64
 import hashlib
 import json
+import sys
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
+
+if sys.version_info < (3, 11) or sys.version_info >= (3, 14):
+    raise SystemExit(
+        "The retained ONNX demo requires Python 3.11-3.13. "
+        "Merriv's base package supports Python 3.14, but this evidence toolchain "
+        "has not been migrated to it."
+    )
 
 import numpy as np
 import onnx

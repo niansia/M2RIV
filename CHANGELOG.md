@@ -7,6 +7,40 @@ versions for portable JSON contracts. Pre-1.0 APIs may change with migration not
 
 ### Added
 
+- Python 3.14 package support and CI coverage, plus Linux, Windows, and macOS
+  package smoke tests
+- GatePolicy 1.1 prospective standard-deviation inputs for planning-time MDE,
+  with observed-design MDE retained only as diagnostic evidence
+- Exact or Monte Carlo paired sign-randomization hypothesis evidence, while
+  exact McNemar remains the zero-margin binary path
+- Adversarial Holm tests for tied p-values, one-rule families, entirely
+  underpowered families, complete declared-family semantics, and adjusted-p
+  monotonicity
+- Permanent GitHub Release creation with wheel, source distribution, SPDX SBOM,
+  and checksums after a successful protected PyPI publish
+
+### Changed
+
+- The public quickstart installs immutable `merriv==0.1.0a2`; mutable `main`
+  remains a development-only installation source
+- The composite-action smoke test is a genuine PASS run and asserts exit code
+  `0` without suppressing a deliberately failing step
+- ONNX regression localization now claims a first bad build or PASS/BLOCK
+  interval only when the observed gate endpoints establish one
+- Statistical documentation now defines the complete declared Holm family,
+  two-sided anomaly rationale, randomization assumptions, and the distinction
+  between planned and observed-design MDE
+
+### Security
+
+- Tag builds fail before packaging when the tag and Python package version differ
+- Release documentation now reflects the active protected Trusted Publisher path
+  instead of describing publishing as disabled
+
+## 0.1.0a2 - 2026-08-30
+
+### Added
+
 - MCR 0.4 fixed PASS/WARN/INSUFFICIENT_POWER/BLOCK/ERROR vectors and negative
   conformance fixtures
 - Policy-family Holm-Bonferroni correction, declared family-wise alpha, target
@@ -60,8 +94,8 @@ versions for portable JSON contracts. Pre-1.0 APIs may change with migration not
 - MCRVerification 1.1 integrity/completeness semantics and evidence coverage counts
 - MCRVerification 1.2 explicit `self-consistency-only` trust scope and an
   `authenticity_verified` field that prevents integrity from implying provenance
-- A CI smoke test that executes the local composite action and asserts its BLOCK
-  output, uploaded bundle, and producer-neutral verification path
+- A release-time CI smoke test that executes the local composite action, exercises
+  BLOCK enforcement, uploads the bundle, and verifies the producer-neutral path
 - First-class producer and consumer conformance commands, normative
   PASS/WARN/BLOCK profiles, deterministic receipts, a compatibility matrix, and
   self-certification rules

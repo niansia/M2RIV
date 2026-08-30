@@ -51,6 +51,13 @@ def test_release_build_has_provenance_sbom_and_gated_trusted_publish() -> None:
     assert publish["environment"]["name"] == "pypi"
     assert "MERRIV_BRAND_CLEARED" in publish["if"]
     assert "pypa/gh-action-pypi-publish@" in source
+    github_release = workflow["jobs"]["github-release"]
+    assert github_release["needs"] == ["build", "attest", "publish"]
+    assert github_release["permissions"] == {"contents": "write"}
+    assert "needs.publish.result == 'success'" in github_release["if"]
+    assert "gh release create" in source
+    assert "dist/*" in source
+    assert "--prerelease" in source
     assert "secrets." not in source
 
 

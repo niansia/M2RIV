@@ -39,6 +39,7 @@ and [security model](https://docs.pypi.org/trusted-publishers/security-model/).
 3. Create the signed/protected `v*` tag from the reviewed commit.
 4. Approve the `pypi` environment only after the build job produces wheel, source
    distribution, SHA256SUMS, SPDX SBOM, and GitHub provenance.
-5. Verify the published project metadata, attestations, hashes, installation, and
-   `merriv --help` from a clean environment.
+5. Verify the published project metadata, attestations, hashes, installation,
+   `merriv --help` from a clean environment, and the permanent GitHub Release
+   assets created after the protected publish succeeds.
 6. Confirm private vulnerability-report notifications remain monitored.

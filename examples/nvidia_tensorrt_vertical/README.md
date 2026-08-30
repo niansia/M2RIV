@@ -29,7 +29,7 @@ scale only the declared calibration input to 0.65 and 0.60. Model weights and th
 
 ```powershell
 $env:UV_PROJECT_ENVIRONMENT = ".venv-tensorrt"
-uv sync --frozen --extra onnx-demo
+uv sync --python 3.11 --frozen --extra onnx-demo
 uv pip install --python .venv-tensorrt/Scripts/python.exe --no-deps `
   --require-hashes -r `
   examples/nvidia_tensorrt_vertical/requirements-tensorrt-cu125-windows.lock
