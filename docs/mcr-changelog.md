@@ -18,6 +18,12 @@ The MCR envelope and identity preimages did not change:
 Verifier, conformance, importer, and OCI contracts are tooling surfaces. Their
 additive revisions do not alter the MCR 0.4 report envelope.
 
+GatePolicy 1.1.0 adds the optional prospective
+`planned_difference_stddev` input. A decision-bearing `max_mde` now requires
+that planned quantity; observed-design MDE remains diagnostic. This tooling
+policy revision does not change the frozen MCR 0.4 report envelope or identity
+preimages.
+
 ## 0.4.0 — 2026-08-29
 
 Breaking pre-alpha correction:

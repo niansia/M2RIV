@@ -2,18 +2,20 @@
 
 This guide runs a complete release evaluation without downloading a model or calling a
 remote service. The fixture is intentionally bad so that a correct run returns
-`BLOCK`.
+`BLOCK`. The convenience `demo` wrapper exits successfully after writing that
+report; use `merriv compare` or the GitHub Action when the process exit code must
+enforce the decision.
 
 ## Run without cloning
 
 ```console
-uvx --python 3.13 --from git+https://github.com/niansia/Merriv.git merriv demo --output runs/quickstart
+uvx --python 3.13 --from merriv==0.1.0a2 merriv demo --output runs/quickstart
 ```
 
-Python 3.11, 3.12, and 3.13 are supported. The base install contains no ONNX,
-GPU, MLflow, or Polygraphy dependency. Once the first tagged PyPI release is
-published, the equivalent command is
-`uvx --from merriv merriv demo --output runs/quickstart`.
+The published alpha supports Python 3.11, 3.12, and 3.13; `uvx` can provision the
+pinned 3.13 interpreter even when the host default differs. The base install
+contains no ONNX, GPU, MLflow, or Polygraphy dependency. Development `main` also
+tests Python 3.14 for the next release line.
 
 ## Run the repository fixture
 
@@ -46,7 +48,7 @@ bounded output contracts are covered by tests and schemas.
 ## Verify the bundle
 
 ```console
-merriv mcr verify runs/quickstart --strict
+merriv mcr verify runs/quickstart/reports --strict
 ```
 
 Strict verification rehashes every recognized local component. It checks bundle
@@ -56,12 +58,12 @@ integrity and declared conformance, not producer identity or model safety.
 
 | File | Purpose |
 |---|---|
-| `mcr-report.json` | Portable Model Change Report |
-| `evidence-manifest.json` | Deduplicated observation and evidence references |
-| `release-plan.json` | Content-addressed policy and execution preflight |
-| `summary.md` | Human-readable decision summary |
-| `junit.xml` | CI test-report integration |
-| `results.sarif` | Code-scanning annotation integration |
+| `reports/mcr-report.json` | Portable Model Change Report |
+| `reports/evidence-manifest.json` | Deduplicated observation and evidence references |
+| `reports/release-plan.json` | Content-addressed policy and execution preflight |
+| `reports/summary.md` | Human-readable decision summary |
+| `reports/junit.xml` | CI test-report integration |
+| `reports/results.sarif` | Code-scanning annotation integration |
 
 Generated runs belong in `runs/`, which is ignored by Git. Only small normative
 fixtures and reproducible examples are retained in the repository.

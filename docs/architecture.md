@@ -76,7 +76,8 @@ The policy compiler turns human-reviewable YAML, suite slices, metric declaratio
 and plugin provenance into a content-addressed plan before inference. `PASS`,
 `WARN`, `INSUFFICIENT_POWER`, `BLOCK`, and `ERROR` remain separate outcomes.
 The policy declares family-wise alpha, Holm-Bonferroni correction, target power,
-and optional per-rule maximum MDE; insufficient evidence can never become `PASS`.
+and optional per-rule maximum MDE backed by a prospectively declared paired-
+difference standard deviation; insufficient evidence can never become `PASS`.
 
 Metrics consume paired baseline/candidate observations after execution. Each metric
 declares a stable ID, unit, optimization direction, and whether its samples are

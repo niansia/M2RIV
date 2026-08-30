@@ -18,7 +18,7 @@ The public project and reference-implementation name is **Merriv**, pronounced
 
 ## Technical identifiers
 
-Before the first PyPI release, the Python distribution, import namespace,
+Before the first Merriv PyPI release, the Python distribution, import namespace,
 executable, project-owned plugin and executor identifiers, cache environment
 variable, release artifacts, and identity hash domains were unified under
 `merriv` or `MERRIV`. The protocol-owned `mcr:` content IDs, JSON field names,
@@ -29,17 +29,11 @@ documentation and package metadata use that locator.
 
 ## Distribution
 
-The PyPI project and distribution are `merriv`. Before the first published
-release, installation examples use the Git repository explicitly:
+The PyPI project and distribution are `merriv`. The reproducible published-alpha
+form pins the version and interpreter:
 
 ```console
-uvx --from git+https://github.com/niansia/Merriv.git merriv --help
-```
-
-After publication, the unambiguous form is:
-
-```console
-uvx --from merriv merriv --help
+uvx --python 3.13 --from merriv==0.1.0a2 merriv --help
 ```
 
 ## Clearance boundary
@@ -47,5 +41,5 @@ uvx --from merriv merriv --help
 General web and package-index searches found no software project occupying the
 exact `Merriv` or `merriv` names at decision time. That is collision screening,
 not a legal trademark opinion. Public package publishing remains gated by the
-repository variable `MERRIV_BRAND_CLEARED=true`, which the owner sets only after
-the desired legal/domain/account checks are recorded.
+repository variable `MERRIV_BRAND_CLEARED=true`, which the owner set before the
+first release and must keep under explicit review for later releases.

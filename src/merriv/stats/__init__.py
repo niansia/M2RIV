@@ -3,8 +3,8 @@
 from merriv.stats.paired import (
     BinaryFlipMatrix,
     BinaryPairedEvidence,
-    BootstrapThresholdTest,
     ConfidenceInterval,
+    HypothesisTestEvidence,
     PairedEstimate,
     binary_paired_evidence,
     paired_bootstrap,
@@ -13,8 +13,8 @@ from merriv.stats.paired import (
 __all__ = [
     "BinaryFlipMatrix",
     "BinaryPairedEvidence",
-    "BootstrapThresholdTest",
     "ConfidenceInterval",
+    "HypothesisTestEvidence",
     "PairedEstimate",
     "binary_paired_evidence",
     "paired_bootstrap",

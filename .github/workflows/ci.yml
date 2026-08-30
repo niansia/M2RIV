@@ -17,7 +17,7 @@ jobs:
     timeout-minutes: 30
     strategy:
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -30,7 +30,10 @@ jobs:
           cache-dependency-glob: uv.lock
       - run: uv sync --frozen --extra dev --extra onnx --group action-build
       - run: uv run --frozen ruff check .
-      - run: uv run --frozen mypy src
+      - if: matrix.python-version != '3.14'
+        run: uv run --frozen mypy src
+      - if: matrix.python-version == '3.14'
+        run: uv run --frozen mypy --python-version 3.14 src
       - run: uv run --frozen pytest --cov=merriv --cov-report=term-missing --cov-fail-under=91
       - run: uv run --frozen python -m pip_audit --local --skip-editable
       - run: uv pip check
@@ -54,25 +57,23 @@ jobs:
           persist-credentials: false
       - name: Run the repository's composite action
         id: gate
-        continue-on-error: true
         uses: ./
         with:
           baseline: examples/recorded_compare/baseline.jsonl
-          candidate: examples/recorded_compare/candidate.jsonl
+          candidate: examples/recorded_compare/baseline.jsonl
           suite: examples/recorded_compare/suite.jsonl
-          policy: examples/recorded_compare/policy.yaml
+          policy: examples/action_smoke_pass_policy.yaml
           output: runs/action-smoke
           slice-key: frequency
           resamples: "200"
           artifact-name: action-smoke-${{ github.run_id }}
-      - name: Assert BLOCK semantics and portable bundle
-        if: always()
+      - name: Assert PASS semantics and portable bundle
         env:
           MERRIV_ACTION_OUTCOME: ${{ steps.gate.outcome }}
           MERRIV_ACTION_EXIT_CODE: ${{ steps.gate.outputs.exit-code }}
         run: |
-          test "$MERRIV_ACTION_OUTCOME" = "failure"
-          test "$MERRIV_ACTION_EXIT_CODE" = "2"
+          test "$MERRIV_ACTION_OUTCOME" = "success"
+          test "$MERRIV_ACTION_EXIT_CODE" = "0"
           test -f runs/action-smoke/mcr-report.json
           test -f runs/action-smoke/evidence-manifest.json
           test -f runs/action-smoke/release-plan.json
@@ -82,6 +83,36 @@ jobs:
           merriv mcr verify runs/action-smoke --strict
       - name: Verify cross-language content identity vectors
         run: node examples/content_identity/verify_golden.mjs
+
+  platform-smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: "3.14"
+          version: "0.11.18"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv sync --frozen
+      - run: uv run --frozen merriv --help
+      - run: >-
+          uv run --frozen merriv compare
+          examples/recorded_compare/baseline.jsonl
+          examples/recorded_compare/baseline.jsonl
+          --suite examples/recorded_compare/suite.jsonl
+          --policy examples/action_smoke_pass_policy.yaml
+          --slice-key frequency
+          --output runs/platform-smoke
+          --resamples 200
+      - run: uv run --frozen merriv mcr verify runs/platform-smoke --strict
 
   rust-mcr-interop:
     runs-on: ubuntu-latest

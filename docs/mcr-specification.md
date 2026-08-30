@@ -41,6 +41,21 @@ conversion before serialization. A generic JSON parse/stringify round trip is
 not sufficient because it can erase integral-float type and negative-zero state.
 The exact typed conformance vectors are normative test inputs.
 
+## Reference statistical profile
+
+The MCR envelope preserves intervals plus raw and adjusted p-values, but MCR
+0.4.0 does not yet have structured fields for a hypothesis-test method, null,
+alternative, or assumptions. A producer MUST NOT present an undocumented tail
+probability as a universally interpretable p-value. Until a future envelope
+version addresses that gap, producers that emit these fields MUST document the
+method and assumptions in retained statistical evidence or the finding message.
+
+The Merriv reference producer uses exact two-sided McNemar evidence for binary
+paired metrics at a zero margin and a two-sided paired sign-randomization test at
+other margins. Percentile-bootstrap tail counts are not used as formal p-values.
+Confidence intervals remain paired percentile-bootstrap intervals and are
+evaluated in full; the p-value does not replace the interval decision.
+
 ## Identity tiers
 
 All content IDs use `mcr:sha256:<64 lowercase hexadecimal characters>`. Hash

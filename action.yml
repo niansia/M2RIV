@@ -37,7 +37,7 @@ inputs:
 
 outputs:
   exit-code:
-    description: Merriv evaluation code (0 pass, 2 block, 3 error, 4 disallowed warn).
+    description: Merriv evaluation code (0 pass, 2 block, 3 invalid/error, 4 WARN or INSUFFICIENT_POWER not permitted).
     value: ${{ steps.final.outputs.exit-code }}
   report:
     description: Path to the generated machine-readable Model Change Report.

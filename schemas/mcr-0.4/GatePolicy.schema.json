@@ -49,6 +49,19 @@
           "default": null,
           "title": "Min Pairs"
         },
+        "planned_difference_stddev": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Planned Difference Stddev"
+        },
         "rule_id": {
           "minLength": 1,
           "title": "Rule Id",
@@ -130,8 +143,11 @@
       "type": "array"
     },
     "schema_version": {
-      "const": "1.0.0",
-      "default": "1.0.0",
+      "default": "1.1.0",
+      "enum": [
+        "1.0.0",
+        "1.1.0"
+      ],
       "title": "Schema Version",
       "type": "string"
     },

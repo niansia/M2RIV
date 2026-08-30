@@ -60,13 +60,22 @@ class GateRule(GateContract):
     # Power-sensitive policies should set max_mde instead of guessing a sample count.
     min_pairs: Annotated[int | None, Field(ge=1)] = None
     max_mde: Annotated[float | None, Field(gt=0.0)] = None
+    planned_difference_stddev: Annotated[float | None, Field(gt=0.0)] = None
     block_on_violation: bool = True
+
+    @model_validator(mode="after")
+    def prospective_power_gate_requires_planned_variance(self) -> GateRule:
+        if self.max_mde is not None and self.planned_difference_stddev is None:
+            raise ValueError(
+                "max_mde requires a prospectively specified planned_difference_stddev"
+            )
+        return self
 
 
 class GatePolicy(GateContract):
     """A versioned collection of release rules."""
 
-    schema_version: Literal["1.0.0"] = "1.0.0"
+    schema_version: Literal["1.0.0", "1.1.0"] = "1.1.0"
     policy_id: Identifier
     rules: tuple[GateRule, ...] = Field(min_length=1)
     multiple_comparison_method: MultipleComparisonMethod = (
@@ -90,6 +99,12 @@ class GatePolicy(GateContract):
         metrics = [rule.metric for rule in self.rules]
         if len(metrics) != len(set(metrics)):
             raise ValueError("each metric may be governed by only one rule")
+        if self.schema_version == "1.0.0" and any(
+            rule.planned_difference_stddev is not None for rule in self.rules
+        ):
+            raise ValueError(
+                "planned_difference_stddev requires GatePolicy schema_version 1.1.0"
+            )
         return self
 
 
@@ -177,15 +192,17 @@ def _minimum_detectable_effect(
     *,
     alpha: float,
     target_power: float,
+    planned_difference_stddev: float | None,
 ) -> float | None:
-    """Observed-design MDE using paired-difference spread and a normal approximation."""
+    """Prospective or diagnostic MDE using a normal approximation."""
 
-    if estimate.difference_stddev is None or estimate.n_pairs < 2:
+    difference_stddev = planned_difference_stddev or estimate.difference_stddev
+    if difference_stddev is None or estimate.n_pairs < 2:
         return None
     normal = NormalDist()
     critical = normal.inv_cdf(1.0 - alpha / 2.0)
     power_quantile = normal.inv_cdf(target_power)
-    return (critical + power_quantile) * estimate.difference_stddev / math.sqrt(estimate.n_pairs)
+    return (critical + power_quantile) * difference_stddev / math.sqrt(estimate.n_pairs)
 
 
 def _decision_from_estimate(
@@ -236,8 +253,8 @@ def _insufficient_decision(
         reason,
         interval=estimate.confidence_interval,
         raw_p_value=(
-            estimate.threshold_test.two_sided_p_value
-            if estimate.threshold_test is not None
+            estimate.hypothesis_test.p_value
+            if estimate.hypothesis_test is not None
             else None
         ),
         adjusted_p_value=None,
@@ -260,6 +277,11 @@ def _evaluate_interval(
     statistically_decisive: bool,
 ) -> RuleDecision:
     threshold = _threshold(rule)
+    method_suffix = (
+        f"; hypothesis test: {estimate.hypothesis_test.method}"
+        if estimate.hypothesis_test is not None
+        else ""
+    )
     if rule.direction is MetricDirection.HIGHER_IS_BETTER:
         passes = interval.low >= threshold
         violates = interval.high < threshold
@@ -273,7 +295,7 @@ def _evaluate_interval(
             estimate,
             GateStatus.PASS,
             "the full multiplicity-adjusted confidence interval satisfies the "
-            "non-inferiority margin",
+            f"non-inferiority margin{method_suffix}",
             interval=interval,
             raw_p_value=raw_p_value,
             adjusted_p_value=adjusted_p_value,
@@ -288,7 +310,7 @@ def _evaluate_interval(
             estimate,
             status,
             "the full multiplicity-adjusted confidence interval violates the "
-            "non-inferiority margin",
+            f"non-inferiority margin{method_suffix}",
             interval=interval,
             raw_p_value=raw_p_value,
             adjusted_p_value=adjusted_p_value,
@@ -301,7 +323,8 @@ def _evaluate_interval(
         estimate,
         GateStatus.WARN,
         "uncertain after multiplicity correction: the adjusted confidence interval "
-        "crosses the non-inferiority margin or the Holm hypothesis was not rejected",
+        "crosses the non-inferiority margin or the Holm hypothesis was not rejected"
+        f"{method_suffix}",
         interval=interval,
         raw_p_value=raw_p_value,
         adjusted_p_value=adjusted_p_value,
@@ -328,11 +351,13 @@ def _aggregate_status(decisions: tuple[RuleDecision, ...]) -> GateStatus:
 def evaluate_gate(policy: GatePolicy, evaluation: GateEvaluation) -> GateDecision:
     """Evaluate a complete non-inferiority family and critical safety evidence.
 
-    Holm-Bonferroni is applied to two-sided percentile-bootstrap threshold tests.
+    Holm-Bonferroni is applied to formal two-sided paired hypothesis tests.
     A decisive rule still compares the complete interval at its Holm step alpha;
-    point estimates alone never PASS or BLOCK. Power is reported from the observed
-    paired-difference spread. Rules with an explicit ``max_mde`` fail closed when
-    that detectable effect is too coarse for the policy.
+    point estimates alone never PASS or BLOCK. Power uses a prospectively declared
+    paired-difference spread when supplied; the observed spread is diagnostic only.
+    Rules with an explicit ``max_mde`` therefore require
+    ``planned_difference_stddev`` and fail closed when that detectable effect is too
+    coarse for the policy.
     """
 
     evidence_by_metric = {item.metric: item for item in evaluation.evidence}
@@ -365,6 +390,7 @@ def evaluate_gate(policy: GatePolicy, evaluation: GateEvaluation) -> GateDecisio
             estimate,
             alpha=planning_alpha,
             target_power=policy.target_power,
+            planned_difference_stddev=rule.planned_difference_stddev,
         )
         mdes[rule.rule_id] = mde
         if rule.min_pairs is not None and estimate.n_pairs < rule.min_pairs:
@@ -387,19 +413,20 @@ def evaluate_gate(policy: GatePolicy, evaluation: GateEvaluation) -> GateDecisio
                 policy,
                 minimum_detectable_effect=mde,
                 reason=(
-                    f"insufficient power: MDE {rendered_mde} exceeds the policy maximum "
+                    f"insufficient power: planned-design MDE {rendered_mde} exceeds "
+                    "the policy maximum "
                     f"{rule.max_mde:.6g} at power {policy.target_power:.3g}"
                 ),
                 status=GateStatus.INSUFFICIENT_POWER,
             )
             continue
 
-        threshold_test = estimate.threshold_test
+        hypothesis_test = estimate.hypothesis_test
         if policy.multiple_comparison_method is MultipleComparisonMethod.HOLM_BONFERRONI:
             if family_size == 1:
                 continue
-            if threshold_test is None or not math.isclose(
-                threshold_test.threshold,
+            if hypothesis_test is None or not math.isclose(
+                hypothesis_test.null_value,
                 _threshold(rule),
                 rel_tol=0.0,
                 abs_tol=1e-12,
@@ -408,14 +435,17 @@ def evaluate_gate(policy: GatePolicy, evaluation: GateEvaluation) -> GateDecisio
                     rule_id=rule.rule_id,
                     metric=rule.metric,
                     status=GateStatus.ERROR,
-                    reason="Holm-Bonferroni requires bootstrap evidence at the rule margin",
+                    reason=(
+                        "Holm-Bonferroni requires formal paired hypothesis-test evidence "
+                        "at the rule margin"
+                    ),
                     margin=rule.margin,
                     n_pairs=estimate.n_pairs,
                     minimum_detectable_effect=mde,
                     target_power=policy.target_power,
                 )
                 continue
-            raw_p_values[rule.rule_id] = threshold_test.two_sided_p_value
+            raw_p_values[rule.rule_id] = hypothesis_test.p_value
 
     adjustments: dict[str, tuple[float, float, float]] = {}
     if policy.multiple_comparison_method is MultipleComparisonMethod.HOLM_BONFERRONI:
@@ -442,8 +472,8 @@ def evaluate_gate(policy: GatePolicy, evaluation: GateEvaluation) -> GateDecisio
         ):
             effective_alpha = policy.familywise_alpha
             raw_p_value = (
-                estimate.threshold_test.two_sided_p_value
-                if estimate.threshold_test is not None
+                estimate.hypothesis_test.p_value
+                if estimate.hypothesis_test is not None
                 else None
             )
             adjusted_p_value = raw_p_value

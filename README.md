@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/niansia/Merriv/actions/workflows/ci.yml/badge.svg)](https://github.com/niansia/Merriv/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
-[![Python 3.11–3.13](https://img.shields.io/badge/Python-3.11%E2%80%933.13-3776AB.svg)](pyproject.toml)
+[![Python 3.11–3.14](https://img.shields.io/badge/Python-3.11%E2%80%933.14-3776AB.svg)](pyproject.toml)
 
 An optimized model can match backend outputs and still become a worse release.
 Merriv catches the regression, records the evidence, and identifies the first bad
@@ -26,7 +26,7 @@ conformance; it does not establish producer identity. The diagram has an
 [editable draw.io source](docs/images/source/merriv-release-evidence-flow.drawio).
 
 > [!IMPORTANT]
-> **Real historical regression:** llama.cpp issue
+> **Replay of a real historical regression:** llama.cpp issue
 > [#22544](https://github.com/ggml-org/llama.cpp/issues/22544) identifies a
 > first-bad commit where `--tensor-type` was ignored during quantization; merged
 > PR [#22572](https://github.com/ggml-org/llama.cpp/pull/22572) fixed it. The
@@ -39,19 +39,19 @@ conformance; it does not establish producer identity. The diagram has an
 Run the offline demo without cloning the repository:
 
 > [!NOTE]
-> This quickstart intentionally produces `BLOCK` and exits with code `2`.
-> That is the expected successful demonstration of the release gate.
+> This quickstart intentionally produces a `BLOCK` report. The convenience
+> `demo` wrapper exits `0` after writing the demonstration; `merriv compare` and
+> the GitHub Action enforce the report and return exit code `2` for `BLOCK`.
 
 ```console
-uvx --python 3.13 --from git+https://github.com/niansia/Merriv.git merriv demo --output runs/quickstart
+uvx --python 3.13 --from merriv==0.1.0a2 merriv demo --output runs/quickstart
 ```
 
 The declared rare slice regresses more sharply than the common slice. The command
 writes a compiled release plan, evidence manifest, Model Change Report JSON,
 Markdown, JUnit, and
-SARIF. It is a synthetic behavior demo, not adoption or empirical evidence. A
-tagged PyPI release will shorten this to `uvx --from merriv merriv demo`; until
-then the Git URL keeps the no-clone path honest. See the
+SARIF. It is a synthetic behavior demo, not adoption or empirical evidence. The
+command pins the published alpha instead of installing mutable `main`. See the
 [full quickstart](docs/quickstart.md).
 
 Already have retained Polygraphy results? Import them without first learning the
@@ -254,10 +254,12 @@ uv run --frozen pytest
 ```
 
 CI also checks schema drift, content-identity vectors, Rust interoperability,
-reproducible builds, the composite action, CPU ONNX evidence on Linux and Windows,
-dependency review, CodeQL, and OpenSSF Scorecard signals. The release workflow
-already builds, attests, and uses PyPI Trusted Publishing; the remaining external
-step is registering the project/publisher and cutting the first brand-cleared tag.
+reproducible builds, the composite action, cross-platform package smoke tests,
+CPU ONNX evidence on Linux and Windows, dependency review, CodeQL, and OpenSSF
+Scorecard signals. Version `0.1.0a2` is published on
+[PyPI](https://pypi.org/project/merriv/0.1.0a2/) through Trusted Publishing; the
+release workflow builds, attests, and publishes only a tag that exactly matches
+the package version.
 
 Merriv is pre-alpha. Public contracts use explicit schema versions, but stability
 is not promised until v1.0. The project currently has no publicly verified

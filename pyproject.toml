@@ -4,10 +4,10 @@ build-backend = "hatchling.build"
 
 [project]
 name = "merriv"
-version = "0.1.0a2"
+version = "0.1.0a3.dev0"
 description = "Vendor-neutral release evidence for deployable AI models."
 readme = "README.md"
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.11,<3.15"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Merriv contributors" }]
 keywords = [
@@ -26,6 +26,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Typing :: Typed",
 ]
 dependencies = [
@@ -37,19 +38,21 @@ dependencies = [
 
 [project.optional-dependencies]
 onnx = [
-  # NumPy 2.3+ publishes PEP 695 type aliases in its stubs. Mypy must parse
-  # dependencies using the project's Python 3.11 target even on newer runners.
-  "numpy>=1.26,<2.3",
+  # Python 3.14 needs a newer wheel; older interpreters retain the narrower
+  # range used by the reproducible ONNX evidence toolchain.
+  "numpy>=1.26,<2.3; python_version < '3.14'",
+  "numpy>=2.3,<3; python_version >= '3.14'",
   "onnx>=1.17,<2",
   "onnxruntime>=1.20,<2",
 ]
 onnx-demo = [
   # The hero demo is release evidence, not a floating compatibility probe.
   # Keep its toolchain exact; the broader `onnx` extra retains supported ranges.
-  "numpy==2.2.6",
-  "onnx==1.22.0",
-  "onnxruntime==1.29.0",
-  "scikit-learn==1.9.0",
+  # This retained toolchain predates Python 3.14; use the `onnx` extra for 3.14.
+  "numpy==2.2.6; python_version < '3.14'",
+  "onnx==1.22.0; python_version < '3.14'",
+  "onnxruntime==1.29.0; python_version < '3.14'",
+  "scikit-learn==1.9.0; python_version < '3.14'",
 ]
 dev = [
   "build>=1.2,<2",

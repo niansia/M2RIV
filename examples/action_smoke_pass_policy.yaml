@@ -1,0 +1,8 @@
+schema_version: 1.0.0
+policy_id: action-smoke-pass
+multiple_comparison_method: none
+rules:
+  - rule_id: overall-quality
+    metric: accuracy
+    margin: 0.30
+    min_pairs: 20

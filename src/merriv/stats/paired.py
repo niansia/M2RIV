@@ -32,16 +32,23 @@ class ConfidenceInterval(StatisticalContract):
         return self
 
 
-class BootstrapThresholdTest(StatisticalContract):
-    """Two-sided percentile-bootstrap tail evidence at a policy threshold."""
+class HypothesisTestEvidence(StatisticalContract):
+    """A formal paired hypothesis test at a policy threshold."""
 
-    threshold: float
-    two_sided_p_value: Annotated[float, Field(ge=0.0, le=1.0)]
+    null_value: float
+    alternative: Literal["two-sided"] = "two-sided"
+    p_value: Annotated[float, Field(ge=0.0, le=1.0)]
+    method: Literal[
+        "exact-mcnemar",
+        "paired-sign-randomization-exact",
+        "paired-sign-randomization-monte-carlo",
+    ]
+    assumptions: tuple[str, ...] = ()
 
     @model_validator(mode="after")
-    def threshold_is_finite(self) -> BootstrapThresholdTest:
-        if not math.isfinite(self.threshold):
-            raise ValueError("bootstrap threshold must be finite")
+    def null_is_finite(self) -> HypothesisTestEvidence:
+        if not math.isfinite(self.null_value):
+            raise ValueError("hypothesis-test null value must be finite")
         return self
 
 
@@ -56,7 +63,7 @@ class PairedEstimate(StatisticalContract):
     difference_stddev: Annotated[float | None, Field(ge=0.0)] = None
     confidence_interval: ConfidenceInterval
     additional_confidence_intervals: tuple[ConfidenceInterval, ...] = ()
-    threshold_test: BootstrapThresholdTest | None = None
+    hypothesis_test: HypothesisTestEvidence | None = None
     method: Literal["paired-percentile-bootstrap"] = "paired-percentile-bootstrap"
     resamples: Annotated[int, Field(ge=1)]
     seed: int
@@ -123,6 +130,63 @@ def _quantile(sorted_values: Sequence[float], probability: float) -> float:
         return sorted_values[lower]
     weight = position - lower
     return sorted_values[lower] * (1.0 - weight) + sorted_values[upper] * weight
+
+
+def _paired_sign_randomization_test(
+    differences: Sequence[float],
+    *,
+    null_value: float,
+    resamples: int,
+    seed: int,
+) -> HypothesisTestEvidence:
+    """Test a paired mean against a null by sign-randomizing centered differences.
+
+    Exact enumeration is used for small families of pairs. Larger samples use the
+    conservative plus-one Monte Carlo estimate, so a finite simulation never emits
+    a zero p-value. The randomization test assumes exchangeable signs (equivalently,
+    a distribution of paired differences symmetric around the null value).
+    """
+
+    centered = tuple(value - null_value for value in differences)
+    observed = abs(math.fsum(centered) / len(centered))
+    tolerance = max(1e-15, observed * 1e-12)
+
+    def is_at_least_observed(values: Sequence[float]) -> bool:
+        statistic = abs(math.fsum(values) / len(values))
+        return statistic + tolerance >= observed
+
+    if len(centered) <= 16:
+        permutations = 1 << len(centered)
+        exceedances = 0
+        for mask in range(permutations):
+            randomized = tuple(
+                value if mask & (1 << index) else -value
+                for index, value in enumerate(centered)
+            )
+            exceedances += is_at_least_observed(randomized)
+        p_value = exceedances / permutations
+        method: Literal[
+            "paired-sign-randomization-exact",
+            "paired-sign-randomization-monte-carlo",
+        ] = "paired-sign-randomization-exact"
+    else:
+        rng = random.Random(seed)  # nosec B311  # noqa: S311
+        exceedances = 0
+        for _ in range(resamples):
+            randomized = tuple(value if rng.getrandbits(1) else -value for value in centered)
+            exceedances += is_at_least_observed(randomized)
+        p_value = (exceedances + 1) / (resamples + 1)
+        method = "paired-sign-randomization-monte-carlo"
+
+    return HypothesisTestEvidence(
+        null_value=null_value,
+        p_value=p_value,
+        method=method,
+        assumptions=(
+            "paired observations are independent across cases",
+            "centered paired differences have exchangeable signs under the null",
+        ),
+    )
 
 
 def paired_bootstrap(
@@ -198,13 +262,13 @@ def paired_bootstrap(
 
     interval = interval_at(confidence_level)
     additional_intervals = tuple(interval_at(level) for level in requested_levels)
-    threshold_test = None
+    hypothesis_test = None
     if threshold is not None:
-        lower_tail = sum(value <= threshold for value in bootstrap_effects) / resamples
-        upper_tail = sum(value >= threshold for value in bootstrap_effects) / resamples
-        threshold_test = BootstrapThresholdTest(
-            threshold=threshold,
-            two_sided_p_value=min(1.0, 2.0 * min(lower_tail, upper_tail)),
+        hypothesis_test = _paired_sign_randomization_test(
+            differences,
+            null_value=threshold,
+            resamples=resamples,
+            seed=seed,
         )
     return PairedEstimate(
         n_pairs=n_pairs,
@@ -215,7 +279,7 @@ def paired_bootstrap(
         difference_stddev=difference_stddev,
         confidence_interval=interval,
         additional_confidence_intervals=additional_intervals,
-        threshold_test=threshold_test,
+        hypothesis_test=hypothesis_test,
         resamples=resamples,
         seed=seed,
     )
@@ -269,8 +333,26 @@ def binary_paired_evidence(
         resamples=resamples,
         seed=seed,
     )
+    mcnemar_exact_p_value = _exact_mcnemar_p_value(
+        flips.baseline_only,
+        flips.candidate_only,
+    )
+    if threshold is not None and math.isclose(threshold, 0.0, rel_tol=0.0, abs_tol=1e-12):
+        estimate = estimate.model_copy(
+            update={
+                "hypothesis_test": HypothesisTestEvidence(
+                    null_value=0.0,
+                    p_value=mcnemar_exact_p_value,
+                    method="exact-mcnemar",
+                    assumptions=(
+                        "paired outcomes are binary",
+                        "discordant directions are equiprobable under the null",
+                    ),
+                )
+            }
+        )
     return BinaryPairedEvidence(
         estimate=estimate,
         flips=flips,
-        mcnemar_exact_p_value=_exact_mcnemar_p_value(flips.baseline_only, flips.candidate_only),
+        mcnemar_exact_p_value=mcnemar_exact_p_value,
     )

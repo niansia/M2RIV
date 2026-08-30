@@ -1,19 +1,19 @@
 # Public release checklist
 
-Repository automation is ready to build, verify, attest, and—only after the
-following owner-side gates—publish through PyPI Trusted Publishing. A green local
-test suite does not satisfy these account-level controls.
+Repository automation builds, verifies, attests, and publishes through PyPI
+Trusted Publishing. Version `0.1.0a2` exercised this path successfully. A green
+local test suite still does not satisfy the account-level controls below.
 
 ## One-time owner gates
 
 - Confirm the recorded [Merriv brand decision](brand.md). The collision scan is
   evidence, not legal clearance.
-- Reserve or create the `merriv` PyPI project and configure its GitHub Trusted
+- [x] Create the `merriv` PyPI project and configure its GitHub Trusted
   Publisher for this repository, workflow filename `release.yml`, environment
   `pypi`.
-- Create the protected GitHub environment `pypi` with at least one required human
+- [x] Create the protected GitHub environment `pypi` with at least one required human
   reviewer and no long-lived package token.
-- Set repository variable `MERRIV_BRAND_CLEARED=true` only after the chosen package,
+- [x] Set repository variable `MERRIV_BRAND_CLEARED=true` only after the chosen package,
   repository, content-ID namespace, action reference, and documentation name agree.
 - Enable GitHub private vulnerability reporting; subscribe at least two monitored
   maintainer accounts to security alerts and test the notification path.

@@ -48,6 +48,7 @@ def _write_fixture(root: Path, *, candidate_fails: bool = True) -> tuple[Path, P
     policy.write_text(
         """schema_version: 1.0.0
 policy_id: recorded-release
+multiple_comparison_method: none
 rules:
   - rule_id: overall-quality
     metric: accuracy

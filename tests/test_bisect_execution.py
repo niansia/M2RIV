@@ -31,6 +31,7 @@ def _write_execution_fixture(root: Path) -> tuple[Path, Path, Path]:
     policy.write_text(
         """schema_version: 1.0.0
 policy_id: executed-bisect
+multiple_comparison_method: none
 rules:
   - rule_id: overall-quality
     metric: accuracy

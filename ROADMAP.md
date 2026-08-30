@@ -43,6 +43,8 @@ decision without depending on Merriv internals at the protocol boundary.
 - Obtain a public design review of Model Change Report 0.4 from an external infra maintainer
 - [x] Unify the public name, Python distribution, import namespace, executable,
   and project-owned identity domains as Merriv before the first PyPI release
+- [x] Publish Merriv through a protected PyPI Trusted Publisher and verify a
+  clean `uvx` installation
 - Add plugin conformance for manifests, mutation safety, secret canaries, and pairing
 - Prototype a Ray or Kubernetes reference executor outside the core dependency set
 - Define cancellation and failure semantics for external job schedulers

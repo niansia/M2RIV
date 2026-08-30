@@ -120,8 +120,16 @@ def test_ci_executes_the_local_composite_action_and_checks_its_outputs() -> None
     source = (WORKFLOWS / "ci.yml").read_text("utf-8")
     assert "uses: ./" in source
     assert "steps.gate.outputs.exit-code" in source
-    assert 'test "$MERRIV_ACTION_EXIT_CODE" = "2"' in source
+    assert 'test "$MERRIV_ACTION_EXIT_CODE" = "0"' in source
     assert "merriv mcr verify runs/action-smoke" in source
+
+
+def test_release_fails_early_when_tag_and_package_version_differ() -> None:
+    source = (WORKFLOWS / "release.yml").read_text("utf-8")
+
+    assert "Verify release tag matches package version" in source
+    assert 'expected_tag="v${package_version}"' in source
+    assert '"${GITHUB_REF_NAME}" != "${expected_tag}"' in source
 
 
 def test_release_build_backend_is_exact_and_preinstalled() -> None:
