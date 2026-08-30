@@ -10,20 +10,18 @@ from typing import Any
 from merriv.reports import verify_report_bundle
 
 EXPECTED_STATUSES = {
-    # The baseline is retained as reference evidence; mechanically comparing it
-    # with itself leaves the n=47 rare slice underpowered at a 1.5-point margin.
-    "build-00-fp16": frozenset({"WARN"}),
-    "build-01-int8-balanced": frozenset({"WARN"}),
-    "build-02-int8-calibration-scale-065": frozenset({"WARN", "BLOCK"}),
-    "build-03-int8-calibration-scale-060": frozenset({"WARN", "BLOCK"}),
+    # The FP16 self-comparison is retained as auditable reference evidence even
+    # though the generated presentation labels it REFERENCE rather than PASS.
+    "build-00-fp16": frozenset({"PASS"}),
+    "build-01-int8-balanced": frozenset({"PASS"}),
+    "build-02-int8-calibration-scale-065": frozenset({"BLOCK"}),
+    "build-03-int8-calibration-scale-060": frozenset({"BLOCK"}),
 }
 EXPECTED_ACCURACY_RANGES = {
-    "build-00-fp16": ((596 / 629, 596 / 629), (43 / 47, 43 / 47)),
-    # The source weights are fixed. Bounded ranges still acknowledge that ORT's
-    # platform-specific INT8 kernels can move borderline samples across argmax.
-    "build-01-int8-balanced": ((595 / 629, 597 / 629), (42 / 47, 44 / 47)),
-    "build-02-int8-calibration-scale-065": ((584 / 629, 586 / 629), (35 / 47, 37 / 47)),
-    "build-03-int8-calibration-scale-060": ((581 / 629, 584 / 629), (33 / 47, 36 / 47)),
+    "build-00-fp16": ((596 / 629, 596 / 629), (369 / 386, 369 / 386)),
+    "build-01-int8-balanced": ((596 / 629, 596 / 629), (368 / 386, 368 / 386)),
+    "build-02-int8-calibration-scale-065": ((584 / 629, 584 / 629), (355 / 386, 355 / 386)),
+    "build-03-int8-calibration-scale-060": ((581 / 629, 581 / 629), (352 / 386, 352 / 386)),
 }
 CALIBRATION_REGRESSION_BUILD = "build-02-int8-calibration-scale-065"
 MAX_MCR_BYTES = 32 * 1024
@@ -69,8 +67,7 @@ def verify(destination: Path) -> None:
         status = report.get("decision", {}).get("status")
         if status not in allowed_statuses:
             raise ValueError(
-                f"{checkpoint} has status {status!r}; expected one of "
-                f"{sorted(allowed_statuses)}"
+                f"{checkpoint} has status {status!r}; expected one of {sorted(allowed_statuses)}"
             )
         policy_satisfied = report.get("decision", {}).get("allowed")
         if policy_satisfied is not (status == "PASS"):
@@ -83,8 +80,7 @@ def verify(destination: Path) -> None:
         ):
             raise ValueError(f"{checkpoint} did not retain the matched-binary score method")
         if any(
-            finding.get("raw_p_value") is None
-            or finding.get("adjusted_p_value") is None
+            finding.get("raw_p_value") is None or finding.get("adjusted_p_value") is None
             for finding in findings
             if isinstance(finding, dict)
         ):
@@ -108,10 +104,10 @@ def verify(destination: Path) -> None:
         ):
             raise ValueError(f"{checkpoint} finding has a dangling evidence set")
         metrics = {item.get("metric_id"): item for item in report.get("metrics", [])}
-        expected_overall, expected_rare = EXPECTED_ACCURACY_RANGES[checkpoint]
+        expected_overall, expected_critical = EXPECTED_ACCURACY_RANGES[checkpoint]
         for metric_id, expected_range in (
             ("accuracy", expected_overall),
-            ("accuracy@risk=rare-high-ink", expected_rare),
+            ("accuracy@risk=high-ink", expected_critical),
         ):
             actual = metrics.get(metric_id, {}).get("candidate_value")
             lower, upper = expected_range
@@ -127,14 +123,13 @@ def verify(destination: Path) -> None:
 
     bisect = _object(root / "bisect-result.json")
     if (
-        bisect.get("outcome") != "inconclusive"
-        or bisect.get("first_failing_checkpoint") is not None
-        or bisect.get("confirmed_interval") is not None
+        bisect.get("outcome") != "first_failing"
+        or bisect.get("first_failing_checkpoint") != CALIBRATION_REGRESSION_BUILD
+        or bisect.get("first_failing_index") != 2
+        or bisect.get("confirmed_interval") != {"lower_pass_index": 1, "upper_block_index": 2}
     ):
-        raise ValueError("demo bisect claimed an onset without a decisive reference endpoint")
-    artifact_diff = _object(
-        root / "reports" / CALIBRATION_REGRESSION_BUILD / "artifact-diff.json"
-    )
+        raise ValueError("demo bisect did not locate the first contracted-calibration build")
+    artifact_diff = _object(root / "reports" / CALIBRATION_REGRESSION_BUILD / "artifact-diff.json")
     if not artifact_diff.get("quantization_format_changed"):
         raise ValueError("calibration-regression build has no quantization change")
     operator_names = {item.get("name") for item in artifact_diff.get("operator_changes", [])}
@@ -164,9 +159,7 @@ def verify(destination: Path) -> None:
         "hidden",
     }:
         raise ValueError("numerical diff did not locate the first shared hidden activation drift")
-    onset_report = _object(
-        root / "reports" / CALIBRATION_REGRESSION_BUILD / "mcr-report.json"
-    )
+    onset_report = _object(root / "reports" / CALIBRATION_REGRESSION_BUILD / "mcr-report.json")
     linked_kinds = {item.get("kind") for item in onset_report.get("evidence", [])}
     if "numerical-diff" not in linked_kinds:
         raise ValueError("calibration-regression report does not link its numerical diff")

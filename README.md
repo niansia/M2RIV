@@ -15,8 +15,12 @@ independently checkable **Model Change Report**.
 > Model Change Report is the portable evidence contract. Merriv is its reference
 > implementation.
 
-**Status:** Pre-alpha reference implementation · seeking three external release
-pilots, not claiming a standard or external adoption · [roadmap](ROADMAP.md)
+**Status:** Pre-alpha reference implementation · [seeking three external release
+pilots and design review](https://github.com/niansia/Merriv/issues/18), not
+claiming a standard or external adoption · [roadmap](ROADMAP.md)
+
+**Author:** [Niansia](https://github.com/niansia), a recent Computer Science
+graduate from Yuan Ze University in Taiwan.
 
 ![Merriv release-evidence flow](docs/images/merriv-release-evidence-flow.svg)
 
@@ -101,33 +105,24 @@ The CPU-only ONNX experiment exports one fixed model to FP16 and three real INT8
 QDQ builds and evaluates 629 paired holdout cases. It intentionally changes the
 calibration range, so it is a controlled regression test—not the headline proof:
 
-| Build | Overall (n=629) | Critical slice (n=47) | Gate |
+| Build | Overall (n=629) | High-ink slice (n=386) | Gate |
 |---|---:|---:|---:|
-| FP16 baseline | 94.8% | 91.5% | REFERENCE (not gated) |
-| INT8 balanced | 94.8–94.9% | 91.5–93.6% | WARN |
-| INT8 scale 0.65 | 92.9–93.2% | 74.5–78.7% | WARN–BLOCK |
-| INT8 scale 0.60 | 92.4–92.9% | 70.2–76.6% | WARN–BLOCK |
+| FP16 baseline | 94.8% | 95.6% | REFERENCE (self-check PASS) |
+| INT8 balanced | 94.8% | 95.3% | PASS |
+| INT8 scale 0.65 | 92.8% | 92.0% | BLOCK |
+| INT8 scale 0.60 | 92.4% | 91.2% | BLOCK |
 
-Pinned CI runs return `WARN` or `BLOCK` for the contracted-calibration builds as
-runner-specific quantization numerics move borderline cases within the declared
-accuracy ranges. A generated Model Change Report is authoritative for its exact
-artifact and runtime; only evidence that clears the full retained interval and
-Holm requirements is promoted to `BLOCK`.
-
-For the retained NVIDIA scale-0.65 run, the critical-slice paired change is
-`-12.77` percentage points with a raw 95% percentile-bootstrap CI of
-`[-23.40, -4.26]` points (`n=47`). That width is why reports now expose sample
-size, CI level, family-wise alpha, Holm-adjusted evidence, target power, and MDE.
-Merriv 0.1.0a3 evaluates non-zero matched-binary margins with Tango's score test
-and its inverted score interval; it never applies the continuous
-sign-randomization assumption to binary outcomes. In the retained NVIDIA
-scale-0.65 run, the critical-slice two-sided score p-value is `0.0224`, Holm
-adjusted to `0.0447`, with a 97.5% score interval of `[-27.34, -1.88]` points, so
-that rule is `BLOCK`. The reference row is declared context, not a candidate
-release verdict. Ordered localization still claims no first bad build because
-the balanced endpoint is `WARN`, not a decisive `PASS`; uncertainty is not
-silently converted into an onset. The example also records ONNX semantic diff,
-per-tensor numerical divergence, gate evidence, and executed bisect. Run it with:
+The critical cohort is declared from inputs as normalized ink sum at least 19;
+it contains 386 independent holdout cases and is not selected from model
+outcomes. With that cohort, the balanced build clears both non-inferiority rules,
+both contracted-calibration builds violate the high-ink rule after Holm
+correction, and localization identifies build 02 as the first bad build. Merriv
+uses Tango's matched-proportion score test and inverted score interval for these
+non-zero matched-binary margins; it never applies the continuous
+sign-randomization assumption to binary outcomes. The generated report remains
+authoritative for its exact artifact and runtime. The example also records ONNX
+semantic diff, per-tensor numerical divergence, gate evidence, and executed
+bisect. Run it with:
 
 > [!NOTE]
 > The retained ONNX evidence toolchain currently requires Python 3.11–3.13.

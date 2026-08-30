@@ -3,7 +3,7 @@ message: "If you use Merriv or produce or consume Model Change Reports, cite thi
 title: "Merriv: Model Release Evidence"
 type: software
 authors:
-  - name: "Merriv contributors"
+  - name: "Niansia"
 abstract: >-
   A vendor-neutral release-evidence layer and reference implementation for
   deployable AI model changes.

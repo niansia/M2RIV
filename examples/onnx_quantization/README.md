@@ -10,9 +10,10 @@ The fixture's training split deliberately retains only one quarter of digit-1
 examples. This makes digit 1 a documented rare training class; labels and holdout
 examples still come from the source dataset. The fixture is pinned by SHA-256 so
 BLAS-specific training differences cannot silently change the artifact under
-test. The critical slice is declared from inputs as digit 1 with normalized ink
-sum at least 18; it is not selected from model outcomes. The regression is caused
-by an under-scaled calibration input range, not by editing candidate predictions.
+test. The critical slice is declared from inputs as normalized ink sum at least
+19, producing 386 independent holdout cases; it is not selected from model
+outcomes. The regression is caused by an under-scaled calibration input range,
+not by editing candidate predictions.
 
 The retained evidence toolchain currently requires Python 3.11–3.13. Merriv's
 base package supports Python 3.14, but the `onnx-demo` extra intentionally omits
@@ -59,22 +60,19 @@ Expected platform-bounded decisions:
 
 ```text
 REFERENCE build-00-fp16 (declared baseline; not a candidate gate)
-WARN       build-01-int8-balanced
-WARN/BLOCK build-02-int8-calibration-scale-065
-WARN/BLOCK build-03-int8-calibration-scale-060
+PASS      build-01-int8-balanced
+BLOCK     build-02-int8-calibration-scale-065
+BLOCK     build-03-int8-calibration-scale-060
 ```
 
 The accuracy rules are matched-binary risk differences with non-zero
 non-inferiority margins. Merriv uses Tango's matched-proportion score statistic
 and its inverted score interval for those rules; it never reuses the continuous
 sign-randomization assumption. The mechanically generated baseline self-check is
-WARN because the 47-case critical slice cannot prove the declared 1.5-point
-margin, but the table correctly presents it as reference context rather than a
-candidate regression. Localization returns no first bad build because its
-reference-side endpoint is not a decisive PASS. Runner-specific quantization
-numerics can make the two contracted-calibration builds WARN or BLOCK within the
-declared accuracy bounds; the generated report for the exact artifact and runtime
-is authoritative.
+PASS, but the table presents it as reference context rather than a candidate
+release verdict. The balanced candidate is PASS, both contracted-calibration
+candidates are BLOCK, and localization returns build 02 as the first bad build.
+The generated report for the exact artifact and runtime remains authoritative.
 
 The demo is fully local after dependency installation. It downloads neither a
 model nor a dataset, uses only `CPUExecutionProvider`, and writes the artifact
@@ -86,7 +84,7 @@ The `onnx-demo` extra pins the exact demo toolchain and the source fixture diges
 The generated README and MCR are authoritative for the executing host. MCR
 execution records include the operating system, architecture, Python version,
 ONNX Runtime version, device, and dtype. CI runs the demo on both Linux and
-Windows, asserts bounded accuracy ranges plus the same statistical boundary, and
+Windows, asserts the accuracy contract plus the same statistical boundary, and
 keeps both platform-specific evidence bundles. Exact max-absolute-error / RMSE /
 cosine triples remain runtime evidence rather than copied documentation.
 

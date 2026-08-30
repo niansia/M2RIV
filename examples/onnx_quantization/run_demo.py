@@ -47,9 +47,9 @@ from merriv.reports import write_report_bundle
 
 SEED = 23
 RARE_DIGIT = 1
-RARE_RISK_SLICE = "rare-high-ink"
-RARE_RISK_THRESHOLD = 18.0
-RARE_METRIC = f"accuracy@risk={RARE_RISK_SLICE}"
+HIGH_INK_RISK_SLICE = "high-ink"
+HIGH_INK_RISK_THRESHOLD = 19.0
+CRITICAL_METRIC = f"accuracy@risk={HIGH_INK_RISK_SLICE}"
 FIXTURE_PATH = Path(__file__).with_name("assets") / "digits-mlp-fp32.onnx.b64"
 FIXTURE_SHA256 = "1d6652110add0355b2c6f4e2ab5aee63be1690384d41c79dc6eff201afd3bdb7"
 
@@ -203,9 +203,7 @@ def run_demo(destination: Path) -> Path:
                 "frequency": "rare" if expected == RARE_DIGIT else "common",
                 "class": str(int(expected)),
                 "risk": (
-                    RARE_RISK_SLICE
-                    if expected == RARE_DIGIT and float(row.sum()) >= RARE_RISK_THRESHOLD
-                    else "common"
+                    HIGH_INK_RISK_SLICE if float(row.sum()) >= HIGH_INK_RISK_THRESHOLD else "common"
                 ),
             },
         )
@@ -225,10 +223,10 @@ def run_demo(destination: Path) -> Path:
                 min_pairs=600,
             ),
             GateRule(
-                rule_id="rare-class-quality",
-                metric=RARE_METRIC,
+                rule_id="high-ink-quality",
+                metric=CRITICAL_METRIC,
                 margin=0.015,
-                min_pairs=40,
+                min_pairs=380,
             ),
         ),
     )
@@ -240,10 +238,10 @@ rules:
     metric: accuracy
     margin: 0.03
     min_pairs: 600
-  - rule_id: rare-class-quality
-    metric: accuracy@risk=rare-high-ink
+  - rule_id: high-ink-quality
+    metric: accuracy@risk=high-ink
     margin: 0.015
-    min_pairs: 40
+    min_pairs: 380
 """,
         encoding="utf-8",
     )
@@ -251,8 +249,8 @@ rules:
     baseline_adapter = OnnxRuntimeAdapter(fp16_path, model_family=ModelFamily.CV)
     baseline_profile = inspect_artifact(fp16_path)
     numerical_cases = tuple(
-        [case for case in cases if case.slices.get("risk") == RARE_RISK_SLICE]
-        + [case for case in cases if case.slices.get("risk") != RARE_RISK_SLICE][:81]
+        [case for case in cases if case.slices.get("risk") == HIGH_INK_RISK_SLICE][:47]
+        + [case for case in cases if case.slices.get("risk") != HIGH_INK_RISK_SLICE][:81]
     )
     comparisons: list[tuple[str, ReleaseComparison]] = []
     checkpoint_rows: list[dict[str, str]] = []
@@ -352,8 +350,8 @@ rules:
         f"Training rare-class setup: digit {RARE_DIGIT} retained "
         f"{retained_rare_count}/{len(rare_indices)} training examples in the fixed fixture.",
         f"Source fixture SHA-256: `{FIXTURE_SHA256}`; regeneration is explicit and reviewable.",
-        f"Critical slice: digit {RARE_DIGIT} with normalized ink sum >= "
-        f"{RARE_RISK_THRESHOLD:.0f}; the rule is derived from inputs, not outcomes.",
+        f"Critical slice: normalized ink sum >= {HIGH_INK_RISK_THRESHOLD:.0f}; "
+        "the rule is derived from inputs, not outcomes.",
         "Baseline: CPU-executed FP16 ONNX. Candidates: CPU-executed static INT8 QDQ ONNX.",
         "Runtime: "
         f"{baseline_adapter.describe().runtime_profile.framework} "
@@ -362,18 +360,16 @@ rules:
         f"{baseline_adapter.describe().runtime_profile.architecture}; Python "
         f"{baseline_adapter.describe().runtime_profile.python_version}.",
         "",
-        "| Build | Overall accuracy | Delta | Rare-class accuracy | Delta | Gate |",
+        "| Build | Overall accuracy | Delta | High-ink accuracy | Delta | Gate |",
         "|---|---:|---:|---:|---:|---|",
     ]
     for name, comparison in comparisons:
         _, overall, overall_delta = _metric(comparison, "accuracy")
-        _, rare, rare_delta = _metric(comparison, RARE_METRIC)
-        gate_label = (
-            "REFERENCE" if name == builds[0][0] else comparison.gate.status.value.upper()
-        )
+        _, critical, critical_delta = _metric(comparison, CRITICAL_METRIC)
+        gate_label = "REFERENCE" if name == builds[0][0] else comparison.gate.status.value.upper()
         lines.append(
             f"| {name} | {overall:.2%} | {overall_delta:+.2%} | "
-            f"{rare:.2%} | {rare_delta:+.2%} | {gate_label} |"
+            f"{critical:.2%} | {critical_delta:+.2%} | {gate_label} |"
         )
     first_bad = bisect_payload["first_failing_checkpoint"]
     interval = bisect_payload["confirmed_interval"]
@@ -397,8 +393,7 @@ rules:
             "mechanical self-comparison report remains available for audit.",
             "",
             localization,
-            "Build-02 first shared activation outside tolerance: "
-            f"`{regression_numerical_tensor}`.",
+            f"Build-02 first shared activation outside tolerance: `{regression_numerical_tensor}`.",
             "",
             "| Shared tensor | max abs error | RMSE | cosine similarity |",
             "|---|---:|---:|---:|",

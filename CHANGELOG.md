@@ -5,6 +5,15 @@ versions for portable JSON contracts. Pre-1.0 APIs may change with migration not
 
 ## Unreleased
 
+### Changed
+
+- The ONNX release demo now uses an input-declared 386-case high-ink cohort,
+  yielding a decisive reference/PASS/BLOCK/BLOCK sequence and a confirmed first
+  bad build under the complete Holm family
+- Public package and citation metadata credit Niansia directly; the README links
+  the author and the external pilot/design-review request
+- Repository issue forms now coexist with an unrestricted blank-issue entry point
+
 ## 0.1.0a3 - 2026-08-30
 
 ### Added

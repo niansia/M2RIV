@@ -9,7 +9,7 @@ description = "Vendor-neutral release evidence for deployable AI models."
 readme = "README.md"
 requires-python = ">=3.11,<3.15"
 license = { text = "Apache-2.0" }
-authors = [{ name = "Merriv contributors" }]
+authors = [{ name = "Niansia" }]
 keywords = [
   "model-release-engineering",
   "model-regression",

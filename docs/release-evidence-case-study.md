@@ -93,27 +93,28 @@ evidence, not claims of external adoption or vendor endorsement.
 
 The shared dataset is scikit-learn's bundled copy of the UCI handwritten-digits
 data: 1,797 real observations, a fixed seed-23 stratified split, and 629 holdout
-cases. The model weights are pinned by SHA-256. The critical slice is declared
-from inputs before inference: digit 1 with normalized ink sum at least 18. The
-holdout is unchanged between builds.
+cases. The model weights are pinned by SHA-256. The current CPU ONNX critical
+slice is declared from inputs before inference as normalized ink sum at least 19,
+which yields 386 independent holdout cases. The frozen 2026-08-29 NVIDIA evidence
+pack retains its original digit-1/high-ink cohort of 47 cases; that historical
+evidence is not rewritten when the current demo policy changes. The holdout is
+unchanged between builds.
 
 The deployment failure is a calibration configuration regression. Model weights
 stay fixed while the first 128 training inputs used for INT8 calibration are
 multiplied by 1.0, 0.65, or 0.60. The contracted calibration range creates overly
-tight quantization scales. Policy evaluates overall accuracy with a 3% margin and
-the critical slice with a 1.5% margin over paired evidence.
+tight quantization scales. The current CPU policy evaluates overall accuracy with
+a 3% margin and the 386-case high-ink slice with a 1.5% margin over paired evidence.
 
 ## 5. CPU ONNX case
 
 The CPU path exports the fixed model to FP16 ONNX and creates QDQ INT8 builds
 with ONNX Runtime. Linux and Windows CI retain separate evidence because numerical
 diff magnitudes and latency are run-scoped. The accuracy policy uses non-zero
-margins over matched-binary outcomes. Tango score inference returns WARN for the
-balanced INT8 candidate. The contracted-calibration candidates are WARN or BLOCK
-within the declared platform-bounded accuracy ranges; the generated report binds
-the exact artifact and runtime result. The FP16 row is the declared reference,
-not a candidate gate. Localization claims no first bad build because the
-reference-side endpoint is not a decisive PASS. A separate
+margins over matched-binary outcomes. Tango score inference returns PASS for the
+balanced INT8 candidate and BLOCK for both contracted-calibration candidates.
+The FP16 self-check is PASS but is presented as the declared reference, not a
+candidate gate. Localization identifies build 02 as the first bad build. A separate
 opset 17 → 18 control explicitly selects an
 interval-only policy, changes artifact structure while preserving all declared
 shared tensors, and emits PASS. It is a structural and numerical negative
