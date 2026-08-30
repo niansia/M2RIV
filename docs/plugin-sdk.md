@@ -64,7 +64,7 @@ and statistical settings, and emits a content-addressed `CompiledReleasePlan`.
 Use the CLI for a zero-inference preflight:
 
 ```console
-m2riv plan --suite suite.jsonl --policy policy.yaml --slice-key risk
+merriv plan --suite suite.jsonl --policy policy.yaml --slice-key risk
 ```
 
 The plan ID is linked from the final MCR. The MCR also records the actual executor

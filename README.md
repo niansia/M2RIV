@@ -108,16 +108,22 @@ calibration range, so it is a controlled regression test—not the headline proo
 |---|---:|---:|---:|
 | FP16 baseline | 94.8% | 91.5% | PASS |
 | INT8 balanced | 94.8–94.9% | 91.5–93.6% | PASS |
-| INT8 scale 0.65 | 92.9–93.2% | 74.5–78.7% | BLOCK |
+| INT8 scale 0.65 | 92.9–93.2% | 74.5–78.7% | WARN–BLOCK |
 | INT8 scale 0.60 | 92.4–92.9% | 70.2–76.6% | BLOCK |
 
 For the retained NVIDIA scale-0.65 run, the critical-slice paired change is
 `-12.77` percentage points with a raw 95% percentile-bootstrap CI of
 `[-23.40, -4.26]` points (`n=47`). That width is why reports now expose sample
 size, CI level, family-wise alpha, Holm-adjusted evidence, target power, and MDE.
+Its archived report predates multiplicity correction; the current two-rule Holm
+family classifies the same 43/47 to 37/47 outcomes as `WARN`, not `BLOCK`.
 
-First bad build: **INT8 scale 0.65**. The example also records ONNX semantic diff,
-per-tensor numerical divergence, gate evidence, and executed bisect. Run it with:
+Scale 0.65 always fails closed, but its Holm-adjusted interval is platform
+dependent: some kernels produce `WARN`, others `BLOCK`. Scale 0.60 is the first
+cross-platform conclusive `BLOCK`; localization reports build 02 only when its
+evidence is decisive, otherwise it retains the build 01–03 uncertainty interval.
+The example also records ONNX semantic diff, per-tensor numerical divergence,
+gate evidence, and executed bisect. Run it with:
 
 ```console
 python -m pip install -e ".[onnx-demo]"

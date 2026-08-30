@@ -25,8 +25,10 @@ producer, a repository-owned Polygraphy producer and MLflow consumer, and a live
 NVIDIA ModelOpt → TensorRT execution on an RTX 4060 Laptop GPU. In the live GPU
 case, all four 629-case ONNX Runtime/TensorRT comparisons matched under the
 declared tolerance, while a calibration-range change reduced the input-declared
-critical slice from 91.49% to 78.72%. The gate returned PASS, PASS, BLOCK, BLOCK
-and the ordered-build search localized build 02. This is exact first-party target
+critical slice from 91.49% to 78.72%. The archived pre-Holm gate returned PASS,
+PASS, BLOCK, BLOCK and localized build 02. Under the current Holm-corrected
+family, that same 43/47 to 37/47 slice is `WARN`, so the historical first-bad
+claim does not transfer to the current policy. This is exact first-party target
 evidence, not an independent or cross-hardware performance claim.
 
 ## 1. Problem and boundary
@@ -102,13 +104,15 @@ the critical slice with a 1.5% margin over paired evidence.
 
 ## 5. CPU ONNX case
 
-The CPU hero path exports the fixed model to FP16 ONNX and creates QDQ INT8 builds
+The CPU path exports the fixed model to FP16 ONNX and creates QDQ INT8 builds
 with ONNX Runtime. Linux and Windows CI retain separate evidence because numerical
 diff magnitudes and latency are run-scoped. Across the bounded platform results,
-the release story remains stable: baseline and balanced builds PASS; calibration-
-contracted builds BLOCK; build 02 is first bad. A separate opset 17 → 18 control
-changes artifact structure while preserving all declared shared tensors and emits
-PASS. This prevents the corpus from equating every structural change with failure.
+the release story remains fail-closed: baseline and balanced builds PASS, build
+02 is WARN or BLOCK, and build 03 is BLOCK. When build 02 is WARN, localization
+retains a build 01–03 uncertainty interval instead of claiming a first bad build.
+A separate opset 17 → 18 control changes artifact structure while preserving all
+declared shared tensors and emits PASS. This prevents the corpus from equating
+every structural change with failure.
 
 ## 6. Live NVIDIA ModelOpt → TensorRT case
 
@@ -138,11 +142,14 @@ TensorRT observations.
 |---|---:|---:|---:|---|
 | PyTorch-derived FP16 TensorRT | 94.75% | 91.49% | 629/629 | PASS |
 | ModelOpt INT8 balanced | 94.91% | 91.49% | 629/629 | PASS |
-| ModelOpt INT8 scale 0.65 | 93.32% | 78.72% | 629/629 | BLOCK |
+| ModelOpt INT8 scale 0.65 | 93.32% | 78.72% | 629/629 | BLOCK (archived pre-Holm) |
 | ModelOpt INT8 scale 0.60 | 92.85% | 74.47% | 629/629 | BLOCK |
 
-Monotonic localization returned first bad index 2, `build-02-modelopt-int8-
-scale-065`. Four strict report verifications succeeded. Every structured backend
+The archived monotonic localization returned first bad index 2,
+`build-02-modelopt-int8-scale-065`. Re-evaluating its retained paired outcomes
+with the current two-rule Holm family yields WARN at build 02 and BLOCK at build
+03, so the current result is a confirmed interval rather than a precise onset.
+Four strict report verifications succeeded. Every structured backend
 claim links a verified native body and matching exit code; snapshot/build evidence
 binds retained artifact bytes, source revision, calibration cohort, and tool
 versions. A target evidence manifest covers every retained file and strict report.

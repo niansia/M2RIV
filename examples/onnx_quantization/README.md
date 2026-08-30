@@ -22,11 +22,11 @@ python examples/onnx_quantization/run_demo.py --output runs/onnx-quantization
 Inspect the actual deployment artifacts:
 
 ```console
-m2riv artifact diff \
+merriv artifact diff \
   runs/onnx-quantization/artifacts/build-00-fp16.onnx \
   runs/onnx-quantization/artifacts/build-02-int8-calibration-scale-065.onnx
 
-m2riv artifact numerical-diff \
+merriv artifact numerical-diff \
   runs/onnx-quantization/artifacts/build-00-fp16.onnx \
   runs/onnx-quantization/artifacts/build-02-int8-calibration-scale-065.onnx \
   --suite runs/onnx-quantization/suite.jsonl
@@ -35,14 +35,14 @@ m2riv artifact numerical-diff \
 Re-run localization from the generated gate statuses:
 
 ```console
-m2riv bisect runs/onnx-quantization/checkpoints.jsonl --mode monotonic
+merriv bisect runs/onnx-quantization/checkpoints.jsonl --mode monotonic
 ```
 
 Or ask Merriv to execute only the checkpoints selected by the localization
 strategy and emit an auditable report for each evaluation:
 
 ```console
-m2riv bisect-run runs/onnx-quantization/artifact-checkpoints.jsonl \
+merriv bisect-run runs/onnx-quantization/artifact-checkpoints.jsonl \
   --adapter onnx \
   --suite runs/onnx-quantization/suite.jsonl \
   --policy runs/onnx-quantization/policy.yaml \
@@ -51,14 +51,19 @@ m2riv bisect-run runs/onnx-quantization/artifact-checkpoints.jsonl \
   --output runs/onnx-bisect
 ```
 
-Expected boundary:
+Expected platform-bounded decisions:
 
 ```text
 PASS build-00-fp16
 PASS build-01-int8-balanced
-BLOCK build-02-int8-calibration-scale-065  <-- first bad
+WARN or BLOCK build-02-int8-calibration-scale-065
 BLOCK build-03-int8-calibration-scale-060
 ```
+
+Build 02 always fails closed, but platform-specific INT8 kernels can leave its
+Holm-adjusted interval inconclusive. When it is `WARN`, localization correctly
+returns the confirmed interval from build 01 to build 03 instead of inventing a
+first bad build. When it is `BLOCK`, build 02 is the conclusive first bad build.
 
 The demo is fully local after dependency installation. It downloads neither a
 model nor a dataset, uses only `CPUExecutionProvider`, and writes the artifact
@@ -70,7 +75,7 @@ The `onnx-demo` extra pins the exact demo toolchain and the source fixture diges
 The generated README and MCR are authoritative for the executing host. MCR
 execution records include the operating system, architecture, Python version,
 ONNX Runtime version, device, and dtype. CI runs the demo on both Linux and
-Windows, asserts bounded accuracy ranges plus the same PASS/BLOCK boundary, and
+Windows, asserts bounded accuracy ranges plus the same fail-closed boundary, and
 keeps both platform-specific evidence bundles. Exact max-absolute-error / RMSE /
 cosine triples remain runtime evidence rather than copied documentation.
 

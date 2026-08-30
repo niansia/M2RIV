@@ -10,10 +10,13 @@ from typing import Any
 from m2riv.reports import verify_report_bundle
 
 EXPECTED_STATUSES = {
-    "build-00-fp16": "PASS",
-    "build-01-int8-balanced": "PASS",
-    "build-02-int8-calibration-scale-065": "BLOCK",
-    "build-03-int8-calibration-scale-060": "BLOCK",
+    "build-00-fp16": frozenset({"PASS"}),
+    "build-01-int8-balanced": frozenset({"PASS"}),
+    # ORT's platform-specific INT8 kernels move two borderline cases. Under the
+    # current Holm family, build 02 is either a conclusive BLOCK or fail-closed
+    # WARN; both preserve the release boundary honestly.
+    "build-02-int8-calibration-scale-065": frozenset({"WARN", "BLOCK"}),
+    "build-03-int8-calibration-scale-060": frozenset({"BLOCK"}),
 }
 EXPECTED_ACCURACY_RANGES = {
     "build-00-fp16": ((596 / 629, 596 / 629), (43 / 47, 43 / 47)),
@@ -23,7 +26,7 @@ EXPECTED_ACCURACY_RANGES = {
     "build-02-int8-calibration-scale-065": ((584 / 629, 586 / 629), (35 / 47, 37 / 47)),
     "build-03-int8-calibration-scale-060": ((581 / 629, 584 / 629), (33 / 47, 36 / 47)),
 }
-FIRST_BAD = "build-02-int8-calibration-scale-065"
+REGRESSION_ONSET = "build-02-int8-calibration-scale-065"
 MAX_MCR_BYTES = 32 * 1024
 ACCURACY_TOLERANCE = 1e-12
 
@@ -51,7 +54,8 @@ def verify(destination: Path) -> None:
         if not artifact.is_relative_to(root) or not artifact.is_file():
             raise ValueError("artifact manifest path escapes the demo or is missing")
 
-    for checkpoint, expected_status in EXPECTED_STATUSES.items():
+    observed_statuses: dict[str, str] = {}
+    for checkpoint, expected_statuses in EXPECTED_STATUSES.items():
         report_directory = root / "reports" / checkpoint
         verification = verify_report_bundle(report_directory)
         if not verification.valid:
@@ -64,8 +68,16 @@ def verify(destination: Path) -> None:
         reference = report.get("evidence_manifest")
         if report.get("schema_version") != "0.4.0":
             raise ValueError(f"{checkpoint} is not an MCR 0.4 report")
-        if report.get("decision", {}).get("status") != expected_status:
-            raise ValueError(f"{checkpoint} has the wrong release status")
+        status = report.get("decision", {}).get("status")
+        if status not in expected_statuses:
+            raise ValueError(
+                f"{checkpoint} has status {status!r}; expected one of "
+                f"{sorted(expected_statuses)}"
+            )
+        observed_statuses[checkpoint] = status
+        policy_satisfied = report.get("decision", {}).get("allowed")
+        if policy_satisfied is not (status == "PASS"):
+            raise ValueError(f"{checkpoint} has inconsistent evaluation-policy semantics")
         if not isinstance(reference, dict) or reference.get("id") != manifest.get("id"):
             raise ValueError(f"{checkpoint} evidence manifest identity is not linked")
         evidence = manifest.get("evidence", [])
@@ -103,18 +115,30 @@ def verify(destination: Path) -> None:
                 )
 
     bisect = _object(root / "bisect-result.json")
-    if bisect.get("first_failing_checkpoint") != FIRST_BAD:
-        raise ValueError("demo bisect did not locate the intended first bad build")
-    artifact_diff = _object(root / "reports" / FIRST_BAD / "artifact-diff.json")
+    if observed_statuses[REGRESSION_ONSET] == "BLOCK":
+        if (
+            bisect.get("outcome") != "first_failing"
+            or bisect.get("first_failing_checkpoint") != REGRESSION_ONSET
+        ):
+            raise ValueError("demo bisect did not locate the conclusive first bad build")
+    else:
+        if (
+            bisect.get("outcome") != "inconclusive"
+            or bisect.get("first_failing_checkpoint") is not None
+            or bisect.get("confirmed_interval")
+            != {"lower_pass_index": 1, "upper_block_index": 3}
+        ):
+            raise ValueError("demo bisect did not preserve the WARN uncertainty interval")
+    artifact_diff = _object(root / "reports" / REGRESSION_ONSET / "artifact-diff.json")
     if not artifact_diff.get("quantization_format_changed"):
-        raise ValueError("first bad build has no machine-readable quantization change")
+        raise ValueError("regression-onset build has no machine-readable quantization change")
     operator_names = {item.get("name") for item in artifact_diff.get("operator_changes", [])}
     if not {
         "ai.onnx::QuantizeLinear",
         "ai.onnx::DequantizeLinear",
     }.issubset(operator_names):
-        raise ValueError("first bad build does not contain the expected QDQ graph changes")
-    numerical_diff = _object(root / "reports" / FIRST_BAD / "numerical-diff.json")
+        raise ValueError("regression-onset build lacks the expected QDQ graph changes")
+    numerical_diff = _object(root / "reports" / REGRESSION_ONSET / "numerical-diff.json")
     tensor_rows = numerical_diff.get("tensors")
     if not isinstance(tensor_rows, list):
         raise ValueError("numerical diff does not contain per-tensor evidence")
@@ -133,10 +157,10 @@ def verify(destination: Path) -> None:
         "hidden",
     }:
         raise ValueError("numerical diff did not locate the first shared hidden activation drift")
-    first_bad_report = _object(root / "reports" / FIRST_BAD / "mcr-report.json")
-    linked_kinds = {item.get("kind") for item in first_bad_report.get("evidence", [])}
+    onset_report = _object(root / "reports" / REGRESSION_ONSET / "mcr-report.json")
+    linked_kinds = {item.get("kind") for item in onset_report.get("evidence", [])}
     if "numerical-diff" not in linked_kinds:
-        raise ValueError("first bad MCR does not link its numerical diff")
+        raise ValueError("regression-onset report does not link its numerical diff")
 
 
 def main() -> None:

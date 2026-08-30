@@ -249,8 +249,8 @@ rules:
     comparisons: list[tuple[str, ReleaseComparison]] = []
     checkpoint_rows: list[dict[str, str]] = []
     artifact_checkpoint_rows: list[dict[str, str]] = []
-    first_bad_numerical_tensor: str | None = None
-    first_bad_numerical_rows: tuple[Any, ...] = ()
+    regression_numerical_tensor: str | None = None
+    regression_numerical_rows: tuple[Any, ...] = ()
     for name, path in builds:
         candidate_adapter = OnnxRuntimeAdapter(path, model_family=ModelFamily.CV)
         artifact_diff = compare_artifacts(baseline_profile, inspect_artifact(path))
@@ -273,8 +273,8 @@ rules:
             )
         ]
         if numerical_diff is not None:
-            first_bad_numerical_tensor = numerical_diff.first_divergent_tensor
-            first_bad_numerical_rows = tuple(
+            regression_numerical_tensor = numerical_diff.first_divergent_tensor
+            regression_numerical_rows = tuple(
                 item for item in numerical_diff.tensors if item.name != "label"
             )
             linked_evidence.append(
@@ -365,11 +365,21 @@ rules:
             f"{rare:.2%} | {rare_delta:+.2%} | {comparison.gate.status.value.upper()} |"
         )
     first_bad = bisect_payload["first_failing_checkpoint"]
+    if first_bad is None:
+        interval = bisect_payload["confirmed_interval"]
+        localization = (
+            "Localization: inconclusive because build 02 is WARN; the confirmed "
+            f"PASS/BLOCK interval is build {interval['lower_pass_index']} through "
+            f"build {interval['upper_block_index']}."
+        )
+    else:
+        localization = f"First conclusive bad build: `{first_bad}`."
     lines.extend(
         (
             "",
-            f"First bad build: `{first_bad}`.",
-            f"First shared activation outside tolerance: `{first_bad_numerical_tensor}`.",
+            localization,
+            "Build-02 first shared activation outside tolerance: "
+            f"`{regression_numerical_tensor}`.",
             "",
             "| Shared tensor | max abs error | RMSE | cosine similarity |",
             "|---|---:|---:|---:|",
@@ -378,7 +388,7 @@ rules:
     lines.extend(
         f"| `{item.name}` | {item.max_abs_error:.4f} | {item.rmse:.4f} | "
         f"{item.cosine_similarity:.6f} |"
-        for item in first_bad_numerical_rows
+        for item in regression_numerical_rows
     )
     lines.extend(
         (

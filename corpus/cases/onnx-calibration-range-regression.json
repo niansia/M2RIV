@@ -6,7 +6,7 @@
   "axis": "quantization-calibration",
   "status": "verified-in-ci",
   "expected_decision": "BLOCK",
-  "expected_first_bad": "build-02-int8-calibration-scale-065",
+  "expected_first_bad": null,
   "reproduction": "python examples/onnx_quantization/run_demo.py --output runs/onnx-quantization",
   "verification": "python tools/verify_onnx_demo.py runs/onnx-quantization",
   "source_paths": [
@@ -14,5 +14,5 @@
     "examples/onnx_quantization/assets/digits-mlp-fp32.onnx.b64",
     "examples/onnx_quantization/README.md"
   ],
-  "limitations": "Fixed digits dataset, fixed MLP weights, CPU ONNX Runtime, and declared calibration sequence."
+  "limitations": "Fixed digits dataset, fixed MLP weights, CPU ONNX Runtime, and declared calibration sequence. Build 02 is fail-closed WARN or BLOCK across supported kernels, so no cross-platform first-bad claim is made."
 }
