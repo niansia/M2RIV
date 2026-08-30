@@ -1,9 +1,10 @@
 # Public release checklist
 
 Repository automation builds, verifies, attests, and publishes through PyPI
-Trusted Publishing. Version `0.1.0a3` exercised the complete recoverable publish
-and GitHub Release finalization path. A green local test suite still does not
-satisfy the account-level controls below.
+Trusted Publishing. Version `0.1.0a3` exercised protected publishing and
+hash-verified post-publish confirmation; its identical attested artifacts were
+then finalized as a permanent GitHub Release. A green local test suite still does
+not satisfy the account-level controls below.
 
 ## One-time owner gates
 

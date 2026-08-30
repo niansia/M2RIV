@@ -71,6 +71,7 @@ def test_release_build_has_provenance_sbom_and_gated_trusted_publish() -> None:
     assert "gh release create" in source
     assert "gh release upload" in source
     assert "--clobber" in source
+    assert "GH_REPO: ${{ github.repository }}" in source
     assert "dist/*" in source
     assert "--prerelease" in source
     assert "secrets." not in source
