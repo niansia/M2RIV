@@ -1,8 +1,9 @@
 # Public release checklist
 
 Repository automation builds, verifies, attests, and publishes through PyPI
-Trusted Publishing. Version `0.1.0a2` exercised this path successfully. A green
-local test suite still does not satisfy the account-level controls below.
+Trusted Publishing. Version `0.1.0a3` exercised the complete recoverable publish
+and GitHub Release finalization path. A green local test suite still does not
+satisfy the account-level controls below.
 
 ## One-time owner gates
 
@@ -15,11 +16,14 @@ local test suite still does not satisfy the account-level controls below.
   reviewer and no long-lived package token.
 - [x] Set repository variable `MERRIV_BRAND_CLEARED=true` only after the chosen package,
   repository, content-ID namespace, action reference, and documentation name agree.
-- Enable GitHub private vulnerability reporting; subscribe at least two monitored
-  maintainer accounts to security alerts and test the notification path.
-- Enable secret scanning, push protection, dependency security updates, and branch
-  protection; protect tag creation and require review for changes to `release.yml`
-  and `.github/CODEOWNERS`.
+- [x] Enable GitHub private vulnerability reporting.
+- [x] Enable secret scanning and push protection.
+- [x] Enable dependency security updates.
+- [x] Protect `main` with required CI, reviews, and CODEOWNERS; protect release-tag
+  creation with an active repository ruleset.
+- [ ] Subscribe at least two monitored maintainer accounts to security alerts and
+  test the notification path. This remains an owner staffing requirement, not a
+  repository setting that one account can satisfy alone.
 
 PyPI identifies a Trusted Publisher by repository owner, repository, workflow,
 and optionally environment. The publish job has only `contents: read` and
@@ -36,10 +40,14 @@ and [security model](https://docs.pypi.org/trusted-publishers/security-model/).
 2. Review every change to the release workflow and immutable action SHAs.
    Regenerate `action-requirements.lock` from the committed `uv.lock` whenever a
    core dependency changes and review the resulting hashes.
-3. Create the signed/protected `v*` tag from the reviewed commit.
+3. Create the protected `v*` tag from the reviewed commit. Sign it when a
+   maintainer signing identity is available and documented.
 4. Approve the `pypi` environment only after the build job produces wheel, source
    distribution, SHA256SUMS, SPDX SBOM, and GitHub provenance.
 5. Verify the published project metadata, attestations, hashes, installation,
    `merriv --help` from a clean environment, and the permanent GitHub Release
-   assets created after the protected publish succeeds.
+   assets created after the protected publish succeeds. A retry first requires
+   PyPI filenames and SHA-256 hashes to match the rebuilt distributions, then
+   safely finalizes or replaces the GitHub Release assets without re-uploading
+   an existing PyPI version.
 6. Confirm private vulnerability-report notifications remain monitored.

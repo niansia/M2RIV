@@ -5,27 +5,22 @@ default method is Holm-Bonferroni with `familywise_alpha: 0.05`; `none` must be 
 explicit policy choice for interval-only gating and does not mean an unadjusted
 formal hypothesis test.
 
-For each governed metric, the paired bootstrap retains the percentile intervals
-needed by every Holm step. Hypothesis-test evidence is separate: continuous
-effects use a paired sign-randomization test centered at the rule margin, while a
-binary effect at a zero margin uses the exact two-sided McNemar test. Ordinary
-percentile-bootstrap tail counts are not treated as formal p-values.
+Hypothesis-test evidence follows the metric support. Continuous effects use a
+paired sign-randomization test centered at the rule margin. A binary effect at a
+zero margin uses the exact two-sided McNemar test. A matched-binary risk
+difference at a non-zero margin strictly inside `(-1, 1)` uses Tango's efficient
+score statistic and a confidence interval obtained by inverting that score test.
+Ordinary percentile-bootstrap tail counts are never treated as formal p-values.
 
-Matched-binary risk differences at a **non-zero** margin are currently an
-unsupported formal-test profile. Centering differences from the binary support
-`{-1, 0, +1}` at a non-zero null does not generally produce the sign symmetry
-required by the randomization test. Merriv therefore emits no formal p-value for
-that combination. A Holm policy that requires it returns `ERROR`; it never
-silently substitutes the continuous sign-randomization method. A policy may
-explicitly select `multiple_comparison_method: none` for interval-only evaluation,
-but that opts out of the formal multiplicity-controlled profile and is not a
-matched-binary non-inferiority test.
-
-Future support must select and validate a method designed for paired binary
-non-inferiority, such as a score-based or unconditional exact procedure, rather
-than reusing the continuous test. Relevant primary references include
-[Tango's paired-proportion method](https://pubmed.ncbi.nlm.nih.gov/9595618/) and
-[Hsueh, Liu, and Chen's unconditional exact procedure](https://doi.org/10.1111/j.0006-341X.2001.00478.x).
+The matched-binary score profile is designed for the discordant counts in paired
+proportions; it does not pretend that the centered support `{-1, 0, +1}` is sign
+exchangeable at a non-zero null. Merriv implements equations 24–26 from
+[Tango (1998)](https://pubmed.ncbi.nlm.nih.gov/9595618/) with the effect oriented
+as candidate minus baseline. [Nam (1997)](https://pubmed.ncbi.nlm.nih.gov/9423257/)
+provides the paired-design non-inferiority score-test context and documents why
+the simpler Wald approach can be anticonservative. The score profile uses its
+asymptotic normal reference; a margin at the exact support boundary remains
+unsupported formal evidence and therefore fails closed under Holm.
 
 Merriv deliberately uses a **two-sided** test and two-sided interval even though
 non-inferiority is commonly framed as a one-sided question. A release gate must
@@ -37,17 +32,20 @@ explicit rather than accidental.
 The sign-randomization test assumes independent cases and exchangeable signs for
 paired differences centered at the null. It is enumerated exactly for at most 16
 pairs and otherwise uses a deterministic Monte Carlo estimate with the plus-one
-correction. Holm orders these raw p-values, breaks exact ties by `rule_id`,
-computes monotone adjusted p-values, and selects the confidence level for each
-step. A Holm rule is decisive only when its adjusted test is significant **and**
-the full selected interval lies on one side of the margin. Point estimates never
-PASS or BLOCK by themselves.
+correction. The Tango profile assumes paired binary outcomes, independence across
+cases, and its asymptotic normal reference. Holm orders the resulting raw
+p-values, breaks exact ties by `rule_id`, computes monotone adjusted p-values,
+and selects the confidence level for each step. A Holm rule is decisive only when
+its adjusted test is significant **and** the full selected interval lies on one
+side of the margin. Point estimates never PASS or BLOCK by themselves.
 
-The percentile-bootstrap confidence interval is an independent interval-evidence
-requirement; it is **not** the inversion of the reported sign-randomization or
-McNemar test. The two requirements are intentionally combined conservatively.
-A future statistical profile may pair each test with a method-compatible
-confidence set, but MCR 0.4 and GatePolicy 1.1 do not claim that duality.
+For a non-zero matched-binary margin, the displayed score interval is the
+confidence-set inversion of the reported Tango test. For continuous effects and
+zero-margin binary effects, the paired percentile-bootstrap interval remains an
+independent interval-evidence requirement; it is **not** the inversion of the
+reported sign-randomization or exact McNemar test. Those two requirements are
+combined conservatively. MCR 0.4 retains the resulting interval and p-values but
+does not yet carry structured test semantics on the wire.
 
 ## Declared family
 

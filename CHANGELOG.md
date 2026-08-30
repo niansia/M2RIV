@@ -5,6 +5,8 @@ versions for portable JSON contracts. Pre-1.0 APIs may change with migration not
 
 ## Unreleased
 
+## 0.1.0a3 - 2026-08-30
+
 ### Added
 
 - Python 3.14 package support and CI coverage, plus Linux, Windows, and macOS
@@ -13,15 +15,19 @@ versions for portable JSON contracts. Pre-1.0 APIs may change with migration not
   with observed-design MDE retained only as diagnostic evidence
 - Exact or Monte Carlo paired sign-randomization hypothesis evidence, while
   exact McNemar remains the zero-margin binary path
+- Tango matched-proportion score tests and inverted score confidence intervals
+  for paired-binary risk differences at non-zero margins
 - Adversarial Holm tests for tied p-values, one-rule families, entirely
   underpowered families, complete declared-family semantics, and adjusted-p
   monotonicity
 - Permanent GitHub Release creation with wheel, source distribution, SPDX SBOM,
   and checksums after a successful protected PyPI publish
+- Hash-verified release recovery when PyPI publishing succeeds before GitHub
+  Release finalization; a rerun skips only a byte-identical existing PyPI version
 
 ### Changed
 
-- The public quickstart installs immutable `merriv==0.1.0a2`; mutable `main`
+- The public quickstart installs immutable `merriv==0.1.0a3`; mutable `main`
   remains a development-only installation source
 - The composite-action smoke test is a genuine PASS run and asserts exit code
   `0` without suppressing a deliberately failing step
@@ -31,11 +37,11 @@ versions for portable JSON contracts. Pre-1.0 APIs may change with migration not
   two-sided anomaly rationale, randomization assumptions, and the distinction
   between planned and observed-design MDE
 - Matched-binary risk differences at non-zero margins no longer reuse the
-  continuous sign-randomization test; formal Holm evaluation fails closed with
-  `ERROR` until a dedicated binary non-inferiority method is selected
-- Percentile-bootstrap intervals are explicitly documented as independent
-  interval evidence, not confidence-set inversions of McNemar or randomization
-  tests
+  continuous sign-randomization test; they use the dedicated Tango score profile
+  under Holm-Bonferroni
+- Non-zero matched-binary score intervals are method-compatible test inversions;
+  continuous and zero-margin binary percentile-bootstrap intervals remain
+  independent interval evidence rather than test inversions
 
 ### Security
 

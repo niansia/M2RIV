@@ -26,9 +26,11 @@ preimages.
 
 The reference producer no longer emits a centered sign-randomization test for a
 matched-binary risk difference at a non-zero margin. That profile lacks the sign
-symmetry assumed by the continuous test; a Holm policy now returns `ERROR` until
-a dedicated paired-binary non-inferiority method is selected. This is a
-statistical tooling correction, not an MCR 0.4 wire or identity change.
+symmetry assumed by the continuous test. Merriv now uses Tango's dedicated
+matched-proportion score statistic and its inverted score interval instead. This
+is a statistical tooling correction, not an MCR 0.4 wire or identity change;
+structured test method, null, alternative, and assumptions remain future-envelope
+work.
 
 ## 0.4.0 — 2026-08-29
 

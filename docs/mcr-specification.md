@@ -51,16 +51,17 @@ version addresses that gap, producers that emit these fields MUST document the
 method and assumptions in retained statistical evidence or the finding message.
 
 The Merriv reference producer uses exact two-sided McNemar evidence for binary
-paired metrics at a zero margin and a two-sided paired sign-randomization test for
-continuous effects. A matched-binary risk difference at a non-zero margin is not
-routed through sign randomization: no supported formal test is currently emitted,
-and a Holm policy fails closed with `ERROR`. Percentile-bootstrap tail counts are
-not used as formal p-values.
+paired metrics at a zero margin, Tango's matched-proportion score test and
+inverted score interval for a non-zero binary margin, and a two-sided paired
+sign-randomization test for continuous effects. Binary outcomes are never routed
+through the continuous sign-randomization assumption. Percentile-bootstrap tail
+counts are not used as formal p-values.
 
-Confidence intervals remain paired percentile-bootstrap intervals and are
-evaluated in full; the p-value does not replace the interval decision. The
-interval is an independent evidence requirement, not the inversion or confidence
-set dual of the reported McNemar or sign-randomization test.
+Every confidence interval is evaluated in full; a p-value does not replace the
+interval decision. The non-zero matched-binary score interval is the confidence
+set dual of its Tango test. Continuous and zero-margin binary intervals remain
+paired percentile-bootstrap evidence independent of the reported
+sign-randomization or exact McNemar test.
 
 ## Identity tiers
 

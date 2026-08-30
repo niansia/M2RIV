@@ -13,7 +13,13 @@ from merriv.io import InputFormatError, load_policy, load_suite
 runner = CliRunner()
 
 
-def _write_fixture(root: Path, *, candidate_fails: bool = True) -> tuple[Path, Path, Path, Path]:
+def _write_fixture(
+    root: Path,
+    *,
+    candidate_fails: bool = True,
+    case_count: int = 6,
+    rare_count: int = 2,
+) -> tuple[Path, Path, Path, Path]:
     suite = root / "suite.jsonl"
     baseline = root / "baseline.jsonl"
     candidate = root / "candidate.jsonl"
@@ -21,10 +27,10 @@ def _write_fixture(root: Path, *, candidate_fails: bool = True) -> tuple[Path, P
     suite_rows = []
     baseline_rows = []
     candidate_rows = []
-    for index in range(6):
+    for index in range(case_count):
         case_id = f"case-{index}"
         expected = f"label-{index}"
-        rare = index >= 4
+        rare = index >= case_count - rare_count
         suite_rows.append(
             {
                 "case_id": case_id,
@@ -65,7 +71,11 @@ rules:
 
 
 def test_compare_cli_blocks_and_writes_all_ci_artifacts(tmp_path: Path) -> None:
-    baseline, candidate, suite, policy = _write_fixture(tmp_path)
+    baseline, candidate, suite, policy = _write_fixture(
+        tmp_path,
+        case_count=60,
+        rare_count=40,
+    )
     output = tmp_path / "run"
     github_summary = tmp_path / "step-summary.md"
 
@@ -107,7 +117,12 @@ def test_compare_cli_blocks_and_writes_all_ci_artifacts(tmp_path: Path) -> None:
 
 
 def test_compare_cli_passes_and_returns_zero(tmp_path: Path) -> None:
-    baseline, candidate, suite, policy = _write_fixture(tmp_path, candidate_fails=False)
+    baseline, candidate, suite, policy = _write_fixture(
+        tmp_path,
+        candidate_fails=False,
+        case_count=60,
+        rare_count=40,
+    )
     result = runner.invoke(
         app,
         [

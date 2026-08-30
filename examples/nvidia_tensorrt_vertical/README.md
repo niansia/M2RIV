@@ -7,11 +7,13 @@ through Polygraphy, records latency and NVML process VRAM when available, applie
 the rare-slice release gate, and evaluates the ordered build sequence.
 
 The accuracy rules are matched-binary risk differences with non-zero
-non-inferiority margins. Merriv does not yet implement a supported formal test
-for that profile, so current Holm evaluations intentionally return `ERROR` for
-all four builds and localization reports no first bad build. Artifact, backend,
-metric, interval, latency, and provenance evidence are still retained. This is a
-fail-closed limitation, not evidence that every build regressed.
+non-inferiority margins. Merriv 0.1.0a3 evaluates them with Tango's score test and
+inverted score interval. Re-evaluating the retained observations yields WARN for
+the balanced candidate and BLOCK for both contracted-calibration candidates. The
+FP16 build is the declared reference, not a candidate release verdict.
+Localization reports no first bad build because the reference-side endpoint is
+not a decisive PASS. Artifact, backend, metric, interval, latency, and provenance
+evidence remain retained.
 
 The source and execution environments are intentionally separate. Neither
 ModelOpt nor TensorRT enters the four-dependency Merriv kernel.
@@ -107,6 +109,7 @@ The historical evidence archive has SHA-256
 `06a060000afb40cd9dd6e529b08249863d20a91706030d2b505493572fd21a05`.
 The compact receipt is a first-party observation, not independent reproduction.
 Its `PASS, PASS, BLOCK, BLOCK` decisions and first-bad index predate the current
-formal matched-binary contract and are retained as historical output only. A
-current rerun must preserve the unsupported profile as `ERROR`; it must not
-reinterpret that receipt as a valid current release decision.
+formal matched-binary contract and are retained as historical output only.
+Re-evaluation from the retained paired observations produces
+`WARN, WARN, BLOCK, BLOCK`; it does not rewrite the archived receipt, and it does
+not claim a current first-bad interval without a decisive reference-side PASS.

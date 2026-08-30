@@ -45,17 +45,32 @@ def test_release_build_has_provenance_sbom_and_gated_trusted_publish() -> None:
     assert "anchore/sbom-action@" in source
     assert "SHA256SUMS" in source
     assert "packages: write" not in source
+    pypi_state = workflow["jobs"]["pypi-state"]
+    assert pypi_state["needs"] == ["build", "attest"]
+    assert pypi_state["permissions"] == {"contents": "read"}
+    assert "id-token" not in pypi_state["permissions"]
     publish = workflow["jobs"]["publish"]
-    assert publish["needs"] == ["build", "attest"]
+    assert publish["needs"] == ["build", "attest", "pypi-state"]
     assert publish["permissions"] == {"contents": "read", "id-token": "write"}
     assert publish["environment"]["name"] == "pypi"
     assert "MERRIV_BRAND_CLEARED" in publish["if"]
     assert "pypa/gh-action-pypi-publish@" in source
+    assert "verify_pypi_release.py" in source
+    assert "needs.pypi-state.outputs.state == 'absent'" in publish["if"]
+    assert "--require-existing" in source
+    assert "skip-existing" not in source
+    assert "actions/checkout@" not in str(publish)
+    pypi_confirm = workflow["jobs"]["pypi-confirm"]
+    assert pypi_confirm["permissions"] == {"contents": "read"}
+    assert "id-token" not in pypi_confirm["permissions"]
+    assert "needs.publish.result == 'skipped'" in pypi_confirm["if"]
     github_release = workflow["jobs"]["github-release"]
-    assert github_release["needs"] == ["build", "attest", "publish"]
+    assert github_release["needs"] == ["build", "attest", "pypi-confirm"]
     assert github_release["permissions"] == {"contents": "write"}
-    assert "needs.publish.result == 'success'" in github_release["if"]
+    assert "needs.pypi-confirm.result == 'success'" in github_release["if"]
     assert "gh release create" in source
+    assert "gh release upload" in source
+    assert "--clobber" in source
     assert "dist/*" in source
     assert "--prerelease" in source
     assert "secrets." not in source

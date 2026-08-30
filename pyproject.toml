@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "merriv"
-version = "0.1.0a3.dev0"
+version = "0.1.0a3"
 description = "Vendor-neutral release evidence for deployable AI models."
 readme = "README.md"
 requires-python = ">=3.11,<3.15"

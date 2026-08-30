@@ -368,9 +368,12 @@ rules:
     for name, comparison in comparisons:
         _, overall, overall_delta = _metric(comparison, "accuracy")
         _, rare, rare_delta = _metric(comparison, RARE_METRIC)
+        gate_label = (
+            "REFERENCE" if name == builds[0][0] else comparison.gate.status.value.upper()
+        )
         lines.append(
             f"| {name} | {overall:.2%} | {overall_delta:+.2%} | "
-            f"{rare:.2%} | {rare_delta:+.2%} | {comparison.gate.status.value.upper()} |"
+            f"{rare:.2%} | {rare_delta:+.2%} | {gate_label} |"
         )
     first_bad = bisect_payload["first_failing_checkpoint"]
     interval = bisect_payload["confirmed_interval"]
@@ -389,6 +392,9 @@ rules:
         )
     lines.extend(
         (
+            "",
+            "The FP16 row is the declared reference, not a candidate release verdict. Its "
+            "mechanical self-comparison report remains available for audit.",
             "",
             localization,
             "Build-02 first shared activation outside tolerance: "

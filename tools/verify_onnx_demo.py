@@ -10,13 +10,12 @@ from typing import Any
 from merriv.reports import verify_report_bundle
 
 EXPECTED_STATUSES = {
-    # Accuracy is a matched-binary risk difference and this policy declares
-    # non-zero margins. Until a dedicated binary NI method is selected, the
-    # formal Holm profile must fail closed on every comparison.
-    "build-00-fp16": frozenset({"ERROR"}),
-    "build-01-int8-balanced": frozenset({"ERROR"}),
-    "build-02-int8-calibration-scale-065": frozenset({"ERROR"}),
-    "build-03-int8-calibration-scale-060": frozenset({"ERROR"}),
+    # The baseline is retained as reference evidence; mechanically comparing it
+    # with itself leaves the n=47 rare slice underpowered at a 1.5-point margin.
+    "build-00-fp16": frozenset({"WARN"}),
+    "build-01-int8-balanced": frozenset({"WARN"}),
+    "build-02-int8-calibration-scale-065": frozenset({"BLOCK"}),
+    "build-03-int8-calibration-scale-060": frozenset({"BLOCK"}),
 }
 EXPECTED_ACCURACY_RANGES = {
     "build-00-fp16": ((596 / 629, 596 / 629), (43 / 47, 43 / 47)),
@@ -78,18 +77,18 @@ def verify(destination: Path) -> None:
             raise ValueError(f"{checkpoint} has inconsistent evaluation-policy semantics")
         findings = report.get("decision", {}).get("findings", [])
         if not any(
-            "matched-binary non-zero-margin" in str(finding.get("message"))
+            "tango-score-matched-proportions" in str(finding.get("message"))
             for finding in findings
             if isinstance(finding, dict)
         ):
-            raise ValueError(f"{checkpoint} did not retain the unsupported-profile reason")
+            raise ValueError(f"{checkpoint} did not retain the matched-binary score method")
         if any(
-            finding.get("raw_p_value") is not None
-            or finding.get("adjusted_p_value") is not None
+            finding.get("raw_p_value") is None
+            or finding.get("adjusted_p_value") is None
             for finding in findings
             if isinstance(finding, dict)
         ):
-            raise ValueError(f"{checkpoint} invented a p-value for the unsupported profile")
+            raise ValueError(f"{checkpoint} omitted matched-binary score evidence")
         if not isinstance(reference, dict) or reference.get("id") != manifest.get("id"):
             raise ValueError(f"{checkpoint} evidence manifest identity is not linked")
         evidence = manifest.get("evidence", [])
@@ -132,7 +131,7 @@ def verify(destination: Path) -> None:
         or bisect.get("first_failing_checkpoint") is not None
         or bisect.get("confirmed_interval") is not None
     ):
-        raise ValueError("demo bisect claimed an onset from unsupported formal-test evidence")
+        raise ValueError("demo bisect claimed an onset without a decisive reference endpoint")
     artifact_diff = _object(
         root / "reports" / CALIBRATION_REGRESSION_BUILD / "artifact-diff.json"
     )

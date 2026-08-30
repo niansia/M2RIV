@@ -403,10 +403,8 @@ rules:
         ],
     )
 
-    assert result.exit_code == 2
+    assert result.exit_code == 3, (result.output, result.exception)
     payload = json.loads(result.stdout)
-    assert payload["first_failing_checkpoint"] == "cp-2"
-    assert {item["status"] for item in payload["executed_checkpoints"]} == {
-        "pass",
-        "block",
-    }
+    assert payload["outcome"] == "inconclusive"
+    assert payload["first_failing_checkpoint"] is None
+    assert {item["status"] for item in payload["executed_checkpoints"]} == {"warn"}

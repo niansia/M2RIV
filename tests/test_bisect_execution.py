@@ -18,13 +18,13 @@ def _write_execution_fixture(root: Path) -> tuple[Path, Path, Path]:
     policy = root / "policy.yaml"
     manifest = root / "artifacts.jsonl"
     cases = []
-    for index in range(6):
+    for index in range(60):
         cases.append(
             {
                 "case_id": f"case-{index}",
                 "input": {"index": index},
                 "expected": f"label-{index}",
-                "slices": {"frequency": "rare" if index >= 4 else "common"},
+                "slices": {"frequency": "rare" if index >= 20 else "common"},
             }
         )
     suite.write_text("".join(json.dumps(case) + "\n" for case in cases), encoding="utf-8")
@@ -36,11 +36,11 @@ rules:
   - rule_id: overall-quality
     metric: accuracy
     margin: 1.0
-    min_pairs: 6
+    min_pairs: 60
   - rule_id: rare-quality
     metric: accuracy@frequency=rare
     margin: 0.1
-    min_pairs: 2
+    min_pairs: 40
 """,
         encoding="utf-8",
     )

@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 import random
 from collections.abc import Sequence
+from statistics import NormalDist
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -40,6 +41,7 @@ class HypothesisTestEvidence(StatisticalContract):
     p_value: Annotated[float, Field(ge=0.0, le=1.0)]
     method: Literal[
         "exact-mcnemar",
+        "tango-score-matched-proportions",
         "paired-sign-randomization-exact",
         "paired-sign-randomization-monte-carlo",
     ]
@@ -53,7 +55,7 @@ class HypothesisTestEvidence(StatisticalContract):
 
 
 class PairedEstimate(StatisticalContract):
-    """Mean candidate-minus-baseline effect with paired bootstrap uncertainty."""
+    """Mean candidate-minus-baseline effect with paired uncertainty."""
 
     n_pairs: Annotated[int, Field(ge=1)]
     baseline_mean: float
@@ -64,7 +66,10 @@ class PairedEstimate(StatisticalContract):
     confidence_interval: ConfidenceInterval
     additional_confidence_intervals: tuple[ConfidenceInterval, ...] = ()
     hypothesis_test: HypothesisTestEvidence | None = None
-    method: Literal["paired-percentile-bootstrap"] = "paired-percentile-bootstrap"
+    method: Literal[
+        "paired-percentile-bootstrap",
+        "tango-score-matched-proportions",
+    ] = "paired-percentile-bootstrap"
     resamples: Annotated[int, Field(ge=1)]
     seed: int
 
@@ -296,6 +301,116 @@ def _exact_mcnemar_p_value(baseline_only: int, candidate_only: int) -> float:
     return float(min(1.0, 2.0 * lower_tail))
 
 
+def _tango_score_statistic(
+    baseline_only: int,
+    candidate_only: int,
+    n_pairs: int,
+    null_value: float,
+) -> float:
+    """Efficient score for a matched-proportion difference at a non-zero null.
+
+    This is Tango (1998), equations 24--26, with the effect oriented as
+    candidate minus baseline. The two off-diagonal counts are sufficient.
+    """
+
+    if not -1.0 < null_value < 1.0:
+        raise ValueError("Tango score null_value must be strictly between -1 and 1")
+    if min(baseline_only, candidate_only) < 0:
+        raise ValueError("discordant counts must be non-negative")
+    if n_pairs < 1 or baseline_only + candidate_only > n_pairs:
+        raise ValueError("discordant counts must fit within n_pairs")
+
+    coefficient_b = (
+        -baseline_only
+        - candidate_only
+        + (2 * n_pairs - candidate_only + baseline_only) * null_value
+    )
+    coefficient_c = -baseline_only * null_value * (1.0 - null_value)
+    discriminant = coefficient_b * coefficient_b - 8.0 * n_pairs * coefficient_c
+    rounding_tolerance = 1e-12 * max(1.0, coefficient_b * coefficient_b)
+    if discriminant < -rounding_tolerance:
+        raise ArithmeticError("Tango score quadratic has a negative discriminant")
+    constrained_q21 = (
+        math.sqrt(max(0.0, discriminant)) - coefficient_b
+    ) / (4.0 * n_pairs)
+    variance_component = 2.0 * constrained_q21 + null_value * (1.0 - null_value)
+    variance_tolerance = 1e-14 * max(1.0, abs(2.0 * constrained_q21))
+    if variance_component < -variance_tolerance:
+        raise ArithmeticError("Tango score variance is negative")
+
+    numerator = candidate_only - baseline_only - n_pairs * null_value
+    if variance_component <= variance_tolerance:
+        if math.isclose(numerator, 0.0, rel_tol=0.0, abs_tol=1e-14):
+            return 0.0
+        return math.copysign(math.inf, numerator)
+    return numerator / math.sqrt(n_pairs * variance_component)
+
+
+def _tango_score_interval(
+    baseline_only: int,
+    candidate_only: int,
+    n_pairs: int,
+    confidence_level: float,
+) -> ConfidenceInterval:
+    """Invert Tango's matched-proportion score test by bounded bisection."""
+
+    if not 0.0 < confidence_level < 1.0:
+        raise ValueError("confidence_level must be between zero and one")
+    critical = NormalDist().inv_cdf(1.0 - (1.0 - confidence_level) / 2.0)
+    effect = (candidate_only - baseline_only) / n_pairs
+
+    def solve(outside: float) -> float:
+        inside = effect
+        if math.isclose(inside, outside, rel_tol=0.0, abs_tol=1e-15):
+            return outside
+        for _ in range(100):
+            candidate_null = (inside + outside) / 2.0
+            statistic = _tango_score_statistic(
+                baseline_only,
+                candidate_only,
+                n_pairs,
+                candidate_null,
+            )
+            if abs(statistic) <= critical:
+                inside = candidate_null
+            else:
+                outside = candidate_null
+            if abs(inside - outside) <= 1e-12:
+                break
+        return (inside + outside) / 2.0
+
+    return ConfidenceInterval(
+        low=-1.0 if baseline_only == n_pairs else solve(-1.0),
+        high=1.0 if candidate_only == n_pairs else solve(1.0),
+        confidence_level=confidence_level,
+    )
+
+
+def _tango_score_test(
+    baseline_only: int,
+    candidate_only: int,
+    n_pairs: int,
+    null_value: float,
+) -> HypothesisTestEvidence:
+    statistic = _tango_score_statistic(
+        baseline_only,
+        candidate_only,
+        n_pairs,
+        null_value,
+    )
+    p_value = math.erfc(abs(statistic) / math.sqrt(2.0))
+    return HypothesisTestEvidence(
+        null_value=null_value,
+        p_value=p_value,
+        method="tango-score-matched-proportions",
+        assumptions=(
+            "paired outcomes are binary and independent across cases",
+            "the matched-proportion score statistic uses its asymptotic normal reference",
+            "the two-sided test treats large regressions and improvements as anomalies",
+        ),
+    )
+
+
 def binary_paired_evidence(
     baseline: Sequence[bool],
     candidate: Sequence[bool],
@@ -306,12 +421,12 @@ def binary_paired_evidence(
     resamples: int = 10_000,
     seed: int = 0,
 ) -> BinaryPairedEvidence:
-    """Summarize paired pass/fail changes and zero-margin McNemar evidence.
+    """Summarize paired pass/fail changes with matched-proportion inference.
 
-    A non-zero threshold intentionally does not produce formal hypothesis-test
-    evidence. Centered Bernoulli pair differences are generally not sign
-    exchangeable at a non-zero risk-difference null, so the generic paired sign
-    randomization test is not a valid fallback for that profile.
+    A zero threshold uses exact McNemar evidence. A non-zero threshold strictly
+    inside the risk-difference support uses Tango's matched-proportion efficient
+    score test and its inverted score confidence interval. Binary effects never
+    use the generic paired sign-randomization test.
     """
 
     if len(baseline) != len(candidate):
@@ -357,6 +472,35 @@ def binary_paired_evidence(
                         "discordant directions are equiprobable under the null",
                     ),
                 )
+            }
+        )
+    elif threshold is not None and -1.0 < threshold < 1.0:
+        tango_interval = _tango_score_interval(
+            flips.baseline_only,
+            flips.candidate_only,
+            flips.n_pairs,
+            confidence_level,
+        )
+        tango_additional = tuple(
+            _tango_score_interval(
+                flips.baseline_only,
+                flips.candidate_only,
+                flips.n_pairs,
+                level,
+            )
+            for level in additional_confidence_levels
+        )
+        estimate = estimate.model_copy(
+            update={
+                "confidence_interval": tango_interval,
+                "additional_confidence_intervals": tango_additional,
+                "hypothesis_test": _tango_score_test(
+                    flips.baseline_only,
+                    flips.candidate_only,
+                    flips.n_pairs,
+                    threshold,
+                ),
+                "method": "tango-score-matched-proportions",
             }
         )
     return BinaryPairedEvidence(

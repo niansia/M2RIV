@@ -33,7 +33,7 @@ The PyPI project and distribution are `merriv`. The reproducible published-alpha
 form pins the version and interpreter:
 
 ```console
-uvx --python 3.13 --from merriv==0.1.0a2 merriv --help
+uvx --python 3.13 --from merriv==0.1.0a3 merriv --help
 ```
 
 ## Clearance boundary

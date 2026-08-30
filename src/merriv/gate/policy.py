@@ -436,8 +436,7 @@ def evaluate_gate(policy: GatePolicy, evaluation: GateEvaluation) -> GateDecisio
                     reason=(
                         "Holm-Bonferroni requires a supported formal paired hypothesis "
                         "test at the exact rule margin; no test was supplied or its null "
-                        "did not match (matched-binary non-zero-margin risk differences "
-                        "are intentionally unsupported)"
+                        "did not match"
                     ),
                     margin=rule.margin,
                     n_pairs=estimate.n_pairs,

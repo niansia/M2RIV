@@ -89,9 +89,45 @@ jobs:
         with:
           subject-path: dist/*
 
-  publish:
+  pypi-state:
     needs: [build, attest]
     if: startsWith(github.ref, 'refs/tags/v') && vars.MERRIV_BRAND_CLEARED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      state: ${{ steps.pypi-state.outputs.state }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Download attested distributions
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: merriv-distributions-${{ github.ref_name }}
+          path: dist
+      - name: Isolate package files from checksums and SBOM
+        run: |
+          mkdir publish-dist
+          cp dist/*.whl dist/*.tar.gz publish-dist/
+      - name: Check whether this exact release is already on PyPI
+        id: pypi-state
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          state="$(python tools/verify_pypi_release.py merriv "${version}" publish-dist)"
+          echo "state=${state}" >> "${GITHUB_OUTPUT}"
+
+  publish:
+    needs: [build, attest, pypi-state]
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') &&
+      vars.MERRIV_BRAND_CLEARED == 'true' &&
+      needs.pypi-state.outputs.state == 'absent'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:
@@ -115,12 +151,49 @@ jobs:
         with:
           packages-dir: publish-dist
 
+  pypi-confirm:
+    needs: [build, attest, pypi-state, publish]
+    if: >-
+      always() && startsWith(github.ref, 'refs/tags/v') &&
+      vars.MERRIV_BRAND_CLEARED == 'true' &&
+      needs.build.result == 'success' && needs.attest.result == 'success' &&
+      needs.pypi-state.result == 'success' &&
+      (needs.publish.result == 'success' ||
+       (needs.publish.result == 'skipped' &&
+        needs.pypi-state.outputs.state == 'matching'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Download attested distributions
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: merriv-distributions-${{ github.ref_name }}
+          path: dist
+      - name: Isolate package files from checksums and SBOM
+        run: |
+          mkdir publish-dist
+          cp dist/*.whl dist/*.tar.gz publish-dist/
+      - name: Verify PyPI contains this exact build
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          python tools/verify_pypi_release.py merriv "${version}" publish-dist \
+            --require-existing --attempts 10 --retry-delay 3
+
   github-release:
-    needs: [build, attest, publish]
+    needs: [build, attest, pypi-confirm]
     if: >-
       always() && startsWith(github.ref, 'refs/tags/v') &&
       needs.build.result == 'success' && needs.attest.result == 'success' &&
-      needs.publish.result == 'success'
+      needs.pypi-confirm.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -131,14 +204,22 @@ jobs:
         with:
           name: merriv-distributions-${{ github.ref_name }}
           path: dist
-      - name: Create the permanent GitHub Release
+      - name: Create or finalize the permanent GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
         shell: bash
         run: |
           release_flags=(--verify-tag --title "Merriv ${RELEASE_TAG}" --generate-notes)
+          prerelease=false
           if [[ "${RELEASE_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(a|b|rc|\.dev)[0-9]+$ ]]; then
             release_flags+=(--prerelease)
+            prerelease=true
           fi
-          gh release create "${RELEASE_TAG}" dist/* "${release_flags[@]}"
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            gh release upload "${RELEASE_TAG}" dist/* --clobber
+            gh release edit "${RELEASE_TAG}" \
+              --title "Merriv ${RELEASE_TAG}" --prerelease="${prerelease}"
+          else
+            gh release create "${RELEASE_TAG}" dist/* "${release_flags[@]}"
+          fi

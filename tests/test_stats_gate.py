@@ -81,16 +81,73 @@ def test_binary_zero_margin_uses_exact_mcnemar_for_holm_evidence() -> None:
     assert hypothesis.null_value == 0.0
 
 
-def test_binary_nonzero_margin_does_not_emit_invalid_sign_randomization_test() -> None:
+def test_binary_nonzero_margin_matches_tango_score_reference_vector() -> None:
     evidence = binary_paired_evidence(
-        [True] * 12 + [False] * 4,
-        [False] * 12 + [True] * 4,
-        threshold=-0.02,
+        [True] * 2 + [False] * 12 + [True] * 18 + [False] * 18,
+        [False] * 2 + [True] * 12 + [True] * 18 + [False] * 18,
+        threshold=-0.1,
         resamples=200,
     )
 
+    hypothesis = evidence.estimate.hypothesis_test
+    assert hypothesis is not None
+    assert hypothesis.method == "tango-score-matched-proportions"
+    assert hypothesis.null_value == -0.1
+    assert hypothesis.p_value == pytest.approx(0.0002218466806632116)
+    assert evidence.estimate.method == "tango-score-matched-proportions"
+    assert evidence.estimate.confidence_interval.low == pytest.approx(0.0611124, abs=1e-7)
+    assert evidence.estimate.confidence_interval.high == pytest.approx(0.3447087, abs=1e-7)
+
+
+def test_tango_score_profile_is_symmetric_when_pair_orientation_is_reversed() -> None:
+    evidence = binary_paired_evidence(
+        [False] * 2 + [True] * 12 + [True] * 18 + [False] * 18,
+        [True] * 2 + [False] * 12 + [True] * 18 + [False] * 18,
+        threshold=0.1,
+        resamples=200,
+    )
+
+    hypothesis = evidence.estimate.hypothesis_test
+    assert hypothesis is not None
+    assert hypothesis.p_value == pytest.approx(0.0002218466806632116)
+    assert evidence.estimate.confidence_interval.low == pytest.approx(-0.3447087, abs=1e-7)
+    assert evidence.estimate.confidence_interval.high == pytest.approx(-0.0611124, abs=1e-7)
+
+
+@pytest.mark.parametrize(
+    ("baseline_only", "candidate_only", "n_pairs", "threshold"),
+    [(1, 1, 20, -0.05), (2, 12, 50, -0.1), (12, 2, 50, 0.1), (0, 5, 20, 0.05)],
+)
+def test_tango_score_interval_is_the_dual_of_its_two_sided_test(
+    baseline_only: int,
+    candidate_only: int,
+    n_pairs: int,
+    threshold: float,
+) -> None:
+    concordant = n_pairs - baseline_only - candidate_only
+    evidence = binary_paired_evidence(
+        [True] * baseline_only + [False] * candidate_only + [True] * concordant,
+        [False] * baseline_only + [True] * candidate_only + [True] * concordant,
+        threshold=threshold,
+        resamples=100,
+    )
+
+    hypothesis = evidence.estimate.hypothesis_test
+    assert hypothesis is not None
+    interval = evidence.estimate.confidence_interval
+    assert (interval.low <= threshold <= interval.high) is (hypothesis.p_value >= 0.05)
+
+
+def test_binary_margin_at_support_boundary_emits_no_formal_score_test() -> None:
+    evidence = binary_paired_evidence(
+        [True, False],
+        [False, True],
+        threshold=-1.0,
+        resamples=20,
+    )
+
     assert evidence.estimate.hypothesis_test is None
-    assert evidence.mcnemar_exact_p_value > 0.0
+    assert evidence.estimate.method == "paired-percentile-bootstrap"
 
 
 def test_mcnemar_evidence_handles_large_suites_without_float_overflow() -> None:
@@ -361,7 +418,7 @@ def test_single_rule_holm_degenerates_to_the_unadjusted_path() -> None:
     [("overall",), ("overall", "slice")],
     ids=["singleton", "family"],
 )
-def test_holm_fails_closed_without_supported_nonzero_binary_test(
+def test_holm_consumes_tango_score_for_nonzero_binary_test(
     metric_names: tuple[str, ...],
 ) -> None:
     estimate = binary_paired_evidence(
@@ -373,7 +430,7 @@ def test_holm_fails_closed_without_supported_nonzero_binary_test(
         resamples=200,
     ).estimate
     policy = GatePolicy(
-        policy_id="unsupported-binary-ni",
+        policy_id="tango-binary-ni",
         rules=tuple(
             GateRule(rule_id=metric, metric=metric, margin=0.02)
             for metric in metric_names
@@ -388,9 +445,13 @@ def test_holm_fails_closed_without_supported_nonzero_binary_test(
 
     decision = evaluate_gate(policy, evaluation)
 
-    assert decision.status is GateStatus.ERROR
-    assert all(item.status is GateStatus.ERROR for item in decision.rule_decisions)
-    assert all("matched-binary non-zero-margin" in item.reason for item in decision.rule_decisions)
+    assert decision.status is GateStatus.WARN
+    assert all(item.status is GateStatus.WARN for item in decision.rule_decisions)
+    assert all(
+        item.raw_p_value == pytest.approx(0.21040645309537137)
+        for item in decision.rule_decisions
+    )
+    assert all("tango-score-matched-proportions" in item.reason for item in decision.rule_decisions)
 
 
 def test_complete_declared_family_includes_missing_and_underpowered_rules() -> None:

@@ -7,7 +7,7 @@ authors:
 abstract: >-
   A vendor-neutral release-evidence layer and reference implementation for
   deployable AI model changes.
-version: 0.1.0a2
+version: 0.1.0a3
 license: Apache-2.0
 repository-code: "https://github.com/niansia/Merriv"
 url: "https://github.com/niansia/Merriv"

@@ -26,10 +26,10 @@ NVIDIA ModelOpt → TensorRT execution on an RTX 4060 Laptop GPU. In the live GP
 case, all four 629-case ONNX Runtime/TensorRT comparisons matched under the
 declared tolerance, while a calibration-range change reduced the input-declared
 critical slice from 91.49% to 78.72%. The archived pre-Holm gate returned PASS,
-PASS, BLOCK, BLOCK and localized build 02. The current formal contract refuses to
-reinterpret these non-zero-margin matched-binary risk differences without a
-dedicated binary non-inferiority test, so the current policy returns `ERROR` and
-the historical first-bad claim does not transfer. This is exact first-party
+PASS, BLOCK, BLOCK and localized build 02. Merriv 0.1.0a3 re-evaluates the
+retained paired observations with Tango score inference and returns WARN, WARN,
+BLOCK, BLOCK. The historical first-bad claim does not transfer because the
+reference-side endpoint is not a decisive PASS. This is exact first-party
 target evidence, not an independent or cross-hardware performance claim.
 
 ## 1. Problem and boundary
@@ -108,10 +108,11 @@ the critical slice with a 1.5% margin over paired evidence.
 The CPU path exports the fixed model to FP16 ONNX and creates QDQ INT8 builds
 with ONNX Runtime. Linux and Windows CI retain separate evidence because numerical
 diff magnitudes and latency are run-scoped. The accuracy policy uses non-zero
-margins over matched-binary outcomes. Because the current formal profile has no
-supported paired-binary non-inferiority test, all four Holm evaluations return
-ERROR and localization claims neither a first bad build nor a confirmed
-PASS/BLOCK interval. A separate opset 17 → 18 control explicitly selects an
+margins over matched-binary outcomes. Tango score inference returns WARN for the
+balanced INT8 candidate and BLOCK for both contracted-calibration candidates.
+The FP16 row is the declared reference, not a candidate gate. Localization claims
+no first bad build because the reference-side endpoint is not a decisive PASS. A
+separate opset 17 → 18 control explicitly selects an
 interval-only policy, changes artifact structure while preserving all declared
 shared tensors, and emits PASS. It is a structural and numerical negative
 control, not a rejected zero-effect McNemar null. This prevents the corpus from
@@ -141,18 +142,18 @@ TensorRT observations.
 
 ### 6.2 Results
 
-| Build | Overall | Critical slice | Backend matches | Archived gate |
-|---|---:|---:|---:|---|
-| PyTorch-derived FP16 TensorRT | 94.75% | 91.49% | 629/629 | PASS |
-| ModelOpt INT8 balanced | 94.91% | 91.49% | 629/629 | PASS |
-| ModelOpt INT8 scale 0.65 | 93.32% | 78.72% | 629/629 | BLOCK (archived pre-Holm) |
-| ModelOpt INT8 scale 0.60 | 92.85% | 74.47% | 629/629 | BLOCK (archived pre-Holm) |
+| Build | Overall | Critical slice | Backend matches | Archived gate | Current 0.1.0a3 |
+|---|---:|---:|---:|---|---|
+| PyTorch-derived FP16 TensorRT | 94.75% | 91.49% | 629/629 | PASS | REFERENCE |
+| ModelOpt INT8 balanced | 94.91% | 91.49% | 629/629 | PASS | WARN |
+| ModelOpt INT8 scale 0.65 | 93.32% | 78.72% | 629/629 | BLOCK (pre-Holm) | BLOCK |
+| ModelOpt INT8 scale 0.60 | 92.85% | 74.47% | 629/629 | BLOCK (pre-Holm) | BLOCK |
 
 The archived monotonic localization returned first bad index 2,
-`build-02-modelopt-int8-scale-065`. Under the current formal-test contract, its
-non-zero-margin matched-binary rules are unsupported and return ERROR; no current
-onset or interval is claimed from those historical outcomes. Four strict report
-verifications succeeded. Every structured backend
+`build-02-modelopt-int8-scale-065`. Re-evaluating the retained observations with
+the current Tango score profile keeps builds 02 and 03 at BLOCK, but returns WARN
+for the balanced candidate; no current onset or PASS/BLOCK interval is therefore
+claimed. Four strict report verifications succeeded. Every structured backend
 claim links a verified native body and matching exit code; snapshot/build evidence
 binds retained artifact bytes, source revision, calibration cohort, and tool
 versions. A target evidence manifest covers every retained file and strict report.

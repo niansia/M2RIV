@@ -44,15 +44,8 @@ Run the offline demo without cloning the repository:
 > the GitHub Action enforce the report and return exit code `2` for `BLOCK`.
 
 ```console
-uvx --python 3.13 --from merriv==0.1.0a2 merriv demo --output runs/quickstart
+uvx --python 3.13 --from merriv==0.1.0a3 merriv demo --output runs/quickstart
 ```
-
-> [!WARNING]
-> Published alpha `0.1.0a2` predates the fail-closed correction for
-> matched-binary metrics with non-zero margins. Use this command to inspect the
-> packaging and report workflow, not as production statistical evidence. Current
-> `main` uses exact McNemar for its zero-margin synthetic demo and returns `ERROR`
-> for unsupported non-zero-margin binary Holm profiles.
 
 The declared rare slice regresses more sharply than the common slice. The command
 writes a compiled release plan, evidence manifest, Model Change Report JSON,
@@ -110,24 +103,25 @@ calibration range, so it is a controlled regression test—not the headline proo
 
 | Build | Overall (n=629) | Critical slice (n=47) | Gate |
 |---|---:|---:|---:|
-| FP16 baseline | 94.8% | 91.5% | ERROR |
-| INT8 balanced | 94.8–94.9% | 91.5–93.6% | ERROR |
-| INT8 scale 0.65 | 92.9–93.2% | 74.5–78.7% | ERROR |
-| INT8 scale 0.60 | 92.4–92.9% | 70.2–76.6% | ERROR |
+| FP16 baseline | 94.8% | 91.5% | REFERENCE (not gated) |
+| INT8 balanced | 94.8–94.9% | 91.5–93.6% | WARN |
+| INT8 scale 0.65 | 92.9–93.2% | 74.5–78.7% | BLOCK |
+| INT8 scale 0.60 | 92.4–92.9% | 70.2–76.6% | BLOCK |
 
 For the retained NVIDIA scale-0.65 run, the critical-slice paired change is
 `-12.77` percentage points with a raw 95% percentile-bootstrap CI of
 `[-23.40, -4.26]` points (`n=47`). That width is why reports now expose sample
 size, CI level, family-wise alpha, Holm-adjusted evidence, target power, and MDE.
-Its archived report predates the current formal-test contract. Accuracy is a
-matched-binary risk difference and the policy declares non-zero margins; Merriv
-does not yet implement a suitable paired-binary non-inferiority test. The current
-Holm profile therefore returns `ERROR` for every build instead of applying the
-continuous sign-randomization assumption. No first bad build or PASS/BLOCK
-interval is claimed. The metric values, percentile intervals, artifact diff, and
-numerical divergence remain diagnostic evidence, not a valid formal gate result.
-The example also records ONNX semantic diff, per-tensor numerical divergence,
-gate evidence, and executed bisect. Run it with:
+Merriv 0.1.0a3 evaluates non-zero matched-binary margins with Tango's score test
+and its inverted score interval; it never applies the continuous
+sign-randomization assumption to binary outcomes. In the retained NVIDIA
+scale-0.65 run, the critical-slice two-sided score p-value is `0.0224`, Holm
+adjusted to `0.0447`, with a 97.5% score interval of `[-27.34, -1.88]` points, so
+that rule is `BLOCK`. The reference row is declared context, not a candidate
+release verdict. Ordered localization still claims no first bad build because
+the balanced endpoint is `WARN`, not a decisive `PASS`; uncertainty is not
+silently converted into an onset. The example also records ONNX semantic diff,
+per-tensor numerical divergence, gate evidence, and executed bisect. Run it with:
 
 > [!NOTE]
 > The retained ONNX evidence toolchain currently requires Python 3.11–3.13.
@@ -268,8 +262,8 @@ uv run --frozen pytest
 CI also checks schema drift, content-identity vectors, Rust interoperability,
 reproducible builds, the composite action, cross-platform package smoke tests,
 CPU ONNX evidence on Linux and Windows, dependency review, CodeQL, and OpenSSF
-Scorecard signals. Version `0.1.0a2` is published on
-[PyPI](https://pypi.org/project/merriv/0.1.0a2/) through Trusted Publishing; the
+Scorecard signals. Version `0.1.0a3` is published on
+[PyPI](https://pypi.org/project/merriv/0.1.0a3/) through Trusted Publishing; the
 release workflow builds, attests, and publishes only a tag that exactly matches
 the package version.
 

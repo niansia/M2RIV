@@ -58,19 +58,21 @@ merriv bisect-run runs/onnx-quantization/artifact-checkpoints.jsonl \
 Expected platform-bounded decisions:
 
 ```text
-ERROR build-00-fp16
-ERROR build-01-int8-balanced
-ERROR build-02-int8-calibration-scale-065
-ERROR build-03-int8-calibration-scale-060
+REFERENCE build-00-fp16 (declared baseline; not a candidate gate)
+WARN      build-01-int8-balanced
+BLOCK     build-02-int8-calibration-scale-065
+BLOCK     build-03-int8-calibration-scale-060
 ```
 
 The accuracy rules are matched-binary risk differences with non-zero
-non-inferiority margins. Merriv intentionally emits no sign-randomization p-value
-for that unsupported formal-test profile, so the Holm family fails closed with
-`ERROR` on every build. Localization therefore returns no first bad build and no
-PASS/BLOCK interval. The generated metric, interval, artifact, and numerical-diff
-evidence remains available for review; it is not promoted into a formal gate
-claim.
+non-inferiority margins. Merriv uses Tango's matched-proportion score statistic
+and its inverted score interval for those rules; it never reuses the continuous
+sign-randomization assumption. The mechanically generated baseline self-check is
+WARN because the 47-case critical slice cannot prove the declared 1.5-point
+margin, but the table correctly presents it as reference context rather than a
+candidate regression. Localization returns no first bad build because its
+reference-side endpoint is not a decisive PASS. The two contracted-calibration
+builds still produce formal BLOCK evidence.
 
 The demo is fully local after dependency installation. It downloads neither a
 model nor a dataset, uses only `CPUExecutionProvider`, and writes the artifact
@@ -82,7 +84,7 @@ The `onnx-demo` extra pins the exact demo toolchain and the source fixture diges
 The generated README and MCR are authoritative for the executing host. MCR
 execution records include the operating system, architecture, Python version,
 ONNX Runtime version, device, and dtype. CI runs the demo on both Linux and
-Windows, asserts bounded accuracy ranges plus the same fail-closed boundary, and
+Windows, asserts bounded accuracy ranges plus the same statistical boundary, and
 keeps both platform-specific evidence bundles. Exact max-absolute-error / RMSE /
 cosine triples remain runtime evidence rather than copied documentation.
 

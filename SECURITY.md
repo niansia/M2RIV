@@ -96,7 +96,7 @@ gh attestation verify PATH/TO/ARTIFACT -R OWNER/REPOSITORY
 ```
 
 Tagged releases are published through the protected PyPI Trusted Publisher path
-when the explicit brand-clearance gate is satisfied. Version `0.1.0a2`
+when the explicit brand-clearance gate is satisfied. Version `0.1.0a3`
 successfully exercised that path without a long-lived package token. After a
 successful publish, the workflow creates a permanent GitHub Release containing
 the wheel, source distribution, SPDX SBOM, and `SHA256SUMS`; the separate
