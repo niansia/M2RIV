@@ -213,6 +213,58 @@ def has_link_like_component(path: str | Path) -> bool:
         cursor = cursor.parent
 
 
+def _validate_hash_limits(
+    max_total_bytes: int, max_file_bytes: int, max_entries: int
+) -> None:
+    for name, value in (
+        ("max_total_bytes", max_total_bytes),
+        ("max_file_bytes", max_file_bytes),
+        ("max_entries", max_entries),
+    ):
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise ValueError(f"{name} must be a positive integer")
+
+
+def _artifact_candidates(directory: Path, *, max_entries: int) -> tuple[Path, ...]:
+    candidates: list[Path] = []
+    for entry_count, candidate in enumerate(directory.rglob("*"), start=1):
+        if entry_count > max_entries:
+            raise ValueError(f"artifact exceeds the {max_entries} entry traversal budget")
+        candidates.append(candidate)
+    return tuple(sorted(candidates, key=lambda path: path.as_posix()))
+
+
+def _hash_directory(
+    directory: Path, *, max_total_bytes: int, max_file_bytes: int, max_entries: int
+) -> ArtifactDigest:
+    entries: list[tuple[str, str, int]] = []
+    total_size = 0
+    for candidate in _artifact_candidates(directory, max_entries=max_entries):
+        if _is_link_like(candidate):
+            raise ValueError(f"symbolic link inside artifact is not allowed: {candidate}")
+        candidate_stat = candidate.lstat()
+        if stat.S_ISDIR(candidate_stat.st_mode):
+            continue
+        if not stat.S_ISREG(candidate_stat.st_mode):
+            raise ValueError(f"artifact entry must be a regular file: {candidate}")
+        remaining = max_total_bytes - total_size
+        file_digest, size = _hash_file(
+            candidate,
+            max_bytes=min(max_file_bytes, max(0, remaining)),
+        )
+        entries.append((candidate.relative_to(directory).as_posix(), file_digest, size))
+        total_size += size
+
+    if not entries:
+        raise ValueError("artifact directory must contain at least one file")
+    return ArtifactDigest(
+        digest=fingerprint(entries, namespace="artifact-directory"),
+        size_bytes=total_size,
+        file_count=len(entries),
+        logical_name=directory.name,
+    )
+
+
 def hash_artifact(
     path: str | Path,
     *,
@@ -221,13 +273,7 @@ def hash_artifact(
     max_entries: int = MAX_ARTIFACT_ENTRIES,
 ) -> ArtifactDigest:
     """Hash a file or directory without including its absolute location."""
-    for name, value in (
-        ("max_total_bytes", max_total_bytes),
-        ("max_file_bytes", max_file_bytes),
-        ("max_entries", max_entries),
-    ):
-        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
-            raise ValueError(f"{name} must be a positive integer")
+    _validate_hash_limits(max_total_bytes, max_file_bytes, max_entries)
     artifact = Path(path)
     if not artifact.exists():
         raise FileNotFoundError(artifact)
@@ -240,37 +286,11 @@ def hash_artifact(
 
     if not artifact.is_dir():
         raise ValueError(f"artifact must be a regular file or directory: {artifact}")
-
-    candidates: list[Path] = []
-    for entry_count, candidate in enumerate(artifact.rglob("*"), start=1):
-        if entry_count > max_entries:
-            raise ValueError(f"artifact exceeds the {max_entries} entry traversal budget")
-        candidates.append(candidate)
-
-    entries: list[tuple[str, str, int]] = []
-    total_size = 0
-    for candidate in sorted(candidates, key=lambda p: p.as_posix()):
-        if _is_link_like(candidate):
-            raise ValueError(f"symbolic link inside artifact is not allowed: {candidate}")
-        candidate_stat = candidate.lstat()
-        if stat.S_ISDIR(candidate_stat.st_mode):
-            continue
-        if not stat.S_ISREG(candidate_stat.st_mode):
-            raise ValueError(f"artifact entry must be a regular file: {candidate}")
-        remaining = max_total_bytes - total_size
-        file_digest, size = _hash_file(candidate, max_bytes=min(max_file_bytes, max(0, remaining)))
-        relative = candidate.relative_to(artifact).as_posix()
-        entries.append((relative, file_digest, size))
-        total_size += size
-
-    if not entries:
-        raise ValueError("artifact directory must contain at least one file")
-    digest = fingerprint(entries, namespace="artifact-directory")
-    return ArtifactDigest(
-        digest=digest,
-        size_bytes=total_size,
-        file_count=len(entries),
-        logical_name=artifact.name,
+    return _hash_directory(
+        artifact,
+        max_total_bytes=max_total_bytes,
+        max_file_bytes=max_file_bytes,
+        max_entries=max_entries,
     )
 
 

@@ -78,6 +78,22 @@ class MetricExecutionError(ValueError):
     """A metric plugin failed or returned untrustworthy paired samples."""
 
 
+@dataclass(frozen=True, slots=True)
+class _MetricSamples:
+    baseline: tuple[float, ...]
+    candidate: tuple[float, ...]
+    observations: tuple[EvidenceRef, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class _ReportEvidence:
+    manifest: EvidenceManifest | None
+    manifest_ref: EvidenceManifestRef | None
+    entries: dict[str, EvidenceRef]
+    metric_set_ids: dict[str, str]
+    critical_set_ids: dict[str, str]
+
+
 def _status(status: GateStatus) -> MCRStatus:
     return {
         GateStatus.PASS: MCRStatus.PASS,
@@ -93,6 +109,46 @@ def _observation_ref(observation_id: str, retention: RetentionMode) -> EvidenceR
         kind="observation",
         redacted=retention is not RetentionMode.FULL,
     )
+
+
+def _collect_metric_samples(
+    metric: PairedMetric,
+    declaration: PlannedMetric,
+    pairs: Sequence[PairedCaseResult],
+) -> _MetricSamples:
+    baseline: list[float] = []
+    candidate: list[float] = []
+    observations: list[EvidenceRef] = []
+    for pair in pairs:
+        try:
+            sample = metric.sample(pair)
+        except Exception:
+            raise MetricExecutionError(f"metric {declaration.base_metric_id!r} failed") from None
+        if sample is None:
+            continue
+        if not isinstance(sample, tuple) or len(sample) != 2:
+            raise MetricExecutionError(
+                f"metric {declaration.base_metric_id!r} returned an invalid paired sample"
+            )
+        try:
+            baseline_value, candidate_value = (float(value) for value in sample)
+        except (TypeError, ValueError, OverflowError):
+            raise MetricExecutionError(
+                f"metric {declaration.base_metric_id!r} returned a non-numeric paired sample"
+            ) from None
+        if not math.isfinite(baseline_value) or not math.isfinite(candidate_value):
+            raise MetricExecutionError(
+                f"metric {declaration.base_metric_id!r} returned a non-finite paired sample"
+            )
+        baseline.append(baseline_value)
+        candidate.append(candidate_value)
+        observations.extend(
+            (
+                _observation_ref(pair.baseline.id, pair.baseline.retention),
+                _observation_ref(pair.candidate.id, pair.candidate.retention),
+            )
+        )
+    return _MetricSamples(tuple(baseline), tuple(candidate), tuple(observations))
 
 
 def _analyze_group(
@@ -112,56 +168,18 @@ def _analyze_group(
             f"metric {declaration.base_metric_id!r} has an invalid identity scope"
         )
     checked_identity_scope = cast(Literal["evidence", "run"], identity_scope)
-    baseline: list[float] = []
-    candidate: list[float] = []
-    observations: list[EvidenceRef] = []
-    for pair in pairs:
-        try:
-            sample = metric.sample(pair)
-        except Exception:
-            raise MetricExecutionError(f"metric {declaration.base_metric_id!r} failed") from None
-        if sample is None:
-            continue
-        if not isinstance(sample, tuple) or len(sample) != 2:
-            raise MetricExecutionError(
-                f"metric {declaration.base_metric_id!r} returned an invalid paired sample"
-            )
-        try:
-            baseline_value = float(sample[0])
-            candidate_value = float(sample[1])
-        except (TypeError, ValueError, OverflowError):
-            raise MetricExecutionError(
-                f"metric {declaration.base_metric_id!r} returned a non-numeric paired sample"
-            ) from None
-        if not math.isfinite(baseline_value) or not math.isfinite(candidate_value):
-            raise MetricExecutionError(
-                f"metric {declaration.base_metric_id!r} returned a non-finite paired sample"
-            )
-        baseline.append(baseline_value)
-        candidate.append(candidate_value)
-        observations.extend(
-            (
-                _observation_ref(
-                    pair.baseline.id,
-                    pair.baseline.retention,
-                ),
-                _observation_ref(
-                    pair.candidate.id,
-                    pair.candidate.retention,
-                ),
-            )
-        )
-    if not baseline:
+    samples = _collect_metric_samples(metric, declaration, pairs)
+    if not samples.baseline:
         return None
     binary_evidence: BinaryPairedEvidence | None = None
     if declaration.binary:
-        if any(value not in {0.0, 1.0} for value in baseline + candidate):
+        if any(value not in {0.0, 1.0} for value in samples.baseline + samples.candidate):
             raise MetricExecutionError(
                 f"binary metric {declaration.base_metric_id!r} emitted a non-binary value"
             )
         binary_evidence = binary_paired_evidence(
-            [bool(value) for value in baseline],
-            [bool(value) for value in candidate],
+            [bool(value) for value in samples.baseline],
+            [bool(value) for value in samples.candidate],
             resamples=resamples,
             seed=seed,
             confidence_level=confidence_level,
@@ -169,8 +187,8 @@ def _analyze_group(
         estimate = binary_evidence.estimate
     else:
         estimate = paired_bootstrap(
-            baseline,
-            candidate,
+            samples.baseline,
+            samples.candidate,
             resamples=resamples,
             seed=seed,
             confidence_level=confidence_level,
@@ -183,7 +201,232 @@ def _analyze_group(
         identity_scope=checked_identity_scope,
         estimate=estimate,
         binary_evidence=binary_evidence,
-        observations=tuple(observations),
+        observations=samples.observations,
+    )
+
+
+def _metric_groups(
+    declaration: PlannedMetric,
+    pairs: Sequence[PairedCaseResult],
+    slice_keys: Sequence[str],
+) -> tuple[tuple[str, str, Sequence[PairedCaseResult]], ...]:
+    groups: list[tuple[str, str, Sequence[PairedCaseResult]]] = [
+        (declaration.base_metric_id, "overall", pairs)
+    ]
+    for slice_key in slice_keys:
+        values = sorted(
+            {pair.case.slices[slice_key] for pair in pairs if slice_key in pair.case.slices}
+        )
+        groups.extend(
+            (
+                f"{declaration.base_metric_id}@{slice_key}={value}",
+                f"slice:{slice_key}={value}",
+                tuple(pair for pair in pairs if pair.case.slices.get(slice_key) == value),
+            )
+            for value in values
+        )
+    return tuple(groups)
+
+
+def _analyze_metrics(
+    plan: CompiledReleasePlan,
+    metrics: Sequence[PairedMetric],
+    run: PairedRunResult,
+    slice_keys: Sequence[str],
+    *,
+    resamples: int,
+    seed: int,
+    confidence_level: float,
+) -> tuple[PairedMetricEvidence, ...]:
+    declarations = tuple(metric for metric in plan.metrics if metric.scope == "overall")
+    if len(declarations) != len(metrics):
+        raise AssertionError("compiled plan lost a declared base metric")
+
+    analyzed: list[PairedMetricEvidence] = []
+    for metric, declaration in zip(metrics, declarations, strict=True):
+        for metric_id, scope, pairs in _metric_groups(declaration, run.cases, slice_keys):
+            evidence = _analyze_group(
+                metric,
+                declaration,
+                metric_id,
+                scope,
+                pairs,
+                resamples=resamples,
+                seed=seed,
+                confidence_level=confidence_level,
+            )
+            if evidence is not None:
+                analyzed.append(evidence)
+    return tuple(analyzed)
+
+
+def _critical_failures(run: PairedRunResult) -> tuple[str, ...]:
+    return tuple(
+        pair.case_id
+        for pair in run.cases
+        if pair.case.critical and pair.candidate.output != pair.case.expected
+    )
+
+
+def _record_evidence(entries: dict[str, EvidenceRef], reference: EvidenceRef) -> None:
+    existing = entries.get(reference.id)
+    if existing is not None and existing != reference:
+        raise ValueError("evidence id is associated with conflicting records")
+    entries[reference.id] = reference
+
+
+def _report_evidence(
+    run: PairedRunResult,
+    metrics: Sequence[PairedMetricEvidence],
+    gate: GateDecision,
+) -> _ReportEvidence:
+    sets: dict[str, EvidenceSet] = {}
+    entries: dict[str, EvidenceRef] = {}
+    metric_set_ids: dict[str, str] = {}
+    for metric in metrics:
+        evidence_set = create_evidence_set(metric.observations)
+        sets.setdefault(evidence_set.id, evidence_set)
+        metric_set_ids[metric.metric_id] = evidence_set.id
+        for observation in metric.observations:
+            _record_evidence(entries, observation)
+
+    cases_by_id = {pair.case_id: pair for pair in run.cases}
+    critical_set_ids: dict[str, str] = {}
+    for case_id in gate.critical_failures:
+        pair = cases_by_id[case_id]
+        references = (
+            _observation_ref(pair.baseline.id, pair.baseline.retention),
+            _observation_ref(pair.candidate.id, pair.candidate.retention),
+        )
+        evidence_set = create_evidence_set(references)
+        sets.setdefault(evidence_set.id, evidence_set)
+        critical_set_ids[case_id] = evidence_set.id
+        for reference in references:
+            _record_evidence(entries, reference)
+
+    manifest = (
+        create_evidence_manifest(tuple(entries.values()), tuple(sets.values())) if sets else None
+    )
+    manifest_ref = (
+        EvidenceManifestRef(
+            id=manifest.id,
+            evidence_count=len(manifest.evidence),
+            set_count=len(manifest.sets),
+        )
+        if manifest is not None
+        else None
+    )
+    return _ReportEvidence(
+        manifest=manifest,
+        manifest_ref=manifest_ref,
+        entries=entries,
+        metric_set_ids=metric_set_ids,
+        critical_set_ids=critical_set_ids,
+    )
+
+
+def _report_findings(gate: GateDecision, evidence: _ReportEvidence) -> tuple[MCRFinding, ...]:
+    findings = [
+        MCRFinding(
+            rule_id=decision.rule_id,
+            metric_id=decision.metric,
+            status=_status(decision.status),
+            message=decision.reason,
+            evidence_set_id=evidence.metric_set_ids.get(decision.metric),
+        )
+        for decision in gate.rule_decisions
+    ]
+    findings.extend(
+        MCRFinding(
+            rule_id="critical-any-failure",
+            status=MCRStatus.BLOCK,
+            message=f"critical case failed: {case_id}",
+            evidence_set_id=evidence.critical_set_ids[case_id],
+        )
+        for case_id in gate.critical_failures
+    )
+    return tuple(findings)
+
+
+def _report_metrics(
+    metrics: Sequence[PairedMetricEvidence], evidence: _ReportEvidence
+) -> tuple[MCRMetric, ...]:
+    return tuple(
+        MCRMetric(
+            metric_id=metric.metric_id,
+            scope=metric.scope,
+            direction=metric.direction.value,
+            unit=metric.unit,
+            baseline_value=metric.estimate.baseline_mean,
+            candidate_value=metric.estimate.candidate_mean,
+            delta=metric.estimate.effect,
+            confidence_level=metric.estimate.confidence_interval.confidence_level,
+            interval_lower=metric.estimate.confidence_interval.low,
+            interval_upper=metric.estimate.confidence_interval.high,
+            effect_size=metric.estimate.effect_size,
+            sample_size=metric.estimate.n_pairs,
+            evidence_set_id=evidence.metric_set_ids[metric.metric_id],
+            identity_scope=metric.identity_scope,
+        )
+        for metric in metrics
+    )
+
+
+def _supplemental_evidence(
+    additional: Sequence[EvidenceRef], retained: Mapping[str, EvidenceRef]
+) -> tuple[EvidenceRef, ...]:
+    supplemental: dict[str, EvidenceRef] = {}
+    for reference in additional:
+        existing = retained.get(reference.id)
+        if existing is not None and existing != reference:
+            raise ValueError("evidence id is associated with conflicting records")
+        if existing is not None:
+            continue
+        conflicting = supplemental.get(reference.id)
+        if conflicting is not None and conflicting != reference:
+            raise ValueError("evidence id is associated with conflicting records")
+        supplemental[reference.id] = reference
+    return tuple(supplemental.values())
+
+
+def _report_executions(run: PairedRunResult) -> tuple[MCRExecution, MCRExecution]:
+    return (
+        MCRExecution(
+            role="baseline",
+            executor_id=run.baseline_execution.descriptor.executor_id,
+            executor_version=run.baseline_execution.descriptor.version,
+            config_fingerprint=run.baseline_execution.descriptor.config_fingerprint,
+            runtime_profile=run.baseline_snapshot.runtime_profile,
+            capabilities=run.baseline_execution.descriptor.capabilities,
+            requested_cases=run.baseline_execution.requested_cases,
+            returned_observations=run.baseline_execution.returned_observations,
+            cache_hits=sum(case.baseline_cache_hit for case in run.cases),
+        ),
+        MCRExecution(
+            role="candidate",
+            executor_id=run.candidate_execution.descriptor.executor_id,
+            executor_version=run.candidate_execution.descriptor.version,
+            config_fingerprint=run.candidate_execution.descriptor.config_fingerprint,
+            runtime_profile=run.candidate_snapshot.runtime_profile,
+            capabilities=run.candidate_execution.descriptor.capabilities,
+            requested_cases=run.candidate_execution.requested_cases,
+            returned_observations=run.candidate_execution.returned_observations,
+            cache_hits=sum(case.candidate_cache_hit for case in run.cases),
+        ),
+    )
+
+
+def _report_limitations(run: PairedRunResult) -> tuple[str, str]:
+    cache_limitation = (
+        "Cache entries used a process-local HMAC key; no cache evidence was trusted "
+        "across processes."
+        if run.cache_authentication == "run-local-hmac"
+        else "Shared cache entries were HMAC-authenticated with M2RIV_CACHE_KEY; this "
+        "authenticates cache writers, not the MCR producer."
+    )
+    return (
+        "Metrics are paired over observed cases; this is not a general safety certification.",
+        cache_limitation,
     )
 
 
@@ -232,48 +475,14 @@ def compare_release(
         candidate_adapter_fingerprint=candidate_adapter_fingerprint,
     )
 
-    analyzed: list[PairedMetricEvidence] = []
-    base_declarations = tuple(
-        planned_metric for planned_metric in plan.metrics if planned_metric.scope == "overall"
-    )
-    if len(base_declarations) != len(declared_metrics):
-        raise AssertionError("compiled plan lost a declared base metric")
-    for metric, declaration in zip(declared_metrics, base_declarations, strict=True):
-        groups: list[tuple[str, str, Sequence[PairedCaseResult]]] = [
-            (declaration.base_metric_id, "overall", run.cases)
-        ]
-        for slice_key in slice_keys:
-            values = sorted(
-                {pair.case.slices[slice_key] for pair in run.cases if slice_key in pair.case.slices}
-            )
-            for value in values:
-                groups.append(
-                    (
-                        f"{declaration.base_metric_id}@{slice_key}={value}",
-                        f"slice:{slice_key}={value}",
-                        tuple(
-                            pair for pair in run.cases if pair.case.slices.get(slice_key) == value
-                        ),
-                    )
-                )
-        for metric_id, scope, pairs in groups:
-            evidence = _analyze_group(
-                metric,
-                declaration,
-                metric_id,
-                scope,
-                pairs,
-                resamples=resamples,
-                seed=runtime_profile.seed,
-                confidence_level=confidence_level,
-            )
-            if evidence is not None:
-                analyzed.append(evidence)
-    metric_evidence = tuple(analyzed)
-    critical_failures = tuple(
-        pair.case_id
-        for pair in run.cases
-        if pair.case.critical and pair.candidate.output != pair.case.expected
+    metric_evidence = _analyze_metrics(
+        plan,
+        declared_metrics,
+        run,
+        slice_keys,
+        resamples=resamples,
+        seed=runtime_profile.seed,
+        confidence_level=confidence_level,
     )
     gate = evaluate_gate(
         policy,
@@ -282,148 +491,30 @@ def compare_release(
                 MetricEvidence(metric=metric.metric_id, estimate=metric.estimate)
                 for metric in metric_evidence
             ),
-            critical_failures=critical_failures,
+            critical_failures=_critical_failures(run),
         ),
     )
-
-    evidence_sets: dict[str, EvidenceSet] = {}
-    evidence_entries: dict[str, EvidenceRef] = {}
-    metric_set_ids: dict[str, str] = {}
-    for metric_result in metric_evidence:
-        evidence_set = create_evidence_set(metric_result.observations)
-        evidence_sets.setdefault(evidence_set.id, evidence_set)
-        metric_set_ids[metric_result.metric_id] = evidence_set.id
-        for observation in metric_result.observations:
-            existing = evidence_entries.get(observation.id)
-            if existing is not None and existing != observation:
-                raise ValueError("evidence id is associated with conflicting records")
-            evidence_entries[observation.id] = observation
-    critical_set_ids: dict[str, str] = {}
-    for case_id in gate.critical_failures:
-        pair = next(item for item in run.cases if item.case_id == case_id)
-        references = (
-            _observation_ref(pair.baseline.id, pair.baseline.retention),
-            _observation_ref(pair.candidate.id, pair.candidate.retention),
-        )
-        evidence_set = create_evidence_set(references)
-        evidence_sets.setdefault(evidence_set.id, evidence_set)
-        critical_set_ids[case_id] = evidence_set.id
-        for observation in references:
-            existing = evidence_entries.get(observation.id)
-            if existing is not None and existing != observation:
-                raise ValueError("evidence id is associated with conflicting records")
-            evidence_entries[observation.id] = observation
-    findings = [
-        MCRFinding(
-            rule_id=decision.rule_id,
-            metric_id=decision.metric,
-            status=_status(decision.status),
-            message=decision.reason,
-            evidence_set_id=metric_set_ids.get(decision.metric),
-        )
-        for decision in gate.rule_decisions
-    ]
-    findings.extend(
-        MCRFinding(
-            rule_id="critical-any-failure",
-            status=MCRStatus.BLOCK,
-            message=f"critical case failed: {case_id}",
-            evidence_set_id=critical_set_ids[case_id],
-        )
-        for case_id in gate.critical_failures
-    )
-    evidence_manifest = (
-        create_evidence_manifest(tuple(evidence_entries.values()), tuple(evidence_sets.values()))
-        if evidence_sets
-        else None
-    )
-    manifest_ref = (
-        EvidenceManifestRef(
-            id=evidence_manifest.id,
-            evidence_count=len(evidence_manifest.evidence),
-            set_count=len(evidence_manifest.sets),
-        )
-        if evidence_manifest is not None
-        else None
-    )
-    mcr_metrics = tuple(
-        MCRMetric(
-            metric_id=metric.metric_id,
-            scope=metric.scope,
-            direction=metric.direction.value,
-            unit=metric.unit,
-            baseline_value=metric.estimate.baseline_mean,
-            candidate_value=metric.estimate.candidate_mean,
-            delta=metric.estimate.effect,
-            confidence_level=metric.estimate.confidence_interval.confidence_level,
-            interval_lower=metric.estimate.confidence_interval.low,
-            interval_upper=metric.estimate.confidence_interval.high,
-            effect_size=metric.estimate.effect_size,
-            sample_size=metric.estimate.n_pairs,
-            evidence_set_id=metric_set_ids[metric.metric_id],
-            identity_scope=metric.identity_scope,
-        )
-        for metric in metric_evidence
-    )
-    supplemental_refs: dict[str, EvidenceRef] = {}
-    for supplemental in additional_evidence:
-        existing = evidence_entries.get(supplemental.id)
-        if existing is not None and existing != supplemental:
-            raise ValueError("evidence id is associated with conflicting records")
-        if existing is None:
-            conflicting = supplemental_refs.get(supplemental.id)
-            if conflicting is not None and conflicting != supplemental:
-                raise ValueError("evidence id is associated with conflicting records")
-            supplemental_refs[supplemental.id] = supplemental
+    report_evidence = _report_evidence(run, metric_evidence, gate)
     report = create_report(
         baseline_snapshot_id=run.baseline_snapshot.id,
         candidate_snapshot_id=run.candidate_snapshot.id,
         release_plan_id=plan.id,
-        executions=(
-            MCRExecution(
-                role="baseline",
-                executor_id=run.baseline_execution.descriptor.executor_id,
-                executor_version=run.baseline_execution.descriptor.version,
-                config_fingerprint=(run.baseline_execution.descriptor.config_fingerprint),
-                runtime_profile=run.baseline_snapshot.runtime_profile,
-                capabilities=run.baseline_execution.descriptor.capabilities,
-                requested_cases=run.baseline_execution.requested_cases,
-                returned_observations=(run.baseline_execution.returned_observations),
-                cache_hits=sum(case.baseline_cache_hit for case in run.cases),
-            ),
-            MCRExecution(
-                role="candidate",
-                executor_id=run.candidate_execution.descriptor.executor_id,
-                executor_version=run.candidate_execution.descriptor.version,
-                config_fingerprint=(run.candidate_execution.descriptor.config_fingerprint),
-                runtime_profile=run.candidate_snapshot.runtime_profile,
-                capabilities=run.candidate_execution.descriptor.capabilities,
-                requested_cases=run.candidate_execution.requested_cases,
-                returned_observations=(run.candidate_execution.returned_observations),
-                cache_hits=sum(case.candidate_cache_hit for case in run.cases),
-            ),
-        ),
-        metrics=mcr_metrics,
+        executions=_report_executions(run),
+        metrics=_report_metrics(metric_evidence, report_evidence),
         decision=MCRDecision(
             status=_status(gate.status),
             allowed=(
                 gate.status is GateStatus.PASS
                 or (gate.status is GateStatus.WARN and policy.allow_warn)
             ),
-            findings=tuple(findings),
+            findings=_report_findings(gate, report_evidence),
         ),
-        evidence_manifest=manifest_ref,
-        evidence=tuple(supplemental_refs.values()),
-        limitations=(
-            "Metrics are paired over observed cases; this is not a general safety certification.",
-            (
-                "Cache entries used a process-local HMAC key; no cache evidence was trusted "
-                "across processes."
-                if run.cache_authentication == "run-local-hmac"
-                else "Shared cache entries were HMAC-authenticated with M2RIV_CACHE_KEY; this "
-                "authenticates cache writers, not the MCR producer."
-            ),
+        evidence_manifest=report_evidence.manifest_ref,
+        evidence=_supplemental_evidence(
+            additional_evidence,
+            report_evidence.entries,
         ),
+        limitations=_report_limitations(run),
     )
     return ReleaseComparison(
         plan=plan,
@@ -431,7 +522,7 @@ def compare_release(
         metrics=metric_evidence,
         gate=gate,
         report=report,
-        evidence_manifest=evidence_manifest,
+        evidence_manifest=report_evidence.manifest,
     )
 
 

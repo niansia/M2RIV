@@ -230,6 +230,54 @@ class PairedRunner:
         )
 
     @staticmethod
+    def _canonical_observation(
+        observation: Observation,
+        snapshot: ModelSnapshot,
+        profile: RuntimeProfile,
+    ) -> Observation:
+        if observation.snapshot_id != snapshot.id:
+            raise RunnerContractError(
+                f"adapter returned case {observation.case_id!r} for the wrong snapshot"
+            )
+        if observation.retention == RetentionMode.FULL:
+            actual_digest = fingerprint(observation.output, namespace="observation-output")
+            if actual_digest != observation.output_digest:
+                raise RunnerContractError(
+                    f"adapter returned an invalid output digest for case {observation.case_id!r}"
+                )
+        if observation.seed != profile.seed:
+            raise RunnerContractError(
+                f"adapter returned case {observation.case_id!r} with the wrong seed"
+            )
+        return observation.model_copy(
+            update={
+                "id": observation_content_id(
+                    snapshot_id=observation.snapshot_id,
+                    case_id=observation.case_id,
+                    seed=observation.seed,
+                    output_digest=observation.output_digest,
+                    retention=observation.retention,
+                )
+            }
+        )
+
+    @staticmethod
+    def _raise_pairing_error(
+        duplicates: set[str], missing: set[str], unexpected: set[str]
+    ) -> None:
+        if not (duplicates or missing or unexpected):
+            return
+        details: list[str] = []
+        for label, case_ids in (
+            ("duplicate", duplicates),
+            ("missing", missing),
+            ("unexpected", unexpected),
+        ):
+            if case_ids:
+                details.append(f"{label}={sorted(case_ids)!r}")
+        raise RunnerContractError("adapter violated case pairing: " + ", ".join(details))
+
+    @staticmethod
     def _validate_observations(
         *,
         observations: Sequence[Observation],
@@ -245,45 +293,11 @@ class PairedRunner:
                 raise RunnerContractError("adapter returned a non-Observation value")
             if observation.case_id in by_id:
                 duplicates.add(observation.case_id)
-            if observation.snapshot_id != snapshot.id:
-                raise RunnerContractError(
-                    f"adapter returned case {observation.case_id!r} for the wrong snapshot"
-                )
-            if observation.retention == RetentionMode.FULL:
-                actual_digest = fingerprint(observation.output, namespace="observation-output")
-                if actual_digest != observation.output_digest:
-                    message = (
-                        "adapter returned an invalid output digest for case "
-                        f"{observation.case_id!r}"
-                    )
-                    raise RunnerContractError(message)
-            if observation.seed != profile.seed:
-                raise RunnerContractError(
-                    f"adapter returned case {observation.case_id!r} with the wrong seed"
-                )
-            canonical = observation.model_copy(
-                update={
-                    "id": observation_content_id(
-                        snapshot_id=observation.snapshot_id,
-                        case_id=observation.case_id,
-                        seed=observation.seed,
-                        output_digest=observation.output_digest,
-                        retention=observation.retention,
-                    )
-                }
-            )
+            canonical = PairedRunner._canonical_observation(observation, snapshot, profile)
             by_id[canonical.case_id] = canonical
 
         actual_ids = set(by_id)
         missing = requested_ids - actual_ids
         unexpected = actual_ids - requested_ids
-        if duplicates or missing or unexpected:
-            details: list[str] = []
-            if duplicates:
-                details.append(f"duplicate={sorted(duplicates)!r}")
-            if missing:
-                details.append(f"missing={sorted(missing)!r}")
-            if unexpected:
-                details.append(f"unexpected={sorted(unexpected)!r}")
-            raise RunnerContractError("adapter violated case pairing: " + ", ".join(details))
+        PairedRunner._raise_pairing_error(duplicates, missing, unexpected)
         return by_id

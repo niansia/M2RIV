@@ -38,6 +38,26 @@ MAX_YAML_DEPTH = 64
 MAX_YAML_NODES = 100_000
 
 
+def _parse_jsonl_record(path: Path, line_number: int, raw_bytes: bytes) -> dict[str, Any] | None:
+    try:
+        raw_line = raw_bytes.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise InputFormatError(f"{path}:{line_number}: input must be UTF-8") from error
+    if not raw_line.strip():
+        return None
+    try:
+        value = parse_strict_json(
+            raw_line,
+            max_depth=MAX_JSON_DEPTH,
+            max_nodes=MAX_JSON_NODES,
+        )
+    except StrictJSONError as error:
+        raise InputFormatError(f"{path}:{line_number}: invalid JSON: {error}") from error
+    if not isinstance(value, dict):
+        raise InputFormatError(f"{path}:{line_number}: row must be a JSON object")
+    return value
+
+
 def _load_jsonl(path: Path) -> tuple[tuple[int, dict[str, Any]], ...]:
     rows: list[tuple[int, dict[str, Any]]] = []
     try:
@@ -57,25 +77,10 @@ def _load_jsonl(path: Path) -> tuple[tuple[int, dict[str, Any]], ...]:
                     raise InputFormatError(
                         f"{path}: file exceeds {MAX_JSONL_FILE_BYTES} byte limit"
                     )
-                try:
-                    raw_line = raw_bytes.decode("utf-8")
-                except UnicodeDecodeError as error:
-                    raise InputFormatError(f"{path}:{line_number}: input must be UTF-8") from error
-                if not raw_line.strip():
+                record = _parse_jsonl_record(path, line_number, raw_bytes)
+                if record is None:
                     continue
-                try:
-                    value = parse_strict_json(
-                        raw_line,
-                        max_depth=MAX_JSON_DEPTH,
-                        max_nodes=MAX_JSON_NODES,
-                    )
-                except StrictJSONError as error:
-                    raise InputFormatError(
-                        f"{path}:{line_number}: invalid JSON: {error}"
-                    ) from error
-                if not isinstance(value, dict):
-                    raise InputFormatError(f"{path}:{line_number}: row must be a JSON object")
-                rows.append((line_number, value))
+                rows.append((line_number, record))
                 if len(rows) > MAX_JSONL_RECORDS:
                     raise InputFormatError(
                         f"{path}: record count exceeds {MAX_JSONL_RECORDS} limit"

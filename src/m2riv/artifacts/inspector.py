@@ -101,6 +101,31 @@ def _uses_external_data(value: Any, onnx: Any) -> bool:
     return bool(value.external_data) or value.data_location == onnx.TensorProto.EXTERNAL
 
 
+def _graph_uses_external_data(graph: Any, onnx: Any) -> bool:
+    dense = any(_uses_external_data(initializer, onnx) for initializer in graph.initializer)
+    sparse = any(
+        _uses_external_data(initializer.values, onnx)
+        or _uses_external_data(initializer.indices, onnx)
+        for initializer in graph.sparse_initializer
+    )
+    return dense or sparse
+
+
+def _scan_attribute(attribute: Any, onnx: Any, stack: list[Any]) -> bool:
+    if attribute.type == onnx.AttributeProto.GRAPH:
+        stack.append(attribute.g)
+    elif attribute.type == onnx.AttributeProto.GRAPHS:
+        stack.extend(attribute.graphs)
+    elif attribute.type == onnx.AttributeProto.TENSOR:
+        _tensor_elements(attribute.t)
+        return _uses_external_data(attribute.t, onnx)
+    elif attribute.type == onnx.AttributeProto.TENSORS:
+        for tensor in attribute.tensors:
+            _tensor_elements(tensor)
+        return any(_uses_external_data(tensor, onnx) for tensor in attribute.tensors)
+    return False
+
+
 def _walk_graphs(model: Any, onnx: Any) -> tuple[tuple[Any, ...], tuple[Any, ...], bool]:
     graphs: list[Any] = []
     nodes: list[Any] = []
@@ -115,14 +140,7 @@ def _walk_graphs(model: Any, onnx: Any) -> tuple[tuple[Any, ...], tuple[Any, ...
         nodes.extend(graph.node)
         if len(nodes) > MAX_ONNX_NODES:
             raise ArtifactInspectionError(f"ONNX graph exceeds {MAX_ONNX_NODES} node limit")
-        for initializer in graph.initializer:
-            uses_external_data = uses_external_data or _uses_external_data(initializer, onnx)
-        for sparse in graph.sparse_initializer:
-            uses_external_data = (
-                uses_external_data
-                or _uses_external_data(sparse.values, onnx)
-                or _uses_external_data(sparse.indices, onnx)
-            )
+        uses_external_data = uses_external_data or _graph_uses_external_data(graph, onnx)
         for node in graph.node:
             attribute_count += len(node.attribute)
             if attribute_count > MAX_ONNX_ATTRIBUTES:
@@ -130,21 +148,7 @@ def _walk_graphs(model: Any, onnx: Any) -> tuple[tuple[Any, ...], tuple[Any, ...
                     f"ONNX model exceeds {MAX_ONNX_ATTRIBUTES} attribute limit"
                 )
             for attribute in node.attribute:
-                if attribute.type == onnx.AttributeProto.GRAPH:
-                    stack.append(attribute.g)
-                elif attribute.type == onnx.AttributeProto.GRAPHS:
-                    stack.extend(attribute.graphs)
-                elif attribute.type == onnx.AttributeProto.TENSOR:
-                    _tensor_elements(attribute.t)
-                    uses_external_data = uses_external_data or _uses_external_data(
-                        attribute.t, onnx
-                    )
-                elif attribute.type == onnx.AttributeProto.TENSORS:
-                    for tensor in attribute.tensors:
-                        _tensor_elements(tensor)
-                    uses_external_data = uses_external_data or any(
-                        _uses_external_data(tensor, onnx) for tensor in attribute.tensors
-                    )
+                uses_external_data = uses_external_data or _scan_attribute(attribute, onnx, stack)
     return tuple(graphs), tuple(nodes), uses_external_data
 
 
@@ -168,24 +172,20 @@ def _quantization_format(
     return "none"
 
 
-def _inspect_onnx(path: Path, *, max_bytes: int) -> OnnxGraphSummary:
-    if isinstance(max_bytes, bool) or max_bytes < 1:
-        raise ValueError("max_bytes must be a positive integer")
-    initial_digest = hash_artifact(
+def _load_onnx(path: Path, *, max_bytes: int) -> tuple[Any, Any]:
+    digest = hash_artifact(
         path,
         max_total_bytes=max_bytes,
         max_file_bytes=max_bytes,
         max_entries=1,
     )
-    if initial_digest.size_bytes > max_bytes:
-        raise ArtifactInspectionError(f"ONNX artifact exceeds {max_bytes} byte inspection limit")
     try:
         import onnx
 
         encoded = read_verified_file(
             path,
             max_bytes=max_bytes,
-            expected_digest=initial_digest.digest,
+            expected_digest=digest.digest,
         )
         model = onnx.load_model_from_string(encoded)
     except ImportError as error:
@@ -196,28 +196,23 @@ def _inspect_onnx(path: Path, *, max_bytes: int) -> OnnxGraphSummary:
         raise ArtifactInspectionError(str(error)) from error
     except Exception:
         raise ArtifactInspectionError("ONNX artifact could not be parsed") from None
+    return onnx, model
 
-    graph = model.graph
-    graphs, nodes, uses_external_data = _walk_graphs(model, onnx)
-    initializer_count = sum(len(item.initializer) + len(item.sparse_initializer) for item in graphs)
-    if initializer_count > MAX_ONNX_INITIALIZERS:
-        raise ArtifactInspectionError(
-            f"ONNX graph exceeds {MAX_ONNX_INITIALIZERS} initializer limit"
-        )
-    if len(model.metadata_props) > MAX_ONNX_METADATA:
-        raise ArtifactInspectionError(f"ONNX metadata exceeds {MAX_ONNX_METADATA} entry limit")
 
+def _operator_counts(nodes: tuple[Any, ...]) -> Counter[str]:
     operators: Counter[str] = Counter()
     for node in nodes:
         domain = _bounded_text(node.domain, label="operator domain", limit=128) or "ai.onnx"
         op_type = _bounded_text(node.op_type, label="operator type", limit=128)
         operators[f"{domain}::{op_type}"] += 1
+    return operators
 
+
+def _initializer_summary(graphs: tuple[Any, ...], onnx: Any) -> tuple[Counter[str], int]:
     dtype_counts: Counter[str] = Counter()
     parameter_count = 0
-    for current_graph in graphs:
-        initializers = list(current_graph.initializer)
-        initializers.extend(sparse.values for sparse in current_graph.sparse_initializer)
+    for graph in graphs:
+        initializers = [*graph.initializer, *(item.values for item in graph.sparse_initializer)]
         for initializer in initializers:
             try:
                 dtype = onnx.TensorProto.DataType.Name(initializer.data_type)
@@ -231,11 +226,16 @@ def _inspect_onnx(path: Path, *, max_bytes: int) -> OnnxGraphSummary:
                 raise ArtifactInspectionError(
                     f"ONNX parameter count exceeds {MAX_ONNX_PARAMETER_COUNT}"
                 )
-    opsets = tuple(
+    return dtype_counts, parameter_count
+
+
+def _opsets(model: Any) -> tuple[OnnxOpset, ...]:
+    return tuple(
         sorted(
             (
                 OnnxOpset(
-                    domain=_bounded_text(item.domain, label="opset domain", limit=128) or "ai.onnx",
+                    domain=_bounded_text(item.domain, label="opset domain", limit=128)
+                    or "ai.onnx",
                     version=item.version,
                 )
                 for item in model.opset_import
@@ -243,6 +243,9 @@ def _inspect_onnx(path: Path, *, max_bytes: int) -> OnnxGraphSummary:
             key=lambda item: item.domain,
         )
     )
+
+
+def _metadata_fingerprint(model: Any) -> str:
     metadata = tuple(
         sorted(
             (
@@ -252,12 +255,32 @@ def _inspect_onnx(path: Path, *, max_bytes: int) -> OnnxGraphSummary:
             for item in model.metadata_props
         )
     )
+    return fingerprint(metadata, namespace="onnx-metadata")
+
+
+def _inspect_onnx(path: Path, *, max_bytes: int) -> OnnxGraphSummary:
+    if isinstance(max_bytes, bool) or max_bytes < 1:
+        raise ValueError("max_bytes must be a positive integer")
+    onnx, model = _load_onnx(path, max_bytes=max_bytes)
+
+    graph = model.graph
+    graphs, nodes, uses_external_data = _walk_graphs(model, onnx)
+    initializer_count = sum(len(item.initializer) + len(item.sparse_initializer) for item in graphs)
+    if initializer_count > MAX_ONNX_INITIALIZERS:
+        raise ArtifactInspectionError(
+            f"ONNX graph exceeds {MAX_ONNX_INITIALIZERS} initializer limit"
+        )
+    if len(model.metadata_props) > MAX_ONNX_METADATA:
+        raise ArtifactInspectionError(f"ONNX metadata exceeds {MAX_ONNX_METADATA} entry limit")
+
+    operators = _operator_counts(nodes)
+    dtype_counts, parameter_count = _initializer_summary(graphs, onnx)
     return OnnxGraphSummary(
         ir_version=model.ir_version,
         producer_name=_bounded_text(model.producer_name, label="producer name", limit=256),
         producer_version=_bounded_text(model.producer_version, label="producer version", limit=128),
         model_version=max(0, model.model_version),
-        opsets=opsets,
+        opsets=_opsets(model),
         node_count=len(nodes),
         initializer_count=initializer_count,
         parameter_count=parameter_count,
@@ -271,8 +294,27 @@ def _inspect_onnx(path: Path, *, max_bytes: int) -> OnnxGraphSummary:
         outputs=tuple(_tensor_spec(value, onnx) for value in graph.output),
         uses_external_data=uses_external_data,
         quantization_format=_quantization_format(operators),
-        metadata_fingerprint=fingerprint(metadata, namespace="onnx-metadata"),
+        metadata_fingerprint=_metadata_fingerprint(model),
     )
+
+
+def _component_candidates(path: Path, *, max_entries: int) -> tuple[Path, ...]:
+    if path.is_file():
+        return (path,)
+    discovered: list[Path] = []
+    for entry_count, candidate in enumerate(path.rglob("*"), start=1):
+        if entry_count > max_entries:
+            raise ArtifactInspectionError(
+                f"artifact exceeds the {max_entries} entry traversal budget"
+            )
+        discovered.append(candidate)
+    return tuple(sorted(discovered, key=lambda item: item.as_posix()))
+
+
+def _component_role(path: Path) -> str | None:
+    if path.suffix.casefold() == ".onnx":
+        return "model-onnx"
+    return _COMPONENT_ROLES.get(path.name.casefold())
 
 
 def _components(
@@ -283,27 +325,11 @@ def _components(
     max_artifact_file_bytes: int,
     max_artifact_entries: int,
 ) -> tuple[ArtifactComponent, ...]:
-    candidates: tuple[Path, ...]
-    if path.is_file():
-        candidates = (path,)
-    else:
-        discovered: list[Path] = []
-        for entry_count, candidate in enumerate(path.rglob("*"), start=1):
-            if entry_count > max_artifact_entries:
-                raise ArtifactInspectionError(
-                    f"artifact exceeds the {max_artifact_entries} entry traversal budget"
-                )
-            discovered.append(candidate)
-        candidates = tuple(discovered)
     components: list[ArtifactComponent] = []
-    for candidate in sorted(candidates, key=lambda item: item.as_posix()):
+    for candidate in _component_candidates(path, max_entries=max_artifact_entries):
         if not candidate.is_file():
             continue
-        role: str | None
-        if candidate.suffix.casefold() == ".onnx":
-            role = "model-onnx"
-        else:
-            role = _COMPONENT_ROLES.get(candidate.name.casefold())
+        role = _component_role(candidate)
         if role is None:
             continue
         if role == "model-onnx" and candidate.lstat().st_size > max_onnx_bytes:

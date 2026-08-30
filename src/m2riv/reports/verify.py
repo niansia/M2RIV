@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import Any, Literal
 
@@ -15,7 +17,14 @@ from m2riv.core.identity import (
     observation_content_id,
     read_verified_file,
 )
-from m2riv.core.models import ContentId, Contract, EvidenceRef, Observation, RetentionMode
+from m2riv.core.models import (
+    ArtifactDigest,
+    ContentId,
+    Contract,
+    EvidenceRef,
+    Observation,
+    RetentionMode,
+)
 from m2riv.evidence import (
     BackendComparisonEvidence,
     BuildProvenanceEvidence,
@@ -98,6 +107,25 @@ class MCRVerification(Contract):
     decision_status: MCRStatus
     checks: tuple[str, ...] = Field(min_length=1, max_length=128)
     warnings: tuple[str, ...] = Field(default=(), max_length=128)
+
+
+@dataclass(slots=True)
+class _VerifiedEvidence:
+    verified_structured: int = 0
+    verified_opaque: int = 0
+    unavailable: int = 0
+    remote: int = 0
+    redacted: int = 0
+    unrecognized_local: int = 0
+    bundle_components: int = 0
+    verified_bundle_components: int = 0
+    observation_ids: set[ContentId] = field(default_factory=set)
+    native: dict[ContentId, ToolNativeEvidence] = field(default_factory=dict)
+    snapshots: dict[ContentId, SnapshotArtifactManifest] = field(default_factory=dict)
+    provenance: dict[ContentId, BuildProvenanceEvidence] = field(default_factory=dict)
+    backend_comparisons: list[BackendComparisonEvidence] = field(default_factory=list)
+    checks: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
 
 def _read_json(path: Path, *, budget: list[int]) -> Any:
@@ -189,114 +217,139 @@ def _verify_snapshot_identity(manifest: SnapshotArtifactManifest) -> None:
         raise MCRVerificationError("snapshot identity does not match its artifact/config digest")
 
 
+_SupplementalResult = tuple[Literal["structured", "opaque"], Any]
+
+
+def _verify_artifact_diff(payload: Any, _root: Path) -> _SupplementalResult:
+    artifact_diff = ArtifactDiff.model_validate(payload)
+    expected = fingerprint(
+        artifact_diff.model_dump(mode="python", exclude={"schema_version", "id"}),
+        namespace="artifact-diff",
+    )
+    if artifact_diff.id != f"mcr:sha256:{expected}":
+        raise MCRVerificationError("artifact diff identity does not match its contents")
+    return "structured", artifact_diff
+
+
+def _verify_numerical_diff(payload: Any, _root: Path) -> _SupplementalResult:
+    numerical_diff = NumericalDiff.model_validate(payload)
+    expected = fingerprint(
+        numerical_diff.model_dump(mode="python", exclude={"schema_version", "id"}),
+        namespace="onnx-numerical-diff",
+    )
+    if numerical_diff.id != f"mcr:sha256:{expected}":
+        raise MCRVerificationError("numerical diff identity does not match its contents")
+    return "structured", numerical_diff
+
+
+def _verify_backend_comparison(payload: Any, _root: Path) -> _SupplementalResult:
+    comparison = BackendComparisonEvidence.model_validate(payload)
+    expected = fingerprint(
+        comparison.model_dump(mode="python", exclude={"schema_version", "id"}),
+        namespace="backend-comparison-evidence",
+    )
+    if comparison.id != f"mcr:sha256:{expected}":
+        raise MCRVerificationError("backend comparison identity does not match its contents")
+    return "structured", comparison
+
+
+def _verify_observation(payload: Any, _root: Path) -> _SupplementalResult:
+    observation = Observation.model_validate(payload)
+    if observation.retention is RetentionMode.FULL:
+        output_digest = fingerprint(observation.output, namespace="observation-output")
+        if output_digest != observation.output_digest:
+            raise MCRVerificationError("observation output digest does not match its body")
+    expected_id = observation_content_id(
+        snapshot_id=observation.snapshot_id,
+        case_id=observation.case_id,
+        seed=observation.seed,
+        output_digest=observation.output_digest,
+        retention=observation.retention,
+    )
+    if observation.id != expected_id:
+        raise MCRVerificationError("observation identity does not match its contents")
+    return "structured", observation
+
+
+def _verify_native_evidence(payload: Any, root: Path) -> _SupplementalResult:
+    native = ToolNativeEvidence.model_validate(payload)
+    expected = fingerprint(
+        {
+            "producer_name": native.producer_name,
+            "producer_version": native.producer_version,
+            "media_type": native.media_type,
+            "purpose": native.purpose,
+            "body": native.body.model_dump(mode="python", exclude={"uri"}),
+            "exit_code": native.exit_code,
+            "runner_names": native.runner_names,
+            "limitations": native.limitations,
+        },
+        namespace="tool-native-evidence",
+    )
+    if native.id != f"mcr:sha256:{expected}":
+        raise MCRVerificationError("tool-native evidence identity does not match")
+    _verify_file_binding(root, native.body.uri, native.body.sha256, native.body.size_bytes)
+    return "opaque", native
+
+
+def _verify_snapshot_manifest(payload: Any, root: Path) -> _SupplementalResult:
+    manifest = SnapshotArtifactManifest.model_validate(payload)
+    canonical = create_snapshot_artifact_manifest(manifest.snapshot, manifest.artifacts)
+    if canonical.id != manifest.id:
+        raise MCRVerificationError("snapshot manifest identity does not match")
+    _verify_snapshot_identity(manifest)
+    for binding in manifest.artifacts:
+        _verify_file_binding(root, binding.uri, binding.sha256, binding.size_bytes)
+    return "structured", manifest
+
+
+def _verify_build_provenance(payload: Any, _root: Path) -> _SupplementalResult:
+    provenance = BuildProvenanceEvidence.model_validate(payload)
+    canonical = create_build_provenance_evidence(
+        build_name=provenance.build_name,
+        builder_name=provenance.builder_name,
+        builder_version=provenance.builder_version,
+        input_artifacts=provenance.input_artifacts,
+        output_artifacts=provenance.output_artifacts,
+        output_snapshot_id=provenance.output_snapshot_id,
+        source_commit=provenance.source_commit,
+        parameters=provenance.parameters,
+        calibration_cohort_digest=provenance.calibration_cohort_digest,
+        parent_build_id=provenance.parent_build_id,
+        limitations=provenance.limitations,
+    )
+    if canonical.id != provenance.id:
+        raise MCRVerificationError("build provenance identity does not match")
+    return "structured", provenance
+
+
+_SUPPLEMENTAL_VERIFIERS: dict[str, Callable[[Any, Path], _SupplementalResult]] = {
+    "artifact-diff": _verify_artifact_diff,
+    "numerical-diff": _verify_numerical_diff,
+    "backend-comparison": _verify_backend_comparison,
+    "observation": _verify_observation,
+    "tool-native-evidence": _verify_native_evidence,
+    "snapshot-artifact-manifest": _verify_snapshot_manifest,
+    "build-provenance": _verify_build_provenance,
+}
+
+
 def _verify_supplemental_identity(
     reference: EvidenceRef,
     payload: Any,
     *,
     root: Path,
-) -> Literal["structured", "opaque"] | None:
+) -> _SupplementalResult | None:
     _expected_embedded_id(reference, payload)
+    verifier = _SUPPLEMENTAL_VERIFIERS.get(reference.kind)
+    if verifier is None:
+        return None
     try:
-        if reference.kind == "artifact-diff":
-            artifact_diff = ArtifactDiff.model_validate(payload)
-            expected = fingerprint(
-                artifact_diff.model_dump(mode="python", exclude={"schema_version", "id"}),
-                namespace="artifact-diff",
-            )
-            if artifact_diff.id != f"mcr:sha256:{expected}":
-                raise MCRVerificationError("artifact diff identity does not match its contents")
-            return "structured"
-        if reference.kind == "numerical-diff":
-            numerical_diff = NumericalDiff.model_validate(payload)
-            expected = fingerprint(
-                numerical_diff.model_dump(mode="python", exclude={"schema_version", "id"}),
-                namespace="onnx-numerical-diff",
-            )
-            if numerical_diff.id != f"mcr:sha256:{expected}":
-                raise MCRVerificationError("numerical diff identity does not match its contents")
-            return "structured"
-        if reference.kind == "backend-comparison":
-            backend_comparison = BackendComparisonEvidence.model_validate(payload)
-            expected = fingerprint(
-                backend_comparison.model_dump(mode="python", exclude={"schema_version", "id"}),
-                namespace="backend-comparison-evidence",
-            )
-            if backend_comparison.id != f"mcr:sha256:{expected}":
-                raise MCRVerificationError(
-                    "backend comparison identity does not match its contents"
-                )
-            return "structured"
-        if reference.kind == "observation":
-            observation = Observation.model_validate(payload)
-            if observation.retention is RetentionMode.FULL:
-                output_digest = fingerprint(observation.output, namespace="observation-output")
-                if output_digest != observation.output_digest:
-                    raise MCRVerificationError("observation output digest does not match its body")
-            expected_id = observation_content_id(
-                snapshot_id=observation.snapshot_id,
-                case_id=observation.case_id,
-                seed=observation.seed,
-                output_digest=observation.output_digest,
-                retention=observation.retention,
-            )
-            if observation.id != expected_id:
-                raise MCRVerificationError("observation identity does not match its contents")
-            return "structured"
-        if reference.kind == "tool-native-evidence":
-            native = ToolNativeEvidence.model_validate(payload)
-            expected = fingerprint(
-                {
-                    "producer_name": native.producer_name,
-                    "producer_version": native.producer_version,
-                    "media_type": native.media_type,
-                    "purpose": native.purpose,
-                    "body": native.body.model_dump(mode="python", exclude={"uri"}),
-                    "exit_code": native.exit_code,
-                    "runner_names": native.runner_names,
-                    "limitations": native.limitations,
-                },
-                namespace="tool-native-evidence",
-            )
-            if native.id != f"mcr:sha256:{expected}":
-                raise MCRVerificationError("tool-native evidence identity does not match")
-            _verify_file_binding(
-                root, native.body.uri, native.body.sha256, native.body.size_bytes
-            )
-            return "opaque"
-        if reference.kind == "snapshot-artifact-manifest":
-            snapshot_manifest = SnapshotArtifactManifest.model_validate(payload)
-            canonical = create_snapshot_artifact_manifest(
-                snapshot_manifest.snapshot, snapshot_manifest.artifacts
-            )
-            if canonical.id != snapshot_manifest.id:
-                raise MCRVerificationError("snapshot manifest identity does not match")
-            _verify_snapshot_identity(snapshot_manifest)
-            for binding in snapshot_manifest.artifacts:
-                _verify_file_binding(root, binding.uri, binding.sha256, binding.size_bytes)
-            return "structured"
-        if reference.kind == "build-provenance":
-            provenance = BuildProvenanceEvidence.model_validate(payload)
-            canonical_provenance = create_build_provenance_evidence(
-                build_name=provenance.build_name,
-                builder_name=provenance.builder_name,
-                builder_version=provenance.builder_version,
-                input_artifacts=provenance.input_artifacts,
-                output_artifacts=provenance.output_artifacts,
-                output_snapshot_id=provenance.output_snapshot_id,
-                source_commit=provenance.source_commit,
-                parameters=provenance.parameters,
-                calibration_cohort_digest=provenance.calibration_cohort_digest,
-                parent_build_id=provenance.parent_build_id,
-                limitations=provenance.limitations,
-            )
-            if canonical_provenance.id != provenance.id:
-                raise MCRVerificationError("build provenance identity does not match")
-            return "structured"
+        return verifier(payload, root)
     except ValidationError as error:
         raise MCRVerificationError(
             f"supplemental evidence does not match its contract: {reference.kind}"
         ) from error
-    return None
 
 
 def _verify_report_identity(report: ModelChangeReport) -> None:
@@ -374,60 +427,211 @@ def _verify_manifest(
     return manifest
 
 
+def _report_path(source: str | Path) -> Path:
+    requested = Path(source)
+    if not requested.is_dir():
+        return requested
+    current = requested / "mcr-report.json"
+    if not current.exists() and (requested / "m2riv-report.json").exists():
+        raise MCRVerificationError(
+            "legacy MCR 1.3 bundle detected; migrate it to the MCR 0.4 identity contract"
+        )
+    return current
+
+
+def _load_report(path: Path, budget: list[int]) -> ModelChangeReport:
+    payload = _read_json(path, budget=budget)
+    if isinstance(payload, dict) and payload.get("schema_version") not in {None, "0.4.0"}:
+        version = payload["schema_version"]
+        raise MCRVerificationError(
+            f"unsupported MCR schema version {version!r}; this verifier supports 0.4.0"
+        )
+    try:
+        return ModelChangeReport.model_validate(payload)
+    except ValidationError as error:
+        raise MCRVerificationError("MCR report does not match its contract") from error
+
+
+def _collect_references(
+    report: ModelChangeReport, manifest: EvidenceManifest | None
+) -> dict[ContentId, EvidenceRef]:
+    references: dict[ContentId, EvidenceRef] = {}
+    manifest_references = () if manifest is None else manifest.evidence
+    for reference in (*manifest_references, *report.evidence):
+        previous = references.get(reference.id)
+        if previous is not None and previous != reference:
+            raise MCRVerificationError("one evidence id has conflicting references")
+        references[reference.id] = reference
+    return references
+
+
+def _record_verified_value(state: _VerifiedEvidence, value: Any) -> None:
+    if isinstance(value, Observation):
+        state.observation_ids.add(value.id)
+    elif isinstance(value, BackendComparisonEvidence):
+        state.backend_comparisons.append(value)
+    elif isinstance(value, SnapshotArtifactManifest):
+        state.snapshots[value.snapshot.id] = value
+    elif isinstance(value, BuildProvenanceEvidence):
+        state.provenance[value.id] = value
+    elif isinstance(value, ToolNativeEvidence):
+        state.native[value.id] = value
+
+
+def _verify_references(
+    root: Path,
+    references: Mapping[ContentId, EvidenceRef],
+    budget: list[int],
+) -> _VerifiedEvidence:
+    state = _VerifiedEvidence()
+    for reference in references.values():
+        if reference.redacted:
+            state.redacted += 1
+            continue
+        if reference.uri is None:
+            state.unavailable += 1
+            continue
+        path = _local_reference(root, reference.uri)
+        if path is None:
+            state.remote += 1
+            continue
+
+        state.bundle_components += 1
+        payload = _read_json(path, budget=budget)
+        verified = _verify_supplemental_identity(reference, payload, root=root)
+        if verified is None:
+            state.unrecognized_local += 1
+            state.warnings.append(
+                f"{reference.kind} embeds the referenced id but has no built-in rehasher"
+            )
+            continue
+
+        verification_kind, value = verified
+        state.verified_bundle_components += 1
+        _record_verified_value(state, value)
+        if verification_kind == "structured":
+            state.verified_structured += 1
+            state.checks.append(f"supplemental-id:{reference.kind}")
+        else:
+            state.verified_opaque += 1
+            state.checks.append(f"opaque-body:{reference.kind}")
+    return state
+
+
+def _verify_backend_links(state: _VerifiedEvidence) -> None:
+    for comparison in state.backend_comparisons:
+        native = state.native.get(comparison.tool_native_evidence_id)
+        if native is None:
+            raise MCRVerificationError(
+                "backend comparison is not linked to verified tool-native evidence"
+            )
+        if (
+            native.producer_name != comparison.comparator_name
+            or native.producer_version != comparison.comparator_version
+            or native.exit_code != comparison.comparator_exit_code
+            or comparison.baseline_runner not in native.runner_names
+            or comparison.candidate_runner not in native.runner_names
+        ):
+            raise MCRVerificationError(
+                "backend comparison disagrees with its tool-native evidence"
+            )
+        if (
+            comparison.baseline_snapshot_id not in state.snapshots
+            or comparison.candidate_snapshot_id not in state.snapshots
+        ):
+            raise MCRVerificationError(
+                "backend comparison snapshots are not bound to retained artifact bytes"
+            )
+
+
+def _artifact_sort_key(artifact: ArtifactDigest) -> tuple[str, int, str]:
+    return artifact.digest, artifact.size_bytes, artifact.logical_name or ""
+
+
+def _verify_provenance_links(state: _VerifiedEvidence) -> None:
+    for provenance in state.provenance.values():
+        snapshot_manifest = state.snapshots.get(provenance.output_snapshot_id)
+        if snapshot_manifest is None:
+            raise MCRVerificationError(
+                "build provenance output snapshot is not bound to retained artifact bytes"
+            )
+        expected_outputs = sorted(
+            snapshot_manifest.snapshot.artifact_hashes,
+            key=_artifact_sort_key,
+        )
+        declared_outputs = sorted(provenance.output_artifacts, key=_artifact_sort_key)
+        if declared_outputs != expected_outputs:
+            raise MCRVerificationError(
+                "build provenance output artifacts disagree with the output snapshot"
+            )
+        if (
+            provenance.parent_build_id is not None
+            and provenance.parent_build_id not in state.provenance
+        ):
+            raise MCRVerificationError("build provenance parent is not retained in the bundle")
+
+
+def _evidence_coverage(state: _VerifiedEvidence, declared: int) -> EvidenceBodyCoverage:
+    verified = state.verified_structured + state.verified_opaque
+    return EvidenceBodyCoverage(
+        declared=declared,
+        verified_structured=state.verified_structured,
+        verified_opaque=state.verified_opaque,
+        unavailable=state.unavailable,
+        remote=state.remote,
+        redacted=state.redacted,
+        unrecognized_local=state.unrecognized_local,
+        coverage=verified / declared if declared else 1.0,
+    )
+
+
+def _metric_recomputable(
+    report: ModelChangeReport,
+    manifest: EvidenceManifest | None,
+    verified_observations: set[ContentId],
+    *,
+    release_plan_verified: bool,
+) -> bool:
+    metric_set_ids = {
+        metric.evidence_set_id for metric in report.metrics if metric.evidence_set_id is not None
+    }
+    manifest_sets = () if manifest is None else manifest.sets
+    metric_members = {
+        member
+        for evidence_set in manifest_sets
+        if evidence_set.id in metric_set_ids
+        for member in evidence_set.members
+    }
+    return (
+        release_plan_verified
+        and bool(metric_members)
+        and metric_members.issubset(verified_observations)
+    )
+
+
 def verify_report_bundle(
     source: str | Path,
     *,
     require_complete: bool = False,
 ) -> MCRVerification:
     """Verify report self-consistency without claiming producer authenticity."""
-    requested = Path(source)
-    if requested.is_dir():
-        report_path = requested / "mcr-report.json"
-        legacy_path = requested / "m2riv-report.json"
-        if not report_path.exists() and legacy_path.exists():
-            raise MCRVerificationError(
-                "legacy MCR 1.3 bundle detected; migrate it to the MCR 0.4 identity contract"
-            )
-    else:
-        report_path = requested
+    report_path = _report_path(source)
     root = report_path.parent
     budget = [0]
-    try:
-        report_payload = _read_json(report_path, budget=budget)
-        if (
-            isinstance(report_payload, dict)
-            and "schema_version" in report_payload
-            and report_payload.get("schema_version") != "0.4.0"
-        ):
-            version = report_payload.get("schema_version", "missing")
-            raise MCRVerificationError(
-                f"unsupported MCR schema version {version!r}; this verifier supports 0.4.0"
-            )
-        report = ModelChangeReport.model_validate(report_payload)
-    except ValidationError as error:
-        raise MCRVerificationError("MCR report does not match its contract") from error
+    report = _load_report(report_path, budget)
     _verify_report_identity(report)
+
     checks = ["report-contract", "evidence-id", "report-id", "run-id"]
     warnings: list[str] = []
-    verified_structured = 0
-    verified_opaque = 0
-    unavailable = 0
-    remote = 0
-    redacted = 0
-    unrecognized_local = 0
-    verified_ids: set[ContentId] = set()
-    verified_observation_ids: set[ContentId] = set()
-    native_evidence: dict[ContentId, ToolNativeEvidence] = {}
-    snapshot_manifests: dict[ContentId, SnapshotArtifactManifest] = {}
-    build_provenance: dict[ContentId, BuildProvenanceEvidence] = {}
-    backend_evidence: list[BackendComparisonEvidence] = []
     bundle_component_count = 1
     verified_bundle_component_count = 1
+
     manifest = _verify_manifest(root, report, budget)
     if manifest is not None:
         checks.extend(("manifest-id", "evidence-set-ids", "evidence-set-references"))
         bundle_component_count += 1
         verified_bundle_component_count += 1
+
     release_plan_verified = _verify_release_plan(root, report, budget)
     if release_plan_verified:
         checks.append("release-plan-id")
@@ -436,132 +640,28 @@ def verify_report_bundle(
     elif report.release_plan_id is not None:
         bundle_component_count += 1
         warnings.append("release-plan.json is not present; its referenced id was not rehashed")
-    references: dict[ContentId, EvidenceRef] = {}
-    for reference in (*(() if manifest is None else manifest.evidence), *report.evidence):
-        previous = references.get(reference.id)
-        if previous is not None and previous != reference:
-            raise MCRVerificationError("one evidence id has conflicting references")
-        references[reference.id] = reference
-    for reference in references.values():
-        if reference.redacted:
-            redacted += 1
-            continue
-        if reference.uri is None:
-            unavailable += 1
-            continue
-        path = _local_reference(root, reference.uri)
-        if path is None:
-            remote += 1
-            continue
-        bundle_component_count += 1
-        payload = _read_json(path, budget=budget)
-        verification_kind = _verify_supplemental_identity(reference, payload, root=root)
-        if verification_kind == "structured":
-            checks.append(f"supplemental-id:{reference.kind}")
-            verified_structured += 1
-            verified_bundle_component_count += 1
-            verified_ids.add(reference.id)
-            if reference.kind == "observation":
-                verified_observation_ids.add(reference.id)
-            if reference.kind == "backend-comparison":
-                backend = BackendComparisonEvidence.model_validate(payload)
-                backend_evidence.append(backend)
-            if reference.kind == "snapshot-artifact-manifest":
-                snapshot = SnapshotArtifactManifest.model_validate(payload)
-                snapshot_manifests[snapshot.snapshot.id] = snapshot
-            if reference.kind == "build-provenance":
-                provenance = BuildProvenanceEvidence.model_validate(payload)
-                build_provenance[provenance.id] = provenance
-        elif verification_kind == "opaque":
-            checks.append(f"opaque-body:{reference.kind}")
-            verified_opaque += 1
-            verified_bundle_component_count += 1
-            verified_ids.add(reference.id)
-            if reference.kind == "tool-native-evidence":
-                native = ToolNativeEvidence.model_validate(payload)
-                native_evidence[native.id] = native
-        else:
-            warnings.append(
-                f"{reference.kind} embeds the referenced id but has no built-in rehasher"
-            )
-            unrecognized_local += 1
-    for backend in backend_evidence:
-        linked_native = native_evidence.get(backend.tool_native_evidence_id)
-        if linked_native is None:
-            raise MCRVerificationError(
-                "backend comparison is not linked to verified tool-native evidence"
-            )
-        if (
-            linked_native.producer_name != backend.comparator_name
-            or linked_native.producer_version != backend.comparator_version
-            or linked_native.exit_code != backend.comparator_exit_code
-            or backend.baseline_runner not in linked_native.runner_names
-            or backend.candidate_runner not in linked_native.runner_names
-        ):
-            raise MCRVerificationError(
-                "backend comparison disagrees with its tool-native evidence"
-            )
-        if (
-            backend.baseline_snapshot_id not in snapshot_manifests
-            or backend.candidate_snapshot_id not in snapshot_manifests
-        ):
-            raise MCRVerificationError(
-                "backend comparison snapshots are not bound to retained artifact bytes"
-            )
-    for provenance in build_provenance.values():
-        snapshot_manifest = snapshot_manifests.get(provenance.output_snapshot_id)
-        if snapshot_manifest is None:
-            raise MCRVerificationError(
-                "build provenance output snapshot is not bound to retained artifact bytes"
-            )
-        expected_outputs = sorted(
-            snapshot_manifest.snapshot.artifact_hashes,
-            key=lambda item: (item.digest, item.size_bytes, item.logical_name or ""),
-        )
-        declared_outputs = sorted(
-            provenance.output_artifacts,
-            key=lambda item: (item.digest, item.size_bytes, item.logical_name or ""),
-        )
-        if declared_outputs != expected_outputs:
-            raise MCRVerificationError(
-                "build provenance output artifacts disagree with the output snapshot"
-            )
-        if (
-            provenance.parent_build_id is not None
-            and provenance.parent_build_id not in build_provenance
-        ):
-            raise MCRVerificationError("build provenance parent is not retained in the bundle")
-    declared = len(references)
-    verified_body_count = verified_structured + verified_opaque
-    coverage = EvidenceBodyCoverage(
-        declared=declared,
-        verified_structured=verified_structured,
-        verified_opaque=verified_opaque,
-        unavailable=unavailable,
-        remote=remote,
-        redacted=redacted,
-        unrecognized_local=unrecognized_local,
-        coverage=verified_body_count / declared if declared else 1.0,
-    )
+
+    references = _collect_references(report, manifest)
+    verified = _verify_references(root, references, budget)
+    _verify_backend_links(verified)
+    _verify_provenance_links(verified)
+    checks.extend(verified.checks)
+    warnings.extend(verified.warnings)
+    bundle_component_count += verified.bundle_components
+    verified_bundle_component_count += verified.verified_bundle_components
+
+    coverage = _evidence_coverage(verified, len(references))
     observation_ids = {
         item.id for item in references.values() if item.kind == "observation"
     }
     observation_bodies_verified = bool(observation_ids) and observation_ids.issubset(
-        verified_observation_ids
+        verified.observation_ids
     )
-    metric_set_ids = {
-        metric.evidence_set_id for metric in report.metrics if metric.evidence_set_id is not None
-    }
-    metric_member_ids = {
-        member
-        for evidence_set in (() if manifest is None else manifest.sets)
-        if evidence_set.id in metric_set_ids
-        for member in evidence_set.members
-    }
-    metric_recomputable = (
-        release_plan_verified
-        and bool(metric_member_ids)
-        and metric_member_ids.issubset(verified_observation_ids)
+    metric_recomputable = _metric_recomputable(
+        report,
+        manifest,
+        verified.observation_ids,
+        release_plan_verified=release_plan_verified,
     )
     if require_complete and warnings:
         raise MCRVerificationError(
