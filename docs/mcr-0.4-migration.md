@@ -9,10 +9,10 @@ original retained inputs whenever possible.
 
 | Legacy surface | MCR 0.4 surface |
 |---|---|
-| `m2riv-report.json` | `mcr-report.json` |
+| Project-branded report filename | `mcr-report.json` |
 | `schema_version: 1.3.0` | `schema_version: 0.4.0` |
-| `m2riv:sha256:<digest>` | `mcr:sha256:<digest>` |
-| `m2riv:<namespace>:v1` hash domain | `mcr:<namespace>:v1` |
+| Project-branded content-ID prefix | `mcr:sha256:<digest>` |
+| Project-branded identity hash domain | `mcr:<namespace>:v1` |
 | `id` treated as evidence identity | new `evidence_id` for stable evidence |
 | verdict omitted from stable `id` | report `id` includes the complete decision |
 | one completeness boolean | bundle completeness, body coverage, and recomputability |

@@ -18,12 +18,12 @@ from typing import Any
 
 import numpy as np
 
-from m2riv.adapters import RecordedAdapter
-from m2riv.bisect import BisectMode, BisectStatus, bisect_regression
-from m2riv.core.identity import build_local_snapshot, hash_artifact
-from m2riv.core.models import ArtifactDigest, EvidenceRef, ModelFamily, RuntimeProfile
-from m2riv.engine import ObservationCache
-from m2riv.evidence import (
+from merriv.adapters import RecordedAdapter
+from merriv.bisect import BisectMode, BisectStatus, bisect_regression
+from merriv.core.identity import build_local_snapshot, hash_artifact
+from merriv.core.models import ArtifactDigest, EvidenceRef, ModelFamily, RuntimeProfile
+from merriv.engine import ObservationCache
+from merriv.evidence import (
     BackendCaseComparison,
     FileDigestBinding,
     create_backend_comparison_evidence,
@@ -31,10 +31,10 @@ from m2riv.evidence import (
     create_snapshot_artifact_manifest,
     create_tool_native_evidence,
 )
-from m2riv.io import load_policy, load_suite
-from m2riv.pipeline import ReleaseComparison, compare_exact_match
-from m2riv.reports import verify_report_bundle, write_report_bundle
-from m2riv.target import (
+from merriv.io import load_policy, load_suite
+from merriv.pipeline import ReleaseComparison, compare_exact_match
+from merriv.reports import verify_report_bundle, write_report_bundle
+from merriv.target import (
     create_target_evidence_manifest,
     verify_target_evidence_manifest,
     write_target_evidence_manifest,
@@ -412,7 +412,7 @@ def main() -> None:
         shutil.copy2(POLICY, arguments.output / "policy.yaml")
 
         prepared: list[dict[str, Any]] = []
-        with tempfile.TemporaryDirectory(prefix="m2riv-nvidia-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="merriv-nvidia-") as temporary:
             work = Path(temporary)
             shutil.copy2(arguments.suite, work / "suite.jsonl")
             shutil.copy2(DATA_LOADER, work / DATA_LOADER.name)

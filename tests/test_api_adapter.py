@@ -6,8 +6,8 @@ from collections.abc import Callable, Iterator
 import httpx
 import pytest
 
-from m2riv.adapters import ModelAdapter, OpenAICompatibleAdapter, OpenAICompatibleError
-from m2riv.core.models import EvalCase, EvidenceAccess, ModelFamily, RuntimeProfile
+from merriv.adapters import ModelAdapter, OpenAICompatibleAdapter, OpenAICompatibleError
+from merriv.core.models import EvalCase, EvidenceAccess, ModelFamily, RuntimeProfile
 
 
 def _success(content: str = "answer") -> dict[str, object]:
@@ -244,7 +244,7 @@ def test_retry_after_is_capped(monkeypatch: pytest.MonkeyPatch) -> None:
             return httpx.Response(429, headers={"Retry-After": "3600"})
         return httpx.Response(200, json=_success())
 
-    monkeypatch.setattr("m2riv.adapters.openai_compatible.time.sleep", sleeps.append)
+    monkeypatch.setattr("merriv.adapters.openai_compatible.time.sleep", sleeps.append)
     _adapter(handler, max_retries=1, retry_after_cap_s=0.25).run(
         (EvalCase(case_id="retry", input="hello"),), RuntimeProfile()
     )
@@ -461,7 +461,7 @@ def test_slow_drip_response_is_stopped_by_cumulative_deadline(
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, stream=SlowStream())
 
-    monkeypatch.setattr("m2riv.adapters.openai_compatible.time.perf_counter", lambda: clock[0])
+    monkeypatch.setattr("merriv.adapters.openai_compatible.time.perf_counter", lambda: clock[0])
     with pytest.raises(OpenAICompatibleError, match="cumulative elapsed-time limit"):
         _adapter(handler, max_elapsed_s=0.5).run(
             (EvalCase(case_id="slow", input="hello"),), RuntimeProfile()

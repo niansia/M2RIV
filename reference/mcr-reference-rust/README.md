@@ -1,7 +1,7 @@
 # MCR reference Rust
 
 This crate is an independent, deliberately small MCR 0.4 producer and verifier.
-It does not import or invoke the Python `m2riv` package. Its scope is the protocol
+It does not import or invoke the Python `merriv` package. Its scope is the protocol
 boundary, not model execution:
 
 ```console

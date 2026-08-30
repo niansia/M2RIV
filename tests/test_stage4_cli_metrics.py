@@ -6,13 +6,13 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from m2riv.adapters import FakeAdapter, RecordedAdapter
-from m2riv.cli import app
-from m2riv.core.identity import build_local_snapshot
-from m2riv.core.models import EvalCase, ModelSnapshot, RuntimeProfile
-from m2riv.engine import ObservationCache, PairedCaseResult
-from m2riv.gate import GatePolicy, GateRule, GateStatus, MetricDirection
-from m2riv.pipeline import compare_release
+from merriv.adapters import FakeAdapter, RecordedAdapter
+from merriv.cli import app
+from merriv.core.identity import build_local_snapshot
+from merriv.core.models import EvalCase, ModelSnapshot, RuntimeProfile
+from merriv.engine import ObservationCache, PairedCaseResult
+from merriv.gate import GatePolicy, GateRule, GateStatus, MetricDirection
+from merriv.pipeline import compare_release
 
 runner = CliRunner()
 
@@ -167,7 +167,7 @@ rules:
         secrets_seen.append(kwargs.get("api_key"))
         return adapters[endpoint]
 
-    monkeypatch.setattr("m2riv.cli.OpenAICompatibleAdapter", adapter_factory)
+    monkeypatch.setattr("merriv.cli.OpenAICompatibleAdapter", adapter_factory)
     secret = "sk-cli-secret-canary"
     result = runner.invoke(
         app,

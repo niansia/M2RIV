@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 
-from m2riv.bisect import (
+from merriv.bisect import (
     BisectConfidence,
     BisectMode,
     BisectOutcome,
@@ -11,7 +11,7 @@ from m2riv.bisect import (
     NonMonotonicInterval,
     bisect_regression,
 )
-from m2riv.gate import GateStatus
+from merriv.gate import GateStatus
 
 
 def test_monotonic_binary_search_finds_first_failure_sublinearly() -> None:

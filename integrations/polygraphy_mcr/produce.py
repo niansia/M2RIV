@@ -146,7 +146,7 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument(
         "--merriv-command",
-        "--m2riv-command",
+        "--merriv-command",
         dest="merriv_command",
         default="merriv",
     )

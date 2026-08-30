@@ -6,9 +6,9 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from m2riv.bisect import load_checkpoint_artifacts
-from m2riv.cli import app
-from m2riv.io import InputFormatError
+from merriv.bisect import load_checkpoint_artifacts
+from merriv.cli import app
+from merriv.io import InputFormatError
 
 runner = CliRunner()
 

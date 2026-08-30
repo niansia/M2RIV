@@ -10,24 +10,24 @@ import httpx
 import pytest
 from typer.testing import CliRunner
 
-from m2riv.adapters import (
+from merriv.adapters import (
     AdapterCapability,
     FakeAdapter,
     OpenAICompatibleAdapter,
     OpenAICompatibleError,
 )
-from m2riv.cli import app
-from m2riv.core.identity import (
+from merriv.cli import app
+from merriv.core.identity import (
     build_local_snapshot,
     fingerprint,
     observation_content_id,
     read_verified_file,
 )
-from m2riv.core.models import EvalCase, ModelSnapshot, Observation, RuntimeProfile
-from m2riv.engine import CACHE_KEY_ENV, CacheKey, ObservationCache, PairedRunner
-from m2riv.engine.runner import RunnerContractError
-from m2riv.reports import MCRVerificationError, verify_report_bundle, write_report_bundle
-from m2riv.reports.models import MCRDecision, MCRStatus, create_report
+from merriv.core.models import EvalCase, ModelSnapshot, Observation, RuntimeProfile
+from merriv.engine import CACHE_KEY_ENV, CacheKey, ObservationCache, PairedRunner
+from merriv.engine.runner import RunnerContractError
+from merriv.reports import MCRVerificationError, verify_report_bundle, write_report_bundle
+from merriv.reports.models import MCRDecision, MCRStatus, create_report
 
 
 def _cache_record() -> tuple[CacheKey, Observation]:
@@ -135,7 +135,7 @@ def test_default_cache_is_process_local_but_shared_hmac_cache_is_reusable(
     # A fresh process receives a new ephemeral key and treats previous entries as
     # misses. Replacing the private module key models that process boundary without
     # transferring any secret into a child command line or environment.
-    monkeypatch.setattr("m2riv.engine.cache._PROCESS_LOCAL_KEY_MATERIAL", secrets.token_bytes(32))
+    monkeypatch.setattr("merriv.engine.cache._PROCESS_LOCAL_KEY_MATERIAL", secrets.token_bytes(32))
     assert ObservationCache(local_root).get(key) is None
 
     shared_root = tmp_path / "shared"

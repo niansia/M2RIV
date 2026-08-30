@@ -8,13 +8,13 @@ from pathlib import Path
 import onnx
 from onnx import TensorProto, helper
 
-from m2riv.adapters import OnnxRuntimeAdapter
-from m2riv.artifacts import compare_artifacts, compare_onnx_numerics, inspect_artifact
-from m2riv.core.models import EvalCase, EvidenceRef, ModelFamily, RuntimeProfile
-from m2riv.engine import ObservationCache
-from m2riv.gate import GatePolicy, GateRule
-from m2riv.pipeline import compare_exact_match
-from m2riv.reports import write_report_bundle
+from merriv.adapters import OnnxRuntimeAdapter
+from merriv.artifacts import compare_artifacts, compare_onnx_numerics, inspect_artifact
+from merriv.core.models import EvalCase, EvidenceRef, ModelFamily, RuntimeProfile
+from merriv.engine import ObservationCache
+from merriv.gate import GatePolicy, GateRule
+from merriv.pipeline import compare_exact_match
+from merriv.reports import write_report_bundle
 
 
 def _baseline_model() -> onnx.ModelProto:
@@ -27,7 +27,7 @@ def _baseline_model() -> onnx.ModelProto:
     model = helper.make_model(
         graph,
         opset_imports=[helper.make_opsetid("", 17)],
-        producer_name="m2riv-opset-demo",
+        producer_name="merriv-opset-demo",
     )
     model.ir_version = 9
     onnx.checker.check_model(model)

@@ -3,8 +3,8 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from m2riv.core.models import RuntimeProfile
-from m2riv.evidence import (
+from merriv.core.models import RuntimeProfile
+from merriv.evidence import (
     BackendCaseComparison,
     BackendComparisonEvidence,
     create_backend_comparison_evidence,

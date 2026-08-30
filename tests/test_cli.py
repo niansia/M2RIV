@@ -3,11 +3,11 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from m2riv.cli import app
-from m2riv.conformance import ConformanceProfile, create_consumer_receipt
-from m2riv.core.identity import fingerprint
-from m2riv.core.models import ModelSnapshot
-from m2riv.reports import MCRDecision, MCRStatus, create_report, write_report_bundle
+from merriv.cli import app
+from merriv.conformance import ConformanceProfile, create_consumer_receipt
+from merriv.core.identity import fingerprint
+from merriv.core.models import ModelSnapshot
+from merriv.reports import MCRDecision, MCRStatus, create_report, write_report_bundle
 
 runner = CliRunner()
 

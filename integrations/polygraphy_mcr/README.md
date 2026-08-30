@@ -3,7 +3,7 @@
 This integration turns NVIDIA Polygraphy comparison results into paired,
 case-level release evidence and then delegates policy, statistics, identity, and
 Model Change Report bundle creation to the public `merriv` command. It lives outside
-`src/m2riv`; Polygraphy and NumPy never become core dependencies.
+`src/merriv`; Polygraphy and NumPy never become core dependencies.
 
 The packaged first-mile command is:
 

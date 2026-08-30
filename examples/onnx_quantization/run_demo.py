@@ -28,14 +28,14 @@ from onnxruntime.quantization.shape_inference import quant_pre_process
 from sklearn.datasets import load_digits
 from sklearn.model_selection import train_test_split
 
-from m2riv.adapters import OnnxRuntimeAdapter
-from m2riv.artifacts import compare_artifacts, compare_onnx_numerics, inspect_artifact
-from m2riv.bisect import BisectMode, bisect_regression
-from m2riv.core.models import EvalCase, EvidenceRef, ModelFamily, RuntimeProfile
-from m2riv.engine import ObservationCache
-from m2riv.gate import GatePolicy, GateRule
-from m2riv.pipeline import ReleaseComparison, compare_exact_match
-from m2riv.reports import write_report_bundle
+from merriv.adapters import OnnxRuntimeAdapter
+from merriv.artifacts import compare_artifacts, compare_onnx_numerics, inspect_artifact
+from merriv.bisect import BisectMode, bisect_regression
+from merriv.core.models import EvalCase, EvidenceRef, ModelFamily, RuntimeProfile
+from merriv.engine import ObservationCache
+from merriv.gate import GatePolicy, GateRule
+from merriv.pipeline import ReleaseComparison, compare_exact_match
+from merriv.reports import write_report_bundle
 
 SEED = 23
 RARE_DIGIT = 1
@@ -84,7 +84,7 @@ def _make_onnx_model(
     result = helper.make_model(
         graph,
         opset_imports=[helper.make_opsetid("", 17)],
-        producer_name="m2riv-onnx-demo",
+        producer_name="merriv-onnx-demo",
     )
     result.ir_version = 9
     result.metadata_props.add(key="dataset", value="sklearn.datasets.load_digits")

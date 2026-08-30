@@ -4,9 +4,6 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Python 3.11–3.13](https://img.shields.io/badge/Python-3.11%E2%80%933.13-3776AB.svg)](pyproject.toml)
 
-**Model release evidence you can verify.**
-Pronounced **“MEH-riv”**—one word, two syllables.
-
 An optimized model can match backend outputs and still become a worse release.
 Merriv catches the regression, records the evidence, and identifies the first bad
 build before a promotion controller acts.
@@ -53,7 +50,7 @@ The declared rare slice regresses more sharply than the common slice. The comman
 writes a compiled release plan, evidence manifest, Model Change Report JSON,
 Markdown, JUnit, and
 SARIF. It is a synthetic behavior demo, not adoption or empirical evidence. A
-tagged PyPI release will shorten this to `uvx --from m2riv merriv demo`; until
+tagged PyPI release will shorten this to `uvx --from merriv merriv demo`; until
 then the Git URL keeps the no-clone path honest. See the
 [full quickstart](docs/quickstart.md).
 
@@ -159,7 +156,7 @@ Version 0.4 binds:
 - optional artifact diff, numerical diff, and first-bad-build evidence.
 
 Any conforming producer may emit a Model Change Report without using the Merriv
-CLI. A consumer can verify and consume it without importing the `m2riv` Python
+CLI. A consumer can verify and consume it without importing the `merriv` Python
 module:
 
 ```console
@@ -265,8 +262,8 @@ step is registering the project/publisher and cutting the first brand-cleared ta
 Merriv is pre-alpha. Public contracts use explicit schema versions, but stability
 is not promised until v1.0. The project currently has no publicly verified
 external adopter; repository-owned integrations are not counted as adoption.
-The public name is fixed as Merriv; the distribution/module and compatibility
-CLI remain `m2riv`. See the [naming decision](docs/brand.md).
+The public name, Python distribution, import namespace, and CLI are all `merriv`.
+See the [naming decision](docs/brand.md).
 
 ## Contributing and security
 

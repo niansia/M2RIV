@@ -11,13 +11,13 @@ from runpy import run_path
 
 import pytest
 
-from m2riv.core.identity import (
+from merriv.core.identity import (
     build_local_snapshot,
     canonical_json,
     fingerprint,
     hash_artifact,
 )
-from m2riv.core.models import RuntimeProfile
+from merriv.core.models import RuntimeProfile
 
 materialize_typed_value = run_path(
     str(Path(__file__).parents[1] / "examples" / "content_identity" / "typed_values.py")
@@ -103,8 +103,8 @@ def test_missing_and_non_artifact_paths_fail_closed(tmp_path: Path) -> None:
 def test_pydantic_frozenset_identity_is_stable_across_hash_seeds() -> None:
     source_root = Path(__file__).parents[1] / "src"
     script = """
-from m2riv.core.identity import fingerprint
-from m2riv.core.models import PluginRecord
+from merriv.core.identity import fingerprint
+from merriv.core.models import PluginRecord
 
 record = PluginRecord(
     name="seed-probe",
@@ -152,7 +152,7 @@ def test_large_files_are_streamed(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     artifact = tmp_path / "large.bin"
     artifact.write_bytes(b"x" * (2 * 1024 * 1024 + 17))
 
-    from m2riv.core import identity
+    from merriv.core import identity
 
     monkeypatch.setattr(identity, "_CHUNK_SIZE", 64 * 1024)
     result = hash_artifact(artifact)
@@ -209,7 +209,7 @@ def test_sparse_file_is_rejected_from_metadata_before_content_read(
     def unexpected_open(*args: object, **kwargs: object) -> int:
         raise AssertionError("oversized sparse file must not be opened")
 
-    from m2riv.core import identity
+    from merriv.core import identity
 
     monkeypatch.setattr(identity.os, "open", unexpected_open)
     with pytest.raises(ValueError, match="byte budget"):

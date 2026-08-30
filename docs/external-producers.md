@@ -13,7 +13,7 @@ stable boundaries:
 3. retain native output and translate it through a file/process importer before
    report construction.
 
-No external producer needs to import `m2riv` or implement a Python Protocol.
+No external producer needs to import `merriv` or implement a Python Protocol.
 
 ## Smallest working path
 

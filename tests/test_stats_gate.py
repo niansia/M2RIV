@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from m2riv.gate import (
+from merriv.gate import (
     GateEvaluation,
     GatePolicy,
     GateRule,
@@ -12,7 +12,7 @@ from m2riv.gate import (
     MetricEvidence,
     evaluate_gate,
 )
-from m2riv.stats import (
+from merriv.stats import (
     BinaryFlipMatrix,
     ConfidenceInterval,
     PairedEstimate,

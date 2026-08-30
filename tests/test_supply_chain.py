@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import re
+import shutil
+import subprocess
 from pathlib import Path
 
 import yaml
@@ -75,7 +77,7 @@ def test_ci_installs_the_frozen_lock_before_audit() -> None:
 def test_reproducible_build_outputs_stay_outside_the_source_tree() -> None:
     source = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
 
-    assert '${RUNNER_TEMP}/m2riv-repro-' in source
+    assert '${RUNNER_TEMP}/merriv-repro-' in source
     assert "python -m build --outdir dist-a" not in source
 
 
@@ -133,12 +135,30 @@ def test_release_build_backend_is_exact_and_preinstalled() -> None:
     assert "python -m build --no-isolation" in ci
 
 
-def test_merriv_is_primary_cli_without_renaming_the_distribution() -> None:
+def test_merriv_is_the_distribution_module_and_only_cli() -> None:
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
-    assert 'name = "m2riv"' in pyproject
-    assert 'merriv = "m2riv.cli:app"' in pyproject
-    assert 'm2riv = "m2riv.cli:app"' in pyproject
+    assert 'name = "merriv"' in pyproject
+    assert 'merriv = "merriv.cli:app"' in pyproject
+    assert 'packages = ["src/merriv"]' in pyproject
+    assert 'packages = ["merriv"]' in pyproject
+
+
+def test_retired_brand_is_absent_from_tracked_paths_and_content() -> None:
+    retired = b"m2" + b"riv"
+    git = shutil.which("git")
+    assert git is not None
+    tracked = subprocess.run(
+        [git, "ls-files", "-z"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+    ).stdout.split(b"\0")
+
+    for encoded_path in filter(None, tracked):
+        assert retired not in encoded_path.lower(), encoded_path
+        path = ROOT / encoded_path.decode("utf-8")
+        assert retired not in path.read_bytes().lower(), path
 
 
 def test_nvidia_runner_uses_isolated_cache_and_hash_locked_dependencies() -> None:

@@ -15,11 +15,11 @@
       "namespace": "golden-basic",
       "value": {
         "z": null,
-        "a": "M2RIV",
+        "a": "Merriv",
         "unicode": "模型"
       },
-      "canonical_json": "{\"a\":\"M2RIV\",\"unicode\":\"模型\",\"z\":null}",
-      "sha256": "c26be059925ed4a0ededf5510d5986247006b677f4533effbe888460f3fe7ae1"
+      "canonical_json": "{\"a\":\"Merriv\",\"unicode\":\"模型\",\"z\":null}",
+      "sha256": "d5e8ea77f92bfc8163154cfd9a580c7e6861dbc06360d1d25eb38ca62a61640d"
     },
     {
       "name": "numbers-and-arrays",

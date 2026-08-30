@@ -11,32 +11,32 @@ import httpx
 import pytest
 from typer.testing import CliRunner
 
-import m2riv.engine.cache as cache_module
-from m2riv.adapters import OpenAICompatibleAdapter, OpenAICompatibleError
-from m2riv.adapters.recorded import RecordedAdapter
-from m2riv.bisect import (
+import merriv.engine.cache as cache_module
+from merriv.adapters import OpenAICompatibleAdapter, OpenAICompatibleError
+from merriv.adapters.recorded import RecordedAdapter
+from merriv.bisect import (
     BisectConfidence,
     BisectMode,
     BisectOutcome,
     BisectStatus,
     bisect_regression,
 )
-from m2riv.cli import _write_github_summary, app
-from m2riv.core.identity import build_local_snapshot, fingerprint, observation_content_id
-from m2riv.core.models import EvalCase, ModelFamily, Observation, RuntimeProfile
-from m2riv.engine import CacheKey, ObservationCache, PairedRunner
-from m2riv.engine.cache import MAX_CACHE_ENTRY_BYTES
-from m2riv.io import InputFormatError, load_policy, load_suite
-from m2riv.io.loaders import (
+from merriv.cli import _write_github_summary, app
+from merriv.core.identity import build_local_snapshot, fingerprint, observation_content_id
+from merriv.core.models import EvalCase, ModelFamily, Observation, RuntimeProfile
+from merriv.engine import CacheKey, ObservationCache, PairedRunner
+from merriv.engine.cache import MAX_CACHE_ENTRY_BYTES
+from merriv.io import InputFormatError, load_policy, load_suite
+from merriv.io.loaders import (
     MAX_JSON_DEPTH,
     MAX_JSONL_LINE_BYTES,
     MAX_JSONL_RECORDS,
     MAX_POLICY_BYTES,
     MAX_YAML_ALIASES,
 )
-from m2riv.pipeline import ReleaseComparison
-from m2riv.reports.ci import render_junit, render_sarif
-from m2riv.reports.models import (
+from merriv.pipeline import ReleaseComparison
+from merriv.reports.ci import render_junit, render_sarif
+from merriv.reports.models import (
     MCRDecision,
     MCRFinding,
     MCRStatus,
@@ -442,7 +442,7 @@ def test_retry_after_is_capped_and_does_not_expand_attempt_budget(
             json={"choices": [{"message": {"content": "ok"}}]},
         )
 
-    monkeypatch.setattr("m2riv.adapters.openai_compatible.time.sleep", sleeps.append)
+    monkeypatch.setattr("merriv.adapters.openai_compatible.time.sleep", sleeps.append)
     adapter = OpenAICompatibleAdapter(
         "https://example.test/v1",
         "model",
@@ -734,7 +734,7 @@ def test_compare_api_cli_scopes_baseline_and_candidate_cache_identity(
         captured.update(kwargs)
         raise OpenAICompatibleError("stop after identity capture")
 
-    monkeypatch.setattr("m2riv.cli.compare_exact_match", intercept_compare)
+    monkeypatch.setattr("merriv.cli.compare_exact_match", intercept_compare)
     result = runner.invoke(
         app,
         [

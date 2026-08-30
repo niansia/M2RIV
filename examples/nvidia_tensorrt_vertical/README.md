@@ -96,7 +96,6 @@ the target manifest SHA-256 is
 The complete engines, Polygraphy outputs, and MCR bundles are distributed as a
 separate [GitHub Release evidence archive](https://github.com/niansia/Merriv/releases/tag/evidence-rtx4060-20260829)
 because TensorRT engines are target-specific binaries.
-The historical pre-rename asset
-`M2RIV-nvidia-evidence-RTX4060-MCR0.4-20260829.zip` has SHA-256
+The historical evidence archive has SHA-256
 `06a060000afb40cd9dd6e529b08249863d20a91706030d2b505493572fd21a05`.
 The compact receipt is a first-party observation, not independent reproduction.

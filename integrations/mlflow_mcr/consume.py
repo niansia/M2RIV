@@ -98,7 +98,7 @@ def _emit_receipt(fixtures: Path, output: Path) -> None:
         )
     payload = {
         "schema_version": "0.3.0",
-        "implementation_name": "m2riv.mlflow-consumer",
+        "implementation_name": "merriv.mlflow-consumer",
         "implementation_version": "1.0.0",
         "profiles": profiles,
     }
@@ -120,7 +120,7 @@ def main() -> None:
     parser.add_argument("--run-name")
     parser.add_argument(
         "--merriv-command",
-        "--m2riv-command",
+        "--merriv-command",
         dest="merriv_command",
         default="merriv",
     )

@@ -31,7 +31,7 @@ jobs:
       - run: uv sync --frozen --extra dev --extra onnx --group action-build
       - run: uv run --frozen ruff check .
       - run: uv run --frozen mypy src
-      - run: uv run --frozen pytest --cov=m2riv --cov-report=term-missing --cov-fail-under=91
+      - run: uv run --frozen pytest --cov=merriv --cov-report=term-missing --cov-fail-under=91
       - run: uv run --frozen python -m pip_audit --local --skip-editable
       - run: uv pip check
       - if: matrix.python-version == '3.13'
@@ -134,7 +134,7 @@ jobs:
         shell: bash
         run: |
           export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
-          reproducibility_root="${RUNNER_TEMP}/m2riv-repro-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          reproducibility_root="${RUNNER_TEMP}/merriv-repro-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           mkdir -p "${reproducibility_root}/a" "${reproducibility_root}/b"
           uv run --frozen python -m build --no-isolation --outdir "${reproducibility_root}/a"
           uv run --frozen python -m build --no-isolation --outdir "${reproducibility_root}/b"

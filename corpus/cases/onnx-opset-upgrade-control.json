@@ -8,7 +8,7 @@
   "expected_decision": "PASS",
   "expected_first_bad": null,
   "reproduction": "python examples/onnx_opset_upgrade/run_demo.py --output runs/onnx-opset-upgrade",
-  "verification": "m2riv mcr verify runs/onnx-opset-upgrade/report --strict",
+  "verification": "merriv mcr verify runs/onnx-opset-upgrade/report --strict",
   "source_paths": [
     "examples/onnx_opset_upgrade/run_demo.py",
     "examples/onnx_opset_upgrade/README.md"

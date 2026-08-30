@@ -13,7 +13,7 @@ uvx --python 3.13 --from git+https://github.com/niansia/Merriv.git merriv demo -
 Python 3.11, 3.12, and 3.13 are supported. The base install contains no ONNX,
 GPU, MLflow, or Polygraphy dependency. Once the first tagged PyPI release is
 published, the equivalent command is
-`uvx --from m2riv merriv demo --output runs/quickstart`.
+`uvx --from merriv merriv demo --output runs/quickstart`.
 
 ## Run the repository fixture
 

@@ -5,11 +5,11 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from m2riv.adapters import ModelAdapter
-from m2riv.core.identity import fingerprint
-from m2riv.core.models import EvalCase, Observation, RuntimeProfile
-from m2riv.execution import ExecutorDescriptor
-from m2riv.plugins import PluginKind, PluginManifest, PluginRegistry
+from merriv.adapters import ModelAdapter
+from merriv.core.identity import fingerprint
+from merriv.core.models import EvalCase, Observation, RuntimeProfile
+from merriv.execution import ExecutorDescriptor
+from merriv.plugins import PluginKind, PluginManifest, PluginRegistry
 
 
 @dataclass(frozen=True, slots=True)

@@ -7,8 +7,8 @@
   "status": "verified-in-ci",
   "expected_decision": "BLOCK",
   "expected_first_bad": null,
-  "reproduction": "m2riv compare examples/recorded_compare/baseline.jsonl examples/recorded_compare/candidate.jsonl --suite examples/recorded_compare/suite.jsonl --policy examples/recorded_compare/policy.yaml --slice-key frequency --output runs/recorded",
-  "verification": "m2riv mcr verify runs/recorded --strict",
+  "reproduction": "merriv compare examples/recorded_compare/baseline.jsonl examples/recorded_compare/candidate.jsonl --suite examples/recorded_compare/suite.jsonl --policy examples/recorded_compare/policy.yaml --slice-key frequency --output runs/recorded",
+  "verification": "merriv mcr verify runs/recorded --strict",
   "source_paths": [
     "examples/recorded_compare/baseline.jsonl",
     "examples/recorded_compare/candidate.jsonl",

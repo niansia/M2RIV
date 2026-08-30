@@ -9,38 +9,38 @@ import pytest
 from pydantic import ValidationError
 from typer.testing import CliRunner
 
-from m2riv.adapters import (
+from merriv.adapters import (
     FakeAdapter,
     ModelAdapter,
     OpenAICompatibleError,
 )
-from m2riv.cli import app
-from m2riv.core.identity import build_local_snapshot, fingerprint
-from m2riv.core.models import (
+from merriv.cli import app
+from merriv.core.identity import build_local_snapshot, fingerprint
+from merriv.core.models import (
     EvalCase,
     EvidenceRef,
     Observation,
     PluginRecord,
     RuntimeProfile,
 )
-from m2riv.engine import ObservationCache, PairedCaseResult, PairedRunner, RunnerContractError
-from m2riv.execution import ExecutionBackend, ExecutorDescriptor
-from m2riv.gate import GatePolicy, GateRule, MetricDirection
-from m2riv.metrics import ExactMatchMetric
-from m2riv.pipeline import MetricExecutionError, compare_release
-from m2riv.planning import (
+from merriv.engine import ObservationCache, PairedCaseResult, PairedRunner, RunnerContractError
+from merriv.execution import ExecutionBackend, ExecutorDescriptor
+from merriv.gate import GatePolicy, GateRule, MetricDirection
+from merriv.metrics import ExactMatchMetric
+from merriv.pipeline import MetricExecutionError, compare_release
+from merriv.planning import (
     MAX_PLAN_SLICE_VALUES_PER_KEY,
     PlanCompileError,
     compile_release_plan,
 )
-from m2riv.plugins import (
+from merriv.plugins import (
     PluginKind,
     PluginManifest,
     PluginRegistrationError,
     PluginRegistry,
     builtin_metric_registry,
 )
-from m2riv.reports import render_markdown, write_report_bundle
+from merriv.reports import render_markdown, write_report_bundle
 
 runner = CliRunner()
 
@@ -110,7 +110,7 @@ def test_builtin_registry_has_stable_core_metric_ownership() -> None:
     registry = builtin_metric_registry()
     assert [metric.id for metric in registry.metrics()] == ["accuracy", "mean_latency_ms"]
     assert len(registry.plugin_records()) == 1
-    assert registry.plugin_records()[0].name == "m2riv.builtin.metrics"
+    assert registry.plugin_records()[0].name == "merriv.builtin.metrics"
 
 
 def test_runtime_profile_rejects_credentials_before_identity_hashing() -> None:
@@ -582,13 +582,13 @@ def test_metric_plugin_failure_is_secret_free_and_report_links_plan(tmp_path: Pa
         "baseline",
         "candidate",
     ]
-    assert all(execution.executor_id == "m2riv.local" for execution in passing.report.executions)
+    assert all(execution.executor_id == "merriv.local" for execution in passing.report.executions)
     assert sum(execution.cache_hits for execution in passing.report.executions) == 0
     assert any(evidence.kind == "artifact-diff" for evidence in passing.report.evidence)
     markdown = render_markdown(passing.report)
     assert "## Linked evidence" in markdown
     provenance = markdown.index("## Execution provenance")
-    baseline_row = markdown.index("| baseline | m2riv.local")
+    baseline_row = markdown.index("| baseline | merriv.local")
     linked_evidence = markdown.index("## Linked evidence")
     assert provenance < baseline_row < linked_evidence
     with pytest.raises(ValueError, match="conflicting records"):
@@ -678,6 +678,6 @@ rules:
     document = json.loads(result.stdout)
     assert document["id"].startswith("mcr:sha256:")
     assert document["bindings"][0]["metric_id"] == "accuracy@risk=rare"
-    assert document["plugins"][0]["name"] == "m2riv.builtin.metrics"
+    assert document["plugins"][0]["name"] == "merriv.builtin.metrics"
     assert document["plugins"][0]["kind"] == "metric"
     assert document["resamples"] == 2_000

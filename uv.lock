@@ -423,7 +423,7 @@ wheels = [
 ]
 
 [[package]]
-name = "m2riv"
+name = "merriv"
 version = "0.1.0a2"
 source = { editable = "." }
 dependencies = [

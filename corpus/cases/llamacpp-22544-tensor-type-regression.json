@@ -7,8 +7,8 @@
   "status": "historical-replay",
   "expected_decision": "BLOCK",
   "expected_first_bad": "1dab5f5",
-  "reproduction": "m2riv compare examples/historical_llamacpp_22544/baseline.jsonl examples/historical_llamacpp_22544/candidate.jsonl --suite examples/historical_llamacpp_22544/suite.jsonl --policy examples/historical_llamacpp_22544/policy.yaml --output runs/historical-llamacpp-22544",
-  "verification": "m2riv mcr verify runs/historical-llamacpp-22544 --strict",
+  "reproduction": "merriv compare examples/historical_llamacpp_22544/baseline.jsonl examples/historical_llamacpp_22544/candidate.jsonl --suite examples/historical_llamacpp_22544/suite.jsonl --policy examples/historical_llamacpp_22544/policy.yaml --output runs/historical-llamacpp-22544",
+  "verification": "merriv mcr verify runs/historical-llamacpp-22544 --strict",
   "upstream_issue": "https://github.com/ggml-org/llama.cpp/issues/22544",
   "upstream_fix": "https://github.com/ggml-org/llama.cpp/pull/22572",
   "source_paths": [

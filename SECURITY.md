@@ -42,9 +42,8 @@ owner-side release checklist items before public v0.1.
 - Cache envelopes are HMAC-authenticated. With no configuration the HMAC key is
   random and process-local, so a new process treats old entries as misses. Set a
   secret `MERRIV_CACHE_KEY` of at least 32 bytes only when deliberate cross-run or
-  multi-worker reuse is required. The legacy `M2RIV_CACHE_KEY` name remains a
-  compatibility fallback. Anyone who can read that key can forge entries; do not
-  place it in reports, logs, command lines, or repository variables.
+  multi-worker reuse is required. Anyone who can read that key can forge entries;
+  do not place it in reports, logs, command lines, or repository variables.
 - Reports attest what Merriv observed under a named policy and runtime. They do not
   prove that an artifact is safe, unbiased, or suitable for every distribution.
   `merriv mcr verify` proves contract validity and content self-consistency only.

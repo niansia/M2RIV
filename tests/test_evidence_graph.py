@@ -7,10 +7,10 @@ import pytest
 from pydantic import ValidationError
 from typer.testing import CliRunner
 
-from m2riv.cli import app
-from m2riv.core.identity import build_local_snapshot, hash_artifact
-from m2riv.core.models import EvidenceRef, RuntimeProfile
-from m2riv.evidence import (
+from merriv.cli import app
+from merriv.core.identity import build_local_snapshot, hash_artifact
+from merriv.core.models import EvidenceRef, RuntimeProfile
+from merriv.evidence import (
     BackendCaseComparison,
     FileDigestBinding,
     create_backend_comparison_evidence,
@@ -18,7 +18,7 @@ from m2riv.evidence import (
     create_snapshot_artifact_manifest,
     create_tool_native_evidence,
 )
-from m2riv.reports import (
+from merriv.reports import (
     MCRDecision,
     MCRStatus,
     MCRVerificationError,
@@ -26,7 +26,7 @@ from m2riv.reports import (
     verify_report_bundle,
     write_report_bundle,
 )
-from m2riv.target import (
+from merriv.target import (
     TargetEvidenceManifest,
     TargetReportBinding,
     create_target_evidence_manifest,

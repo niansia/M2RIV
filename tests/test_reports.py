@@ -10,11 +10,11 @@ from xml.etree import ElementTree
 import pytest
 from pydantic import ValidationError
 
-from m2riv.artifacts import ArtifactDiff, NumericalDiff, TensorNumericalDiff
-from m2riv.core.identity import fingerprint
-from m2riv.core.models import EvidenceRef, RuntimeProfile
-from m2riv.planning import CompiledReleasePlan, PlannedMetric, RuleBinding
-from m2riv.reports import (
+from merriv.artifacts import ArtifactDiff, NumericalDiff, TensorNumericalDiff
+from merriv.core.identity import fingerprint
+from merriv.core.models import EvidenceRef, RuntimeProfile
+from merriv.planning import CompiledReleasePlan, PlannedMetric, RuleBinding
+from merriv.reports import (
     EvidenceManifest,
     EvidenceManifestRef,
     EvidenceSet,
@@ -35,7 +35,7 @@ from m2riv.reports import (
     verify_report_bundle,
     write_report_bundle,
 )
-from m2riv.reports import verify as report_verifier
+from merriv.reports import verify as report_verifier
 
 
 def content_id(label: str) -> str:
@@ -756,8 +756,8 @@ def test_independent_full_bundle_is_current_complete_and_valid() -> None:
     root = Path(__file__).parents[1]
     producer = root / "examples" / "independent_producer" / "generate_bundle.py"
     source = producer.read_text(encoding="utf-8")
-    assert "from m2riv" not in source
-    assert "import m2riv" not in source
+    assert "from merriv" not in source
+    assert "import merriv" not in source
     subprocess.run(
         [sys.executable, str(producer), "--check"],
         check=True,

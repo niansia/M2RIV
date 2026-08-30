@@ -7,10 +7,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from m2riv.conformance import normative_profile_report
-from m2riv.core.identity import fingerprint
-from m2riv.core.models import EvidenceRef
-from m2riv.reports import MCRStatus, create_report, render_json
+from merriv.conformance import normative_profile_report
+from merriv.core.identity import fingerprint
+from merriv.core.models import EvidenceRef
+from merriv.reports import MCRStatus, create_report, render_json
 
 ROOT = Path(__file__).parent
 

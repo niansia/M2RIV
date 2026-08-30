@@ -16,24 +16,21 @@ The public project and reference-implementation name is **Merriv**, pronounced
   tool; Model Change Report is the portable evidence object it produces and
   consumes.
 
-## Stable technical identifiers
+## Technical identifiers
 
-The Python distribution and import module remain `m2riv`, preserving the clean
-PyPI namespace and avoiding a brand-only wire migration. The primary executable
-is `merriv`; `m2riv` remains an install-time compatibility alias. Existing
-`m2riv.*` plugin/executor identifiers, `mcr:` content IDs, JSON field names,
-filenames, and identity hash domains do not change because of this naming
-decision.
+Before the first PyPI release, the Python distribution, import namespace,
+executable, project-owned plugin and executor identifiers, cache environment
+variable, release artifacts, and identity hash domains were unified under
+`merriv` or `MERRIV`. The protocol-owned `mcr:` content IDs, JSON field names,
+filenames, and schema identifiers remain brand-neutral.
 
-The canonical GitHub repository is `github.com/niansia/Merriv`. GitHub redirects
-the pre-rename `niansia/M2RIV` locator, but public documentation and package
-metadata use the canonical Merriv URL.
+The canonical GitHub repository is `github.com/niansia/Merriv`; public
+documentation and package metadata use that locator.
 
 ## Distribution
 
-The PyPI project remains `m2riv`; the distribution name is a stable technical
-identifier rather than a second public brand. Before the first published release,
-installation examples use the Git repository explicitly:
+The PyPI project and distribution are `merriv`. Before the first published
+release, installation examples use the Git repository explicitly:
 
 ```console
 uvx --from git+https://github.com/niansia/Merriv.git merriv --help
@@ -42,7 +39,7 @@ uvx --from git+https://github.com/niansia/Merriv.git merriv --help
 After publication, the unambiguous form is:
 
 ```console
-uvx --from m2riv merriv --help
+uvx --from merriv merriv --help
 ```
 
 ## Clearance boundary

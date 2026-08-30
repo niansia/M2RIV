@@ -9,8 +9,8 @@ from types import ModuleType
 
 from typer.testing import CliRunner
 
-from m2riv.cli import app
-from m2riv.conformance import verify_consumer_conformance
+from merriv.cli import app
+from merriv.conformance import verify_consumer_conformance
 
 runner = CliRunner()
 
@@ -89,4 +89,4 @@ def test_mlflow_consumer_emits_a_conformant_receipt(tmp_path: Path) -> None:
     assert completed.returncode == 0, completed.stderr
     result = verify_consumer_conformance(receipt, fixtures="examples/mcr_conformance")
     assert result.conformant
-    assert result.implementation_name == "m2riv.mlflow-consumer"
+    assert result.implementation_name == "merriv.mlflow-consumer"

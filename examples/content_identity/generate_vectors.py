@@ -67,7 +67,7 @@ def build_document() -> dict[str, Any]:
         _vector(
             "object-order-unicode",
             "golden-basic",
-            value={"z": None, "a": "M2RIV", "unicode": "模型"},
+            value={"z": None, "a": "Merriv", "unicode": "模型"},
         ),
         _vector(
             "numbers-and-arrays",
@@ -224,7 +224,7 @@ def build_float_document() -> dict[str, Any]:
     counter = 0
     while len(bit_patterns) < FLOAT_VECTOR_COUNT:
         candidate = int.from_bytes(
-            hashlib.sha256(b"m2riv-f64-v1\0" + counter.to_bytes(8, "big")).digest()[:8],
+            hashlib.sha256(b"merriv-f64-v1\0" + counter.to_bytes(8, "big")).digest()[:8],
             "big",
         )
         counter += 1
@@ -250,7 +250,7 @@ def build_float_document() -> dict[str, Any]:
         "schema_version": "1.0.0",
         "canonicalization_version": "v1",
         "algorithm": "sha256",
-        "generation": "11 anchors plus SHA-256(m2riv-f64-v1\\0 || uint64be(counter))",
+        "generation": "11 anchors plus SHA-256(merriv-f64-v1\\0 || uint64be(counter))",
         "vectors": vectors,
     }
 

@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from m2riv.adapters import AdapterCapability, FakeAdapter, ModelAdapter
-from m2riv.core.identity import build_local_snapshot
-from m2riv.core.models import EvalCase, RuntimeProfile
+from merriv.adapters import AdapterCapability, FakeAdapter, ModelAdapter
+from merriv.core.identity import build_local_snapshot
+from merriv.core.models import EvalCase, RuntimeProfile
 
 
 def test_fake_adapter_satisfies_runtime_contract(tmp_path: Path) -> None:

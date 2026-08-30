@@ -3,7 +3,7 @@ Merriv deliberately does not scan and import arbitrary Python entry points. Trus
 host code imports a plugin and registers it explicitly:
 
 ```python
-from m2riv.plugins import builtin_metric_registry
+from merriv.plugins import builtin_metric_registry
 from length_metric import register
 
 registry = builtin_metric_registry()

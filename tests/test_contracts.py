@@ -5,9 +5,9 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from m2riv.artifacts import OnnxGraphSummary, OnnxTensorSpec, TensorNumericalDiff
-from m2riv.core.identity import fingerprint
-from m2riv.core.models import (
+from merriv.artifacts import OnnxGraphSummary, OnnxTensorSpec, TensorNumericalDiff
+from merriv.core.identity import fingerprint
+from merriv.core.models import (
     Claim,
     ClaimStrength,
     EvalCase,

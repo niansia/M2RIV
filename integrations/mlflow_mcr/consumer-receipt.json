@@ -1,7 +1,7 @@
 {
   "schema_version": "0.3.0",
   "id": "mcr:sha256:6f61d05553262e9063a2dba67e4e98c3d819b905570381be24a5f1652ce216a2",
-  "implementation_name": "m2riv.mlflow-consumer",
+  "implementation_name": "merriv.mlflow-consumer",
   "implementation_version": "1.0.0",
   "profiles": [
     {

@@ -2,11 +2,11 @@
 * @niansia
 
 /schemas/ @niansia
-/src/m2riv/core/ @niansia
-/src/m2riv/gate/ @niansia
-/src/m2riv/reports/ @niansia
-/src/m2riv/evidence.py @niansia
-/src/m2riv/target.py @niansia
+/src/merriv/core/ @niansia
+/src/merriv/gate/ @niansia
+/src/merriv/reports/ @niansia
+/src/merriv/evidence.py @niansia
+/src/merriv/target.py @niansia
 /rfcs/ @niansia
 /docs/mcr-*.md @niansia
 /.github/workflows/ @niansia

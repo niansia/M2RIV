@@ -83,9 +83,8 @@ versions for portable JSON contracts. Pre-1.0 APIs may change with migration not
 
 ### Changed
 
-- The public name is fixed as Merriv (pronounced "MEH-riv"), with `merriv` as the
-  primary executable. The `m2riv` distribution, Python module, executable alias,
-  and brand-neutral `mcr:` wire identifiers remain stable.
+- The public name, Python distribution, import namespace, and executable are
+  unified as `merriv`; brand-neutral `mcr:` wire identifiers remain stable.
 - Public prose spells out Model Change Report; `MCR` remains only where it is a
   versioned technical identifier, filename, schema name, or CLI command group.
 - CI and release builds now install from the frozen `uv.lock` rather than
@@ -133,8 +132,7 @@ versions for portable JSON contracts. Pre-1.0 APIs may change with migration not
 - Artifact hashing and discovery enforce total-byte, per-file, and traversal budgets
 - Cache format v2 authenticates every observation envelope with HMAC-SHA-256.
   The default key is run-local; intentional shared reuse requires a secret
-  `MERRIV_CACHE_KEY` of at least 32 bytes; `M2RIV_CACHE_KEY` remains a legacy
-  compatibility fallback
+  `MERRIV_CACHE_KEY` of at least 32 bytes
 - The evidence kernel recomputes observation IDs and validates snapshot, case,
   seed, output digest, retention, and executor result cardinality before caching
 - Strict JSON rejects duplicate keys, non-finite values, invalid Unicode, excessive

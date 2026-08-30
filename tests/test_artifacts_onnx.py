@@ -15,8 +15,8 @@ pytest.importorskip("onnxruntime")
 
 from onnx import TensorProto, helper, numpy_helper
 
-from m2riv.adapters import OnnxRuntimeAdapter, OnnxRuntimeError
-from m2riv.artifacts import (
+from merriv.adapters import OnnxRuntimeAdapter, OnnxRuntimeError
+from merriv.artifacts import (
     ArtifactComponent,
     ArtifactFormat,
     ArtifactInspectionError,
@@ -24,8 +24,8 @@ from m2riv.artifacts import (
     compare_onnx_numerics,
     inspect_artifact,
 )
-from m2riv.cli import app
-from m2riv.core.models import EvalCase, ModelFamily, RuntimeProfile
+from merriv.cli import app
+from merriv.core.models import EvalCase, ModelFamily, RuntimeProfile
 
 
 def _model(path: Path, *, half: bool = False, opset: int = 17, weight_scale: float = 1.0) -> Path:
@@ -45,7 +45,7 @@ def _model(path: Path, *, half: bool = False, opset: int = 17, weight_scale: flo
     model = helper.make_model(
         graph,
         opset_imports=[helper.make_opsetid("", opset)],
-        producer_name="m2riv-test",
+        producer_name="merriv-test",
     )
     model.ir_version = 9
     onnx.checker.check_model(model)

@@ -7,8 +7,8 @@ from xml.etree import ElementTree
 import pytest
 from typer.testing import CliRunner
 
-from m2riv.cli import app
-from m2riv.io import InputFormatError, load_policy, load_suite
+from merriv.cli import app
+from merriv.io import InputFormatError, load_policy, load_suite
 
 runner = CliRunner()
 

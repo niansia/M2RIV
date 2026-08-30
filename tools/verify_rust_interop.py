@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from m2riv.reports import MCRVerificationError, verify_report_bundle
+from merriv.reports import MCRVerificationError, verify_report_bundle
 
 ROOT = Path(__file__).parents[1]
 MANIFEST = ROOT / "reference" / "mcr-reference-rust" / "Cargo.toml"
@@ -30,7 +30,7 @@ def _cargo(*arguments: str, check: bool = True) -> subprocess.CompletedProcess[s
 
 
 def main() -> None:
-    with tempfile.TemporaryDirectory(prefix="m2riv-rust-interop-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="merriv-rust-interop-") as temporary:
         bundle = Path(temporary) / "rust-bundle"
         _cargo("produce", str(SIMPLE_EVIDENCE), str(bundle))
         python_result = verify_report_bundle(bundle, require_complete=True)

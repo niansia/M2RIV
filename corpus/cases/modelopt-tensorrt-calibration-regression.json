@@ -8,7 +8,7 @@
   "expected_decision": "BLOCK",
   "expected_first_bad": "build-02-modelopt-int8-scale-065",
   "reproduction": "python examples/nvidia_tensorrt_vertical/build_artifacts.py --fixture examples/onnx_quantization/assets/digits-mlp-fp32.onnx.b64 --output runs/nvidia/artifact-inputs && python examples/nvidia_tensorrt_vertical/run_vertical.py --artifacts runs/nvidia/artifact-inputs --suite runs/onnx-quantization/suite.jsonl --output runs/nvidia/live",
-  "verification": "m2riv mcr verify-target runs/nvidia/live",
+  "verification": "merriv mcr verify-target runs/nvidia/live",
   "target_receipt": "examples/nvidia_tensorrt_vertical/reference-receipt-rtx4060-20260829.json",
   "source_paths": [
     "examples/nvidia_tensorrt_vertical/build_artifacts.py",

@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from m2riv.demo import run_rare_slice_demo
-from m2riv.gate import GateStatus
-from m2riv.reports import ModelChangeReport
+from merriv.demo import run_rare_slice_demo
+from merriv.gate import GateStatus
+from merriv.reports import ModelChangeReport
 
 
 def test_rare_slice_demo_blocks_and_reuses_cache(tmp_path: Path) -> None:

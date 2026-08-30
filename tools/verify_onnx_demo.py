@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from m2riv.reports import verify_report_bundle
+from merriv.reports import verify_report_bundle
 
 EXPECTED_STATUSES = {
     "build-00-fp16": frozenset({"PASS"}),

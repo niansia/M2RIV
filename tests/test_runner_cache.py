@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from m2riv.adapters import AdapterCapability, FakeAdapter
-from m2riv.core.identity import build_local_snapshot
-from m2riv.core.models import EvalCase, ModelSnapshot, Observation, RuntimeProfile
-from m2riv.engine import CacheKey, ObservationCache, PairedRunner, RunnerContractError
+from merriv.adapters import AdapterCapability, FakeAdapter
+from merriv.core.identity import build_local_snapshot
+from merriv.core.models import EvalCase, ModelSnapshot, Observation, RuntimeProfile
+from merriv.engine import CacheKey, ObservationCache, PairedRunner, RunnerContractError
 
 
 @dataclass

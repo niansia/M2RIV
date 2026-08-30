@@ -8,7 +8,7 @@ test suite does not satisfy these account-level controls.
 
 - Confirm the recorded [Merriv brand decision](brand.md). The collision scan is
   evidence, not legal clearance.
-- Reserve or create the `m2riv` PyPI project and configure its GitHub Trusted
+- Reserve or create the `merriv` PyPI project and configure its GitHub Trusted
   Publisher for this repository, workflow filename `release.yml`, environment
   `pypi`.
 - Create the protected GitHub environment `pypi` with at least one required human
@@ -40,6 +40,5 @@ and [security model](https://docs.pypi.org/trusted-publishers/security-model/).
 4. Approve the `pypi` environment only after the build job produces wheel, source
    distribution, SHA256SUMS, SPDX SBOM, and GitHub provenance.
 5. Verify the published project metadata, attestations, hashes, installation, and
-   `merriv --help` and the compatibility alias `m2riv --help` from a clean
-   environment.
+   `merriv --help` from a clean environment.
 6. Confirm private vulnerability-report notifications remain monitored.

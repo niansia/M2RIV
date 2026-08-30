@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from m2riv.core.identity import fingerprint
-from m2riv.engine import PairedCaseResult
-from m2riv.gate import MetricDirection
-from m2riv.plugins import PluginKind, PluginManifest, PluginRegistry
+from merriv.core.identity import fingerprint
+from merriv.engine import PairedCaseResult
+from merriv.gate import MetricDirection
+from merriv.plugins import PluginKind, PluginManifest, PluginRegistry
 
 
 @dataclass(frozen=True, slots=True)

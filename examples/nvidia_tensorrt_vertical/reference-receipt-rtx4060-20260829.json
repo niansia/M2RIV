@@ -6,7 +6,7 @@
   "verified_file_count": 4514,
   "target_manifest_sha256": "7a1036ff5aa1541d82678bd3adb74c5160f58ba746c55336964b883c0a940186",
   "gpu_receipt_sha256": "a1ad352b7f01d47db2d35a4376f356327ae408277f510c5ccf3472e7dbaff1a3",
-  "archive_name": "M2RIV-nvidia-evidence-RTX4060-MCR0.4-20260829.zip",
+  "archive_name": "nvidia-evidence-RTX4060-MCR0.4-20260829.zip",
   "archive_sha256": "06a060000afb40cd9dd6e529b08249863d20a91706030d2b505493572fd21a05",
   "preflight": {
     "gpu_name": "NVIDIA GeForce RTX 4060 Laptop GPU",

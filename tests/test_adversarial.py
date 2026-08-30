@@ -6,9 +6,9 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from m2riv.core import identity
-from m2riv.core.identity import fingerprint, hash_artifact
-from m2riv.core.models import EvalCase, Observation, RetentionMode, RuntimeProfile
+from merriv.core import identity
+from merriv.core.identity import fingerprint, hash_artifact
+from merriv.core.models import EvalCase, Observation, RetentionMode, RuntimeProfile
 
 
 def _content_id(label: str) -> str:

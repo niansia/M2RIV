@@ -41,8 +41,8 @@ decision without depending on Merriv internals at the protocol boundary.
 - Compose Model Change Report references with retained SLSA provenance, OpenSSF Model Signing or
   Sigstore identity, and SPDX/CycloneDX ML-BOM instead of duplicating them
 - Obtain a public design review of Model Change Report 0.4 from an external infra maintainer
-- [x] Fix the public name as Merriv before distribution while retaining the
-  `m2riv` package and wire namespaces for compatibility
+- [x] Unify the public name, Python distribution, import namespace, executable,
+  and project-owned identity domains as Merriv before the first PyPI release
 - Add plugin conformance for manifests, mutation safety, secret canaries, and pairing
 - Prototype a Ray or Kubernetes reference executor outside the core dependency set
 - Define cancellation and failure semantics for external job schedulers
