@@ -375,6 +375,7 @@ def test_bisect_run_executes_onnx_checkpoints(tmp_path: Path) -> None:
     policy.write_text(
         """schema_version: 1.0.0
 policy_id: onnx-bisect
+multiple_comparison_method: none
 rules:
   - rule_id: accuracy
     metric: accuracy

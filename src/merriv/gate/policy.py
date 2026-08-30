@@ -423,8 +423,6 @@ def evaluate_gate(policy: GatePolicy, evaluation: GateEvaluation) -> GateDecisio
 
         hypothesis_test = estimate.hypothesis_test
         if policy.multiple_comparison_method is MultipleComparisonMethod.HOLM_BONFERRONI:
-            if family_size == 1:
-                continue
             if hypothesis_test is None or not math.isclose(
                 hypothesis_test.null_value,
                 _threshold(rule),
@@ -436,8 +434,10 @@ def evaluate_gate(policy: GatePolicy, evaluation: GateEvaluation) -> GateDecisio
                     metric=rule.metric,
                     status=GateStatus.ERROR,
                     reason=(
-                        "Holm-Bonferroni requires formal paired hypothesis-test evidence "
-                        "at the rule margin"
+                        "Holm-Bonferroni requires a supported formal paired hypothesis "
+                        "test at the exact rule margin; no test was supplied or its null "
+                        "did not match (matched-binary non-zero-margin risk differences "
+                        "are intentionally unsupported)"
                     ),
                     margin=rule.margin,
                     n_pairs=estimate.n_pairs,
@@ -466,10 +466,7 @@ def evaluate_gate(policy: GatePolicy, evaluation: GateEvaluation) -> GateDecisio
             continue
         estimate = estimates[rule.rule_id]
         mde = mdes[rule.rule_id]
-        if (
-            policy.multiple_comparison_method is MultipleComparisonMethod.NONE
-            or family_size == 1
-        ):
+        if policy.multiple_comparison_method is MultipleComparisonMethod.NONE:
             effective_alpha = policy.familywise_alpha
             raw_p_value = (
                 estimate.hypothesis_test.p_value

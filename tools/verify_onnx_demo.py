@@ -10,13 +10,13 @@ from typing import Any
 from merriv.reports import verify_report_bundle
 
 EXPECTED_STATUSES = {
-    "build-00-fp16": frozenset({"PASS"}),
-    "build-01-int8-balanced": frozenset({"PASS"}),
-    # ORT's platform-specific INT8 kernels move borderline cases. Under the
-    # current formal paired test and Holm family, either degraded build can be a
-    # conclusive BLOCK or fail-closed WARN.
-    "build-02-int8-calibration-scale-065": frozenset({"WARN", "BLOCK"}),
-    "build-03-int8-calibration-scale-060": frozenset({"WARN", "BLOCK"}),
+    # Accuracy is a matched-binary risk difference and this policy declares
+    # non-zero margins. Until a dedicated binary NI method is selected, the
+    # formal Holm profile must fail closed on every comparison.
+    "build-00-fp16": frozenset({"ERROR"}),
+    "build-01-int8-balanced": frozenset({"ERROR"}),
+    "build-02-int8-calibration-scale-065": frozenset({"ERROR"}),
+    "build-03-int8-calibration-scale-060": frozenset({"ERROR"}),
 }
 EXPECTED_ACCURACY_RANGES = {
     "build-00-fp16": ((596 / 629, 596 / 629), (43 / 47, 43 / 47)),
@@ -26,7 +26,7 @@ EXPECTED_ACCURACY_RANGES = {
     "build-02-int8-calibration-scale-065": ((584 / 629, 586 / 629), (35 / 47, 37 / 47)),
     "build-03-int8-calibration-scale-060": ((581 / 629, 584 / 629), (33 / 47, 36 / 47)),
 }
-REGRESSION_ONSET = "build-02-int8-calibration-scale-065"
+CALIBRATION_REGRESSION_BUILD = "build-02-int8-calibration-scale-065"
 MAX_MCR_BYTES = 32 * 1024
 ACCURACY_TOLERANCE = 1e-12
 
@@ -54,7 +54,6 @@ def verify(destination: Path) -> None:
         if not artifact.is_relative_to(root) or not artifact.is_file():
             raise ValueError("artifact manifest path escapes the demo or is missing")
 
-    observed_statuses: dict[str, str] = {}
     for checkpoint, expected_statuses in EXPECTED_STATUSES.items():
         report_directory = root / "reports" / checkpoint
         verification = verify_report_bundle(report_directory)
@@ -74,10 +73,23 @@ def verify(destination: Path) -> None:
                 f"{checkpoint} has status {status!r}; expected one of "
                 f"{sorted(expected_statuses)}"
             )
-        observed_statuses[checkpoint] = status
         policy_satisfied = report.get("decision", {}).get("allowed")
         if policy_satisfied is not (status == "PASS"):
             raise ValueError(f"{checkpoint} has inconsistent evaluation-policy semantics")
+        findings = report.get("decision", {}).get("findings", [])
+        if not any(
+            "matched-binary non-zero-margin" in str(finding.get("message"))
+            for finding in findings
+            if isinstance(finding, dict)
+        ):
+            raise ValueError(f"{checkpoint} did not retain the unsupported-profile reason")
+        if any(
+            finding.get("raw_p_value") is not None
+            or finding.get("adjusted_p_value") is not None
+            for finding in findings
+            if isinstance(finding, dict)
+        ):
+            raise ValueError(f"{checkpoint} invented a p-value for the unsupported profile")
         if not isinstance(reference, dict) or reference.get("id") != manifest.get("id"):
             raise ValueError(f"{checkpoint} evidence manifest identity is not linked")
         evidence = manifest.get("evidence", [])
@@ -115,37 +127,26 @@ def verify(destination: Path) -> None:
                 )
 
     bisect = _object(root / "bisect-result.json")
-    terminal_status = observed_statuses["build-03-int8-calibration-scale-060"]
-    if observed_statuses[REGRESSION_ONSET] == "BLOCK":
-        if (
-            bisect.get("outcome") != "first_failing"
-            or bisect.get("first_failing_checkpoint") != REGRESSION_ONSET
-        ):
-            raise ValueError("demo bisect did not locate the conclusive first bad build")
-    elif terminal_status == "BLOCK":
-        if (
-            bisect.get("outcome") != "inconclusive"
-            or bisect.get("first_failing_checkpoint") is not None
-            or bisect.get("confirmed_interval")
-            != {"lower_pass_index": 1, "upper_block_index": 3}
-        ):
-            raise ValueError("demo bisect did not preserve the WARN uncertainty interval")
-    elif (
+    if (
         bisect.get("outcome") != "inconclusive"
         or bisect.get("first_failing_checkpoint") is not None
         or bisect.get("confirmed_interval") is not None
     ):
-        raise ValueError("demo bisect claimed an onset without a conclusive BLOCK endpoint")
-    artifact_diff = _object(root / "reports" / REGRESSION_ONSET / "artifact-diff.json")
+        raise ValueError("demo bisect claimed an onset from unsupported formal-test evidence")
+    artifact_diff = _object(
+        root / "reports" / CALIBRATION_REGRESSION_BUILD / "artifact-diff.json"
+    )
     if not artifact_diff.get("quantization_format_changed"):
-        raise ValueError("regression-onset build has no machine-readable quantization change")
+        raise ValueError("calibration-regression build has no quantization change")
     operator_names = {item.get("name") for item in artifact_diff.get("operator_changes", [])}
     if not {
         "ai.onnx::QuantizeLinear",
         "ai.onnx::DequantizeLinear",
     }.issubset(operator_names):
-        raise ValueError("regression-onset build lacks the expected QDQ graph changes")
-    numerical_diff = _object(root / "reports" / REGRESSION_ONSET / "numerical-diff.json")
+        raise ValueError("calibration-regression build lacks the expected QDQ graph changes")
+    numerical_diff = _object(
+        root / "reports" / CALIBRATION_REGRESSION_BUILD / "numerical-diff.json"
+    )
     tensor_rows = numerical_diff.get("tensors")
     if not isinstance(tensor_rows, list):
         raise ValueError("numerical diff does not contain per-tensor evidence")
@@ -164,10 +165,12 @@ def verify(destination: Path) -> None:
         "hidden",
     }:
         raise ValueError("numerical diff did not locate the first shared hidden activation drift")
-    onset_report = _object(root / "reports" / REGRESSION_ONSET / "mcr-report.json")
+    onset_report = _object(
+        root / "reports" / CALIBRATION_REGRESSION_BUILD / "mcr-report.json"
+    )
     linked_kinds = {item.get("kind") for item in onset_report.get("evidence", [])}
     if "numerical-diff" not in linked_kinds:
-        raise ValueError("regression-onset report does not link its numerical diff")
+        raise ValueError("calibration-regression report does not link its numerical diff")
 
 
 def main() -> None:

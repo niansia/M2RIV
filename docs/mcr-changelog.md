@@ -24,6 +24,12 @@ that planned quantity; observed-design MDE remains diagnostic. This tooling
 policy revision does not change the frozen MCR 0.4 report envelope or identity
 preimages.
 
+The reference producer no longer emits a centered sign-randomization test for a
+matched-binary risk difference at a non-zero margin. That profile lacks the sign
+symmetry assumed by the continuous test; a Holm policy now returns `ERROR` until
+a dedicated paired-binary non-inferiority method is selected. This is a
+statistical tooling correction, not an MCR 0.4 wire or identity change.
+
 ## 0.4.0 — 2026-08-29
 
 Breaking pre-alpha correction:

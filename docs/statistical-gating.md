@@ -2,14 +2,30 @@
 
 Merriv evaluates every rule in one policy as a declared comparison family. The
 default method is Holm-Bonferroni with `familywise_alpha: 0.05`; `none` must be an
-explicit policy choice when no multiplicity correction is wanted.
+explicit policy choice for interval-only gating and does not mean an unadjusted
+formal hypothesis test.
 
 For each governed metric, the paired bootstrap retains the percentile intervals
-needed by every Holm step. Hypothesis-test evidence is separate: continuous and
-non-zero-margin binary effects use a paired sign-randomization test centered at
-the rule margin, while a binary effect at a zero margin uses the exact two-sided
-McNemar test. Ordinary percentile-bootstrap tail counts are not treated as formal
-p-values.
+needed by every Holm step. Hypothesis-test evidence is separate: continuous
+effects use a paired sign-randomization test centered at the rule margin, while a
+binary effect at a zero margin uses the exact two-sided McNemar test. Ordinary
+percentile-bootstrap tail counts are not treated as formal p-values.
+
+Matched-binary risk differences at a **non-zero** margin are currently an
+unsupported formal-test profile. Centering differences from the binary support
+`{-1, 0, +1}` at a non-zero null does not generally produce the sign symmetry
+required by the randomization test. Merriv therefore emits no formal p-value for
+that combination. A Holm policy that requires it returns `ERROR`; it never
+silently substitutes the continuous sign-randomization method. A policy may
+explicitly select `multiple_comparison_method: none` for interval-only evaluation,
+but that opts out of the formal multiplicity-controlled profile and is not a
+matched-binary non-inferiority test.
+
+Future support must select and validate a method designed for paired binary
+non-inferiority, such as a score-based or unconditional exact procedure, rather
+than reusing the continuous test. Relevant primary references include
+[Tango's paired-proportion method](https://pubmed.ncbi.nlm.nih.gov/9595618/) and
+[Hsueh, Liu, and Chen's unconditional exact procedure](https://doi.org/10.1111/j.0006-341X.2001.00478.x).
 
 Merriv deliberately uses a **two-sided** test and two-sided interval even though
 non-inferiority is commonly framed as a one-sided question. A release gate must
@@ -23,8 +39,15 @@ paired differences centered at the null. It is enumerated exactly for at most 16
 pairs and otherwise uses a deterministic Monte Carlo estimate with the plus-one
 correction. Holm orders these raw p-values, breaks exact ties by `rule_id`,
 computes monotone adjusted p-values, and selects the confidence level for each
-step. A rule is decisive only when the full selected interval lies on one side of
-the margin. Point estimates never PASS or BLOCK by themselves.
+step. A Holm rule is decisive only when its adjusted test is significant **and**
+the full selected interval lies on one side of the margin. Point estimates never
+PASS or BLOCK by themselves.
+
+The percentile-bootstrap confidence interval is an independent interval-evidence
+requirement; it is **not** the inversion of the reported sign-randomization or
+McNemar test. The two requirements are intentionally combined conservatively.
+A future statistical profile may pair each test with a method-compatible
+confidence set, but MCR 0.4 and GatePolicy 1.1 do not claim that duality.
 
 ## Declared family
 
@@ -44,7 +67,7 @@ familywise_alpha: 0.05
 target_power: 0.8
 rules:
   - rule_id: critical-slice-quality
-    metric: accuracy@risk=critical
+    metric: mean_quality_score@risk=critical
     direction: higher_is_better
     margin: 0.02
     max_mde: 0.02

@@ -39,6 +39,7 @@ def test_polygraphy_first_mile_cli_imports_normalized_evidence(tmp_path: Path) -
     policy.write_text(
         """schema_version: 1.0.0
 policy_id: importer-smoke
+multiple_comparison_method: none
 rules:
   - rule_id: parity
     metric: accuracy

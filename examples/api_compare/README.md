@@ -20,7 +20,10 @@ merriv compare-api https://baseline.example/v1 https://candidate.example/v1 \
 
 An unauthenticated local endpoint can omit the environment variables. The suite
 uses exact-match outputs only as a canonical smoke test; projects should provide
-domain metrics through the `PairedMetric` boundary.
+domain metrics through the `PairedMetric` boundary. The sample policy explicitly
+uses `multiple_comparison_method: none`, so this small endpoint-wiring example is
+interval-only, not a multiplicity-controlled formal comparison of matched-binary
+endpoint quality.
 
 Credential-bearing requests require HTTPS. Cloud metadata hostnames plus known
 link-local and non-link-local metadata addresses are rejected, while loopback

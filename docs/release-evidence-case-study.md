@@ -2,7 +2,7 @@
 
 ## Artifact regression, statistical gating, and build localization
 
-Status: reproducible first-party case study, revision 2026-08-29
+Status: reproducible first-party case study, revision 2026-08-30
 
 Scope: Model Change Report 0.4 and the Merriv reference implementation
 
@@ -26,10 +26,11 @@ NVIDIA ModelOpt → TensorRT execution on an RTX 4060 Laptop GPU. In the live GP
 case, all four 629-case ONNX Runtime/TensorRT comparisons matched under the
 declared tolerance, while a calibration-range change reduced the input-declared
 critical slice from 91.49% to 78.72%. The archived pre-Holm gate returned PASS,
-PASS, BLOCK, BLOCK and localized build 02. Under the current Holm-corrected
-family, that same 43/47 to 37/47 slice is `WARN`, so the historical first-bad
-claim does not transfer to the current policy. This is exact first-party target
-evidence, not an independent or cross-hardware performance claim.
+PASS, BLOCK, BLOCK and localized build 02. The current formal contract refuses to
+reinterpret these non-zero-margin matched-binary risk differences without a
+dedicated binary non-inferiority test, so the current policy returns `ERROR` and
+the historical first-bad claim does not transfer. This is exact first-party
+target evidence, not an independent or cross-hardware performance claim.
 
 ## 1. Problem and boundary
 
@@ -106,15 +107,15 @@ the critical slice with a 1.5% margin over paired evidence.
 
 The CPU path exports the fixed model to FP16 ONNX and creates QDQ INT8 builds
 with ONNX Runtime. Linux and Windows CI retain separate evidence because numerical
-diff magnitudes and latency are run-scoped. Across the bounded platform results,
-the release story remains fail-closed: baseline and balanced builds PASS, while
-builds 02 and 03 are WARN or BLOCK. The current pinned Python 3.11 CI artifacts on
-Linux and Windows classify both degraded builds as WARN, so localization claims
-neither a first bad build nor a confirmed PASS/BLOCK interval. A run with a
-conclusive BLOCK may report only the onset or interval its observed statuses
-establish. A separate opset 17 → 18 control changes artifact structure while
-preserving all declared shared tensors and emits PASS. This prevents the corpus
-from equating every structural change with failure.
+diff magnitudes and latency are run-scoped. The accuracy policy uses non-zero
+margins over matched-binary outcomes. Because the current formal profile has no
+supported paired-binary non-inferiority test, all four Holm evaluations return
+ERROR and localization claims neither a first bad build nor a confirmed
+PASS/BLOCK interval. A separate opset 17 → 18 control explicitly selects an
+interval-only policy, changes artifact structure while preserving all declared
+shared tensors, and emits PASS. It is a structural and numerical negative
+control, not a rejected zero-effect McNemar null. This prevents the corpus from
+equating every structural change with failure.
 
 ## 6. Live NVIDIA ModelOpt → TensorRT case
 
@@ -140,18 +141,18 @@ TensorRT observations.
 
 ### 6.2 Results
 
-| Build | Overall | Critical slice | Backend matches | Gate |
+| Build | Overall | Critical slice | Backend matches | Archived gate |
 |---|---:|---:|---:|---|
 | PyTorch-derived FP16 TensorRT | 94.75% | 91.49% | 629/629 | PASS |
 | ModelOpt INT8 balanced | 94.91% | 91.49% | 629/629 | PASS |
 | ModelOpt INT8 scale 0.65 | 93.32% | 78.72% | 629/629 | BLOCK (archived pre-Holm) |
-| ModelOpt INT8 scale 0.60 | 92.85% | 74.47% | 629/629 | BLOCK |
+| ModelOpt INT8 scale 0.60 | 92.85% | 74.47% | 629/629 | BLOCK (archived pre-Holm) |
 
 The archived monotonic localization returned first bad index 2,
-`build-02-modelopt-int8-scale-065`. Re-evaluating its retained paired outcomes
-with the current two-rule Holm family yields WARN at build 02 and BLOCK at build
-03, so the current result is a confirmed interval rather than a precise onset.
-Four strict report verifications succeeded. Every structured backend
+`build-02-modelopt-int8-scale-065`. Under the current formal-test contract, its
+non-zero-margin matched-binary rules are unsupported and return ERROR; no current
+onset or interval is claimed from those historical outcomes. Four strict report
+verifications succeeded. Every structured backend
 claim links a verified native body and matching exit code; snapshot/build evidence
 binds retained artifact bytes, source revision, calibration cohort, and tool
 versions. A target evidence manifest covers every retained file and strict report.
@@ -197,10 +198,12 @@ verification.
 
 The indexed corpus begins with:
 
-1. ONNX Runtime calibration-range rare-slice regression (CI verified);
-2. ModelOpt/TensorRT calibration regression (target verified, not independent);
-3. recorded-output rare-slice regression (CI verified);
-4. ONNX opset structural negative control (CI verified).
+1. ONNX Runtime calibration-range rare-slice regression (CI exercised; current
+   formal gate returns `ERROR`);
+2. ModelOpt/TensorRT calibration regression (target observed, not independent;
+   current formal gate returns `ERROR`);
+3. recorded-output rare-slice regression (CI-verified interval-only fixture);
+4. ONNX opset structural negative control (CI-verified interval-only fixture).
 
 Planned axes include TensorRT tactics and versions, precision overflow,
 execution-provider changes, tokenizer/config sidecars, dynamic shapes, Jetson/DLA

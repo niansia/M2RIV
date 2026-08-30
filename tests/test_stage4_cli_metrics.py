@@ -144,6 +144,7 @@ def test_compare_api_cli_uses_environment_secrets_without_printing_them(
     policy.write_text(
         """schema_version: 1.0.0
 policy_id: api-release
+multiple_comparison_method: none
 rules:
   - rule_id: quality
     metric: accuracy

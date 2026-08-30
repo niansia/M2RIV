@@ -2,7 +2,9 @@
 
 This offline example represents a model converted from FP16 to INT4. Overall
 accuracy changes by only 10%, while both low-light rare-class cases regress. The
-release policy blocks the candidate on that slice.
+release policy blocks the candidate on that slice. This tiny fixture explicitly
+uses `multiple_comparison_method: none`; it demonstrates bundle and enforcement
+mechanics, not a multiplicity-controlled statistical claim.
 
 ```console
 merriv compare \

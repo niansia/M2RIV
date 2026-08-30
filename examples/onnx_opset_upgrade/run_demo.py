@@ -12,7 +12,7 @@ from merriv.adapters import OnnxRuntimeAdapter
 from merriv.artifacts import compare_artifacts, compare_onnx_numerics, inspect_artifact
 from merriv.core.models import EvalCase, EvidenceRef, ModelFamily, RuntimeProfile
 from merriv.engine import ObservationCache
-from merriv.gate import GatePolicy, GateRule
+from merriv.gate import GatePolicy, GateRule, MultipleComparisonMethod
 from merriv.pipeline import compare_exact_match
 from merriv.reports import write_report_bundle
 
@@ -78,6 +78,9 @@ def run(destination: Path) -> None:
         cases=cases,
         policy=GatePolicy(
             policy_id="opset-upgrade",
+            # This negative control demonstrates artifact and interval evidence.
+            # Identical binary outcomes cannot reject a zero-effect McNemar null.
+            multiple_comparison_method=MultipleComparisonMethod.NONE,
             rules=(
                 GateRule(
                     rule_id="behavior-preserved",

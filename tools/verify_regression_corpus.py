@@ -35,6 +35,10 @@ TARGET_RECEIPT_REQUIRED = {
     "target_manifest_sha256",
     "verified_file_count",
 }
+TARGET_CASE_HISTORY_REQUIRED = {
+    "historical_decisions",
+    "historical_first_bad",
+}
 
 
 def _load(path: Path) -> Any:
@@ -52,6 +56,12 @@ def _safe_relative(value: str) -> Path:
 
 
 def _validate_target_receipt(case: dict[str, Any], case_path: Path) -> None:
+    missing_history = TARGET_CASE_HISTORY_REQUIRED - set(case)
+    if missing_history:
+        raise ValueError(
+            f"{case_path.name} is missing historical receipt fields: "
+            f"{sorted(missing_history)}"
+        )
     receipt_value = case.get("target_receipt")
     if not isinstance(receipt_value, str):
         raise ValueError(f"{case_path.name} must name its target_receipt")
@@ -82,10 +92,10 @@ def _validate_target_receipt(case: dict[str, Any], case_path: Path) -> None:
     if not isinstance(builds, list) or len(builds) != 4:
         raise ValueError(f"{receipt_path.name} must contain four target builds")
     decisions = [item.get("decision") for item in builds if isinstance(item, dict)]
-    if decisions != ["PASS", "PASS", "BLOCK", "BLOCK"]:
-        raise ValueError(f"{receipt_path.name} has unexpected target release decisions")
-    if receipt.get("first_bad_build") != case["expected_first_bad"]:
-        raise ValueError(f"{receipt_path.name} has unexpected first bad build")
+    if decisions != case["historical_decisions"]:
+        raise ValueError(f"{receipt_path.name} has unexpected historical decisions")
+    if receipt.get("first_bad_build") != case["historical_first_bad"]:
+        raise ValueError(f"{receipt_path.name} has unexpected historical first bad build")
     case_counts = {item.get("case_count") for item in builds if isinstance(item, dict)}
     matches = {
         item.get("backend_matched_cases") for item in builds if isinstance(item, dict)
@@ -117,7 +127,13 @@ def main() -> None:
             raise ValueError(f"{case_path.name} is not a recognized v1 corpus case")
         if case["case_id"] in seen:
             raise ValueError(f"duplicate corpus case_id: {case['case_id']}")
-        if case["kind"] not in counts or case["expected_decision"] not in {"PASS", "BLOCK"}:
+        if case["kind"] not in counts or case["expected_decision"] not in {
+            "PASS",
+            "WARN",
+            "INSUFFICIENT_POWER",
+            "BLOCK",
+            "ERROR",
+        }:
             raise ValueError(f"{case_path.name} has invalid release semantics")
         for source in case["source_paths"]:
             if not _safe_relative(source).is_file():

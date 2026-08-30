@@ -13,5 +13,5 @@
     "examples/onnx_opset_upgrade/run_demo.py",
     "examples/onnx_opset_upgrade/README.md"
   ],
-  "limitations": "Small CPU-only graph; a control for structural change without numerical divergence."
+  "limitations": "Small CPU-only graph using an explicit interval-only policy; a structural and numerical control, not a formal rejection of a zero-effect McNemar null."
 }

@@ -17,8 +17,8 @@ def test_rare_slice_demo_blocks_and_reuses_cache(tmp_path: Path) -> None:
     )
     assert result.warm_cache_hits == result.comparison.run.observation_count == 200
     metrics = {metric.metric_id: metric for metric in result.comparison.report.metrics}
-    assert metrics["accuracy"].delta == -0.06
-    assert metrics["accuracy@frequency=rare"].delta == -0.6
+    assert metrics["accuracy"].delta == -0.08
+    assert metrics["accuracy@frequency=rare"].delta == -0.8
     assert result.bundle.json_path.exists()
     assert result.bundle.markdown_path.exists()
     assert result.bundle.plan_path is not None

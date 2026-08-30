@@ -30,6 +30,12 @@ versions for portable JSON contracts. Pre-1.0 APIs may change with migration not
 - Statistical documentation now defines the complete declared Holm family,
   two-sided anomaly rationale, randomization assumptions, and the distinction
   between planned and observed-design MDE
+- Matched-binary risk differences at non-zero margins no longer reuse the
+  continuous sign-randomization test; formal Holm evaluation fails closed with
+  `ERROR` until a dedicated binary non-inferiority method is selected
+- Percentile-bootstrap intervals are explicitly documented as independent
+  interval evidence, not confidence-set inversions of McNemar or randomization
+  tests
 
 ### Security
 

@@ -12,6 +12,13 @@ enforce the decision.
 uvx --python 3.13 --from merriv==0.1.0a2 merriv demo --output runs/quickstart
 ```
 
+> [!WARNING]
+> Published alpha `0.1.0a2` predates the fail-closed correction for
+> matched-binary metrics with non-zero margins. This run demonstrates packaging,
+> report generation, and verification; do not treat its statistical decision as
+> a production binary non-inferiority result. Current `main` uses exact McNemar
+> for the zero-margin synthetic demo and rejects unsupported binary Holm profiles.
+
 The published alpha supports Python 3.11, 3.12, and 3.13; `uvx` can provision the
 pinned 3.13 interpreter even when the host default differs. The base install
 contains no ONNX, GPU, MLflow, or Polygraphy dependency. Development `main` also

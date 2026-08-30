@@ -56,18 +56,18 @@ def run_rare_slice_demo(destination: Path, *, resamples: int = 2_000) -> DemoRes
             )
         )
         baseline_responses[case_id] = expected
-        candidate_responses[case_id] = "wrong-class" if rare and index < 96 else expected
+        candidate_responses[case_id] = "wrong-class" if rare and index < 98 else expected
 
     baseline = FakeAdapter(baseline_snapshot, baseline_responses)
     candidate = FakeAdapter(candidate_snapshot, candidate_responses)
     policy = GatePolicy(
         policy_id="rare-slice-release",
         rules=(
-            GateRule(rule_id="overall-quality", metric="accuracy", margin=0.12),
+            GateRule(rule_id="overall-quality", metric="accuracy", margin=0.0),
             GateRule(
                 rule_id="rare-quality",
                 metric="accuracy@frequency=rare",
-                margin=0.10,
+                margin=0.0,
                 min_pairs=10,
             ),
         ),

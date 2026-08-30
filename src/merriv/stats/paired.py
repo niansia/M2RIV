@@ -306,7 +306,13 @@ def binary_paired_evidence(
     resamples: int = 10_000,
     seed: int = 0,
 ) -> BinaryPairedEvidence:
-    """Summarize paired pass/fail changes, including an exact McNemar p-value."""
+    """Summarize paired pass/fail changes and zero-margin McNemar evidence.
+
+    A non-zero threshold intentionally does not produce formal hypothesis-test
+    evidence. Centered Bernoulli pair differences are generally not sign
+    exchangeable at a non-zero risk-difference null, so the generic paired sign
+    randomization test is not a valid fallback for that profile.
+    """
 
     if len(baseline) != len(candidate):
         raise ValueError("baseline and candidate must contain the same number of pairs")
@@ -329,7 +335,9 @@ def binary_paired_evidence(
         [float(value) for value in candidate],
         confidence_level=confidence_level,
         additional_confidence_levels=additional_confidence_levels,
-        threshold=threshold,
+        # Binary formal-test routing is handled below. In particular, never
+        # generate sign-randomization evidence for a non-zero binary margin.
+        threshold=None,
         resamples=resamples,
         seed=seed,
     )

@@ -47,6 +47,13 @@ Run the offline demo without cloning the repository:
 uvx --python 3.13 --from merriv==0.1.0a2 merriv demo --output runs/quickstart
 ```
 
+> [!WARNING]
+> Published alpha `0.1.0a2` predates the fail-closed correction for
+> matched-binary metrics with non-zero margins. Use this command to inspect the
+> packaging and report workflow, not as production statistical evidence. Current
+> `main` uses exact McNemar for its zero-margin synthetic demo and returns `ERROR`
+> for unsupported non-zero-margin binary Holm profiles.
+
 The declared rare slice regresses more sharply than the common slice. The command
 writes a compiled release plan, evidence manifest, Model Change Report JSON,
 Markdown, JUnit, and
@@ -103,24 +110,22 @@ calibration range, so it is a controlled regression test—not the headline proo
 
 | Build | Overall (n=629) | Critical slice (n=47) | Gate |
 |---|---:|---:|---:|
-| FP16 baseline | 94.8% | 91.5% | PASS |
-| INT8 balanced | 94.8–94.9% | 91.5–93.6% | PASS |
-| INT8 scale 0.65 | 92.9–93.2% | 74.5–78.7% | WARN–BLOCK |
-| INT8 scale 0.60 | 92.4–92.9% | 70.2–76.6% | WARN–BLOCK |
+| FP16 baseline | 94.8% | 91.5% | ERROR |
+| INT8 balanced | 94.8–94.9% | 91.5–93.6% | ERROR |
+| INT8 scale 0.65 | 92.9–93.2% | 74.5–78.7% | ERROR |
+| INT8 scale 0.60 | 92.4–92.9% | 70.2–76.6% | ERROR |
 
 For the retained NVIDIA scale-0.65 run, the critical-slice paired change is
 `-12.77` percentage points with a raw 95% percentile-bootstrap CI of
 `[-23.40, -4.26]` points (`n=47`). That width is why reports now expose sample
 size, CI level, family-wise alpha, Holm-adjusted evidence, target power, and MDE.
-Its archived report predates multiplicity correction; the current two-rule Holm
-family classifies the same 43/47 to 37/47 outcomes as `WARN`, not `BLOCK`.
-
-Both under-scaled builds fail closed, but their formal paired-test evidence is
-platform dependent: borderline kernel outcomes can produce `WARN` or `BLOCK`.
-The current pinned Python 3.11 CI artifacts on Linux and Windows classify both as
-`WARN`, so localization honestly reports no first bad build and no confirmed
-PASS/BLOCK interval. If another supported runtime produces a conclusive `BLOCK`,
-localization reports only the onset or interval justified by that run's evidence.
+Its archived report predates the current formal-test contract. Accuracy is a
+matched-binary risk difference and the policy declares non-zero margins; Merriv
+does not yet implement a suitable paired-binary non-inferiority test. The current
+Holm profile therefore returns `ERROR` for every build instead of applying the
+continuous sign-randomization assumption. No first bad build or PASS/BLOCK
+interval is claimed. The metric values, percentile intervals, artifact diff, and
+numerical divergence remain diagnostic evidence, not a valid formal gate result.
 The example also records ONNX semantic diff, per-tensor numerical divergence,
 gate evidence, and executed bisect. Run it with:
 

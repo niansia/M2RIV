@@ -58,19 +58,19 @@ merriv bisect-run runs/onnx-quantization/artifact-checkpoints.jsonl \
 Expected platform-bounded decisions:
 
 ```text
-PASS build-00-fp16
-PASS build-01-int8-balanced
-WARN or BLOCK build-02-int8-calibration-scale-065
-WARN or BLOCK build-03-int8-calibration-scale-060
+ERROR build-00-fp16
+ERROR build-01-int8-balanced
+ERROR build-02-int8-calibration-scale-065
+ERROR build-03-int8-calibration-scale-060
 ```
 
-Both under-scaled builds fail closed, but platform- and runtime-specific INT8
-kernels can leave their Holm-adjusted evidence inconclusive. The current pinned
-Python 3.11 CI artifacts on Linux and Windows classify both as `WARN`;
-localization therefore returns no first bad build and no PASS/BLOCK interval. If
-build 03 is `BLOCK` while build 02 is `WARN`, the result is the build 01–03
-uncertainty interval. Only a `BLOCK` at build 02 makes build 02 the conclusive
-first bad build.
+The accuracy rules are matched-binary risk differences with non-zero
+non-inferiority margins. Merriv intentionally emits no sign-randomization p-value
+for that unsupported formal-test profile, so the Holm family fails closed with
+`ERROR` on every build. Localization therefore returns no first bad build and no
+PASS/BLOCK interval. The generated metric, interval, artifact, and numerical-diff
+evidence remains available for review; it is not promoted into a formal gate
+claim.
 
 The demo is fully local after dependency installation. It downloads neither a
 model nor a dataset, uses only `CPUExecutionProvider`, and writes the artifact

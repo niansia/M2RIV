@@ -4,7 +4,14 @@ This is the target-GPU hero path. It exports reviewed fixed weights through a
 PyTorch Conv1d graph, creates three INT8 artifacts with NVIDIA ModelOpt, builds
 and executes TensorRT engines, compares every engine to its ONNX Runtime oracle
 through Polygraphy, records latency and NVML process VRAM when available, applies
-the rare-slice release gate, and bisects the ordered build sequence.
+the rare-slice release gate, and evaluates the ordered build sequence.
+
+The accuracy rules are matched-binary risk differences with non-zero
+non-inferiority margins. Merriv does not yet implement a supported formal test
+for that profile, so current Holm evaluations intentionally return `ERROR` for
+all four builds and localization reports no first bad build. Artifact, backend,
+metric, interval, latency, and provenance evidence are still retained. This is a
+fail-closed limitation, not evidence that every build regressed.
 
 The source and execution environments are intentionally separate. Neither
 ModelOpt nor TensorRT enters the four-dependency Merriv kernel.
@@ -99,3 +106,7 @@ because TensorRT engines are target-specific binaries.
 The historical evidence archive has SHA-256
 `06a060000afb40cd9dd6e529b08249863d20a91706030d2b505493572fd21a05`.
 The compact receipt is a first-party observation, not independent reproduction.
+Its `PASS, PASS, BLOCK, BLOCK` decisions and first-bad index predate the current
+formal matched-binary contract and are retained as historical output only. A
+current rerun must preserve the unsupported profile as `ERROR`; it must not
+reinterpret that receipt as a valid current release decision.

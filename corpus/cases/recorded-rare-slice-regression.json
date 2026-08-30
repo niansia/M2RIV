@@ -15,5 +15,5 @@
     "examples/recorded_compare/suite.jsonl",
     "examples/recorded_compare/policy.yaml"
   ],
-  "limitations": "Recorded-output contract fixture; it proves release semantics, not live model execution."
+  "limitations": "Recorded-output interval-only contract fixture; it demonstrates bundle and enforcement mechanics, not live model execution or a multiplicity-controlled formal claim."
 }

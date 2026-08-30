@@ -81,6 +81,18 @@ def test_binary_zero_margin_uses_exact_mcnemar_for_holm_evidence() -> None:
     assert hypothesis.null_value == 0.0
 
 
+def test_binary_nonzero_margin_does_not_emit_invalid_sign_randomization_test() -> None:
+    evidence = binary_paired_evidence(
+        [True] * 12 + [False] * 4,
+        [False] * 12 + [True] * 4,
+        threshold=-0.02,
+        resamples=200,
+    )
+
+    assert evidence.estimate.hypothesis_test is None
+    assert evidence.mcnemar_exact_p_value > 0.0
+
+
 def test_mcnemar_evidence_handles_large_suites_without_float_overflow() -> None:
     evidence = binary_paired_evidence(
         [True] * 1_000 + [False] * 1_000,
@@ -112,19 +124,33 @@ def _policy(
     )
 
 
-def _evaluation(baseline: list[float], candidate: list[float]) -> GateEvaluation:
+def _evaluation(
+    baseline: list[float],
+    candidate: list[float],
+    *,
+    threshold: float = -0.1,
+) -> GateEvaluation:
     return GateEvaluation(
         evidence=(
             MetricEvidence(
                 metric="quality",
-                estimate=paired_bootstrap(baseline, candidate, resamples=1_000, seed=5),
+                estimate=paired_bootstrap(
+                    baseline,
+                    candidate,
+                    threshold=threshold,
+                    resamples=1_000,
+                    seed=5,
+                ),
             ),
         )
     )
 
 
 def test_gate_passes_only_when_full_interval_meets_margin() -> None:
-    decision = evaluate_gate(_policy(), _evaluation([1, 2, 3], [1, 2, 3]))
+    decision = evaluate_gate(
+        _policy(),
+        _evaluation([1, 2, 3, 4, 5, 6], [1, 2, 3, 4, 5, 6]),
+    )
 
     assert decision.status is GateStatus.PASS
     assert decision.rule_decisions[0].status is GateStatus.PASS
@@ -142,10 +168,13 @@ def test_gate_warns_when_ci_crosses_noninferiority_margin() -> None:
 
 
 def test_gate_blocks_clear_violation_and_supports_lower_is_better() -> None:
-    higher_decision = evaluate_gate(_policy(), _evaluation([1, 1, 1], [0.7, 0.7, 0.7]))
+    higher_decision = evaluate_gate(
+        _policy(),
+        _evaluation([1] * 6, [0.7] * 6),
+    )
     lower_decision = evaluate_gate(
         _policy(direction=MetricDirection.LOWER_IS_BETTER),
-        _evaluation([1, 1, 1], [1.3, 1.3, 1.3]),
+        _evaluation([1] * 6, [1.3] * 6, threshold=0.1),
     )
 
     assert higher_decision.status is GateStatus.BLOCK
@@ -217,7 +246,11 @@ def test_explicit_mde_requirement_returns_insufficient_power() -> None:
         ),
         insufficient_evidence_status=GateStatus.WARN,
     )
-    evidence = _evaluation([0.0, 1.0, 0.0, 1.0], [1.0, 0.0, 1.0, 0.0])
+    evidence = _evaluation(
+        [0.0, 1.0, 0.0, 1.0],
+        [1.0, 0.0, 1.0, 0.0],
+        threshold=-0.05,
+    )
 
     decision = evaluate_gate(policy, evidence)
 
@@ -323,6 +356,43 @@ def test_single_rule_holm_degenerates_to_the_unadjusted_path() -> None:
     assert rule.effective_alpha == 0.05
 
 
+@pytest.mark.parametrize(
+    "metric_names",
+    [("overall",), ("overall", "slice")],
+    ids=["singleton", "family"],
+)
+def test_holm_fails_closed_without_supported_nonzero_binary_test(
+    metric_names: tuple[str, ...],
+) -> None:
+    estimate = binary_paired_evidence(
+        [True] * 20,
+        [True] * 18 + [False] * 2,
+        confidence_level=0.95,
+        additional_confidence_levels=(0.975,),
+        threshold=-0.02,
+        resamples=200,
+    ).estimate
+    policy = GatePolicy(
+        policy_id="unsupported-binary-ni",
+        rules=tuple(
+            GateRule(rule_id=metric, metric=metric, margin=0.02)
+            for metric in metric_names
+        ),
+    )
+    evaluation = GateEvaluation(
+        evidence=tuple(
+            MetricEvidence(metric=metric, estimate=estimate)
+            for metric in metric_names
+        )
+    )
+
+    decision = evaluate_gate(policy, evaluation)
+
+    assert decision.status is GateStatus.ERROR
+    assert all(item.status is GateStatus.ERROR for item in decision.rule_decisions)
+    assert all("matched-binary non-zero-margin" in item.reason for item in decision.rule_decisions)
+
+
 def test_complete_declared_family_includes_missing_and_underpowered_rules() -> None:
     policy = GatePolicy(
         policy_id="declared-family",
@@ -425,10 +495,17 @@ def test_planned_stddev_makes_mde_independent_of_observed_spread() -> None:
             ),
         ),
     )
-    low_spread = evaluate_gate(policy, _evaluation([0.0] * 20, [0.0] * 20))
+    low_spread = evaluate_gate(
+        policy,
+        _evaluation([0.0] * 20, [0.0] * 20, threshold=0.0),
+    )
     high_spread = evaluate_gate(
         policy,
-        _evaluation([0.0] * 20, [float(index % 2) for index in range(20)]),
+        _evaluation(
+            [0.0] * 20,
+            [float(index % 2) for index in range(20)],
+            threshold=0.0,
+        ),
     )
 
     assert low_spread.rule_decisions[0].minimum_detectable_effect == pytest.approx(
@@ -444,7 +521,7 @@ def test_missing_evidence_is_error() -> None:
 
 
 def test_any_critical_failure_directly_blocks() -> None:
-    evaluation = _evaluation([1, 1, 1], [1, 1, 1]).model_copy(
+    evaluation = _evaluation([1] * 6, [1] * 6).model_copy(
         update={"critical_failures": ("safety/case-17",)}
     )
     decision = evaluate_gate(_policy(), evaluation)

@@ -5,8 +5,15 @@
   "kind": "regression",
   "axis": "modelopt-tensorrt-quantization",
   "status": "verified-on-target",
-  "expected_decision": "BLOCK",
-  "expected_first_bad": "build-02-modelopt-int8-scale-065",
+  "expected_decision": "ERROR",
+  "expected_first_bad": null,
+  "historical_decisions": [
+    "PASS",
+    "PASS",
+    "BLOCK",
+    "BLOCK"
+  ],
+  "historical_first_bad": "build-02-modelopt-int8-scale-065",
   "reproduction": "python examples/nvidia_tensorrt_vertical/build_artifacts.py --fixture examples/onnx_quantization/assets/digits-mlp-fp32.onnx.b64 --output runs/nvidia/artifact-inputs && python examples/nvidia_tensorrt_vertical/run_vertical.py --artifacts runs/nvidia/artifact-inputs --suite runs/onnx-quantization/suite.jsonl --output runs/nvidia/live",
   "verification": "merriv mcr verify-target runs/nvidia/live",
   "target_receipt": "examples/nvidia_tensorrt_vertical/reference-receipt-rtx4060-20260829.json",
@@ -17,5 +24,5 @@
     "examples/nvidia_tensorrt_vertical/reference-receipt-rtx4060-20260829.json",
     ".github/workflows/nvidia-vertical.yml"
   ],
-  "limitations": "Verified once on RTX 4060 Laptop GPU, driver 555.97, TensorRT 10.4.0, and Polygraphy 0.53.4. It is not independently reproduced and makes no cross-hardware performance claim."
+  "limitations": "Verified once on RTX 4060 Laptop GPU, driver 555.97, TensorRT 10.4.0, and Polygraphy 0.53.4. The retained PASS/PASS/BLOCK/BLOCK receipt predates the current formal matched-binary contract; a current rerun returns ERROR and no first-bad build. It is not independently reproduced and makes no cross-hardware performance claim."
 }

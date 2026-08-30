@@ -1,5 +1,6 @@
 schema_version: 1.0.0
 policy_id: api-smoke-release
+multiple_comparison_method: none
 rules:
   - rule_id: overall-quality
     metric: accuracy
