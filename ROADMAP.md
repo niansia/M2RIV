@@ -5,6 +5,35 @@ release workflows. It is directional rather than a delivery-date commitment.
 Model Change Report 0.4.0 is frozen as the external-review baseline; new core
 fields are not a progress metric.
 
+## Current phase — external problem validation
+
+The main unknown is no longer whether the reference implementation can add more
+capabilities. It is whether real infrastructure teams have release-evidence
+fragmentation that is urgent enough to justify a workflow change.
+
+Current priorities:
+
+- [x] Lead the README with the production problem, target users, system boundary,
+  evaluation-script distinction, and external review request
+- [x] Disclose the ONNX cohort and calibration controls as deterministic
+  engineering fixtures
+- [x] Publish a repeatable problem-discovery and workflow-mapping guide
+- [ ] Complete ten structured conversations with target users
+- [ ] Obtain one serious external maintainer review of MCR 0.4
+- [ ] Map one real baseline → candidate production workflow
+- [ ] Obtain one independently maintained MCR producer or consumer
+- [ ] Obtain one independent hardware/runtime reproduction
+
+Until those signals exist, the project is holding dashboard/SaaS work, web UI,
+new statistical methods, broad importer coverage, additional benchmark families,
+new schema fields, MCR 0.5 design, cluster executors, and large refactors. A real
+external workflow can move a bounded item off hold.
+
+[Issue #17](https://github.com/niansia/Merriv/issues/17) is the explicit exception:
+the stable `predicateType` namespace must be decided before the first external
+producer persists signed OCI/in-toto attestations. It does not block plain JSON
+producers, consumers, workflow mapping, conformance experiments, or design review.
+
 ## v0.1 — Evidence kernel and portable protocol
 
 - [x] Content-addressed model snapshots and observation cache
@@ -28,7 +57,7 @@ fields are not a progress metric.
 Exit criterion: a user can produce and independently verify a bounded release
 decision without depending on Merriv internals at the protocol boundary.
 
-## v0.2 — Target evidence and external interoperability
+## v0.2 — Target evidence and external interoperability after validation
 
 - [x] NVIDIA ModelOpt/TensorRT/Polygraphy reference vertical with exact artifacts,
   target evidence, quality gates, and first-bad-build localization
@@ -36,8 +65,9 @@ decision without depending on Merriv internals at the protocol boundary.
 - Expand the corpus with independently reproduced quantization, opset, compiler,
   runtime, precision, tokenizer/config, and provider regressions
 - Exercise Model Change Report producers and consumers maintained outside the core package
-- Complete a registry round trip: push model, attach a signed Model Change Report referrer,
-  discover, retrieve, authenticate, and verify without repository-local paths
+- After resolving issue #17, complete a registry round trip: push model, attach a
+  signed Model Change Report referrer, discover, retrieve, authenticate, and
+  verify without repository-local paths
 - Compose Model Change Report references with retained SLSA provenance, OpenSSF Model Signing or
   Sigstore identity, and SPDX/CycloneDX ML-BOM instead of duplicating them
 - Obtain a public design review of Model Change Report 0.4 from an external infra maintainer
@@ -46,7 +76,8 @@ decision without depending on Merriv internals at the protocol boundary.
 - [x] Publish Merriv through a protected PyPI Trusted Publisher and verify a
   clean `uvx` installation
 - Add plugin conformance for manifests, mutation safety, secret canaries, and pairing
-- Prototype a Ray or Kubernetes reference executor outside the core dependency set
+- If a design partner demonstrates the need, prototype a Ray or Kubernetes
+  reference executor outside the core dependency set
 - Define cancellation and failure semantics for external job schedulers
 - Add adapter and metric capability negotiation
 - Validate trusted publishing and reproducible builds across release hosts
@@ -82,17 +113,17 @@ integrate through adapters, executors, and Model Change Reports.
 
 Repository-owned references are never counted in these numbers. The next
 12-month success condition is three external organizations using Model Change
-Reports on real
-release work, not a star target.
+Reports on real release work, not a star target.
 
-| Signal | Current verified external count | 12-month target |
-|---|---:|---:|
-| Independent Model Change Report producers | 0 | 3 |
-| Independent Model Change Report consumers | 0 | 3 |
-| Organizations gating real releases | 0 | 3 |
-| Independently reproduced regression cases | 0 | 3 |
-| Upstream integrations maintained outside this repository | 0 | 1 |
-| External maintainers | 0 | 1+ |
+| Signal | Current verified external count | Current-phase target | 12-month target |
+|---|---:|---:|---:|
+| Serious production workflow reviews | 0 | 1 | 3+ |
+| Real baseline → candidate workflow maps | 0 | 1 | 3+ |
+| Independent Model Change Report producers or consumers | 0 | 1 | 3 of each |
+| Organizations gating real releases | 0 | — | 3 |
+| Independently reproduced regression cases | 0 | 1 | 3 |
+| Upstream integrations maintained outside this repository | 0 | — | 1 |
+| External maintainers | 0 | 1 review | 1+ |
 
 Foundation or neutral-home discussions start only after independent
 implementations, organizations, and maintainers exist. Governance documents do

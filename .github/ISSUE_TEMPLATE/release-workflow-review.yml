@@ -1,0 +1,74 @@
+name: Release workflow review
+description: Map one sanitized baseline-to-candidate release and show where MCR 0.4 fits or breaks
+title: "[Workflow review]: "
+labels: ["design-review", "external-review"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is problem discovery, not an adoption claim or endorsement. Describe one real workflow, but do not include credentials, private artifacts, model outputs, customer data, or proprietary implementation details.
+  - type: dropdown
+    id: role
+    attributes:
+      label: Your role in the release workflow
+      options:
+        - Model optimization / quantization
+        - Inference runtime / compiler
+        - ML platform / registry
+        - Release engineering / CI
+        - Deployment / serving
+        - Audit / governance
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: change
+    attributes:
+      label: Baseline to candidate change
+      description: For example, FP16 to INT8, runtime upgrade, compiler build, or backend migration.
+    validations:
+      required: true
+  - type: textarea
+    id: decision
+    attributes:
+      label: Current release decision
+      description: Who or what decides, and which conditions can stop the release?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence locations and handoff
+      description: Where does evidence live, and how does it move between teams or systems?
+    validations:
+      required: true
+  - type: textarea
+    id: reconstruction
+    attributes:
+      label: Six-month reconstruction
+      description: What could and could not be reconstructed later about why this candidate was allowed or denied?
+    validations:
+      required: true
+  - type: textarea
+    id: fit
+    attributes:
+      label: Where MCR 0.4 fits or breaks
+      description: Identify clean mappings, unavailable fields, ambiguous semantics, retention limits, or unacceptable producer burden.
+    validations:
+      required: true
+  - type: textarea
+    id: smallest_integration
+    attributes:
+      label: Smallest useful integration
+      description: What bounded producer, consumer, or verification experiment—if any—would be worth trying?
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope confirmation
+      options:
+        - label: This report is sanitized and safe to discuss publicly.
+          required: true
+        - label: I understand that submitting a review does not claim adoption, endorsement, or independent reproduction.
+          required: true

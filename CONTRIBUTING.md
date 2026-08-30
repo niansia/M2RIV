@@ -1,8 +1,10 @@
 # Contributing to Merriv
 
-Merriv is contract-first infrastructure. Before proposing a large feature, open an
-RFC that describes the user problem, compatibility impact, evidence semantics,
-security boundary, and acceptance tests.
+Merriv is contract-first infrastructure in an external problem-validation phase.
+Before proposing a large feature, first check whether a real release workflow in
+the [external validation guide](docs/external-validation.md) demonstrates the
+need. Then open an RFC that describes the user problem, compatibility impact,
+evidence semantics, security boundary, and acceptance tests.
 
 Participation is governed by the [Community Code of Conduct](CODE_OF_CONDUCT.md).
 
@@ -22,6 +24,7 @@ For code changes:
 8. Add migration and protocol-changelog entries for any breaking public change.
 
 See [SUPPORT.md](SUPPORT.md) for issue routing,
+[docs/external-validation.md](docs/external-validation.md) for workflow reviews,
 [docs/protocol-governance.md](docs/protocol-governance.md) for Model Change Report
 changes, and
 [docs/external-reproduction-guide.md](docs/external-reproduction-guide.md) for

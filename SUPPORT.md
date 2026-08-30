@@ -4,6 +4,8 @@ Merriv is pre-alpha infrastructure maintained on a best-effort basis.
 
 - For reproducible bugs, use the bug issue form.
 - For Model Change Report compatibility questions, use the compatibility issue form.
+- For a sanitized production release map or contract critique, use the release
+  workflow review form.
 - For an independent GPU/corpus reproduction, use the reproduction issue form.
 - For a proposed producer, consumer, adapter, metric, or executor, use the plugin
   and integration form.

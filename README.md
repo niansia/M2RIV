@@ -4,23 +4,94 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Python 3.11–3.14](https://img.shields.io/badge/Python-3.11%E2%80%933.14-3776AB.svg)](pyproject.toml)
 
-An optimized model can match backend outputs and still become a worse release.
-Merriv catches the regression, records the evidence, and localizes the first bad
-build when the evidence is decisive—before a promotion controller acts.
+You quantized, compiled, or changed the runtime of a deployed model. The new
+artifact builds successfully, and backend outputs still look valid. But can this
+candidate actually replace the current baseline?
 
-Merriv is the **vendor-neutral release-evidence layer for deployable AI models**.
-It turns a change between model builds into a portable, content-addressed, and
-independently checkable **Model Change Report**.
+**Merriv turns a baseline → candidate model change into an evidence-backed
+release evaluation and a portable Model Change Report (MCR).** It catches
+regressions, records why a candidate passed or failed, and can localize the first
+bad build before a promotion controller acts.
 
-> Model Change Report is the portable evidence contract. Merriv is its reference
-> implementation.
+**Status:** Pre-alpha reference implementation · MCR 0.4 frozen for
+[external review](https://github.com/niansia/Merriv/issues/18) · no claim of a
+standard or external adoption · [roadmap](ROADMAP.md)
 
-**Status:** Pre-alpha reference implementation · [seeking three external release
-pilots and design review](https://github.com/niansia/Merriv/issues/18), not
-claiming a standard or external adoption · [roadmap](ROADMAP.md)
+The Model Change Report is the portable evidence contract. Merriv is one
+reference producer, verifier, and conformance suite.
 
-**Author:** [Niansia](https://github.com/niansia), a recent Computer Science
-graduate from Yuan Ze University in Taiwan.
+## The production problem
+
+Model releases cross optimizer, compiler, runtime, hardware, registry, CI, and
+team boundaries. The evidence needed to approve a change often ends up split
+between evaluation databases, CI artifacts, notebooks, registry metadata,
+dashboards, and chat approvals. Each tool can be locally correct while the
+release process still cannot answer:
+
+- Which exact baseline and candidate artifacts were compared?
+- Which evidence and policy produced the decision?
+- What runtime and platform produced that evidence?
+- Can another team or a future auditor verify the handoff independently?
+
+### Who is Merriv for?
+
+Merriv is for model optimization, inference/runtime, ML compiler, ML platform,
+and release engineering teams that need to review deployable artifact changes.
+Typical changes include:
+
+- FP16 → INT8 or FP8 quantization;
+- ONNX, TensorRT, OpenVINO, or internal compiler builds;
+- compiler, runtime, or execution-provider upgrades;
+- backend migrations and hardware-specific builds; and
+- model release CI with traceable evidence handoffs.
+
+Merriv is **not** a training framework, general experiment tracker, general model
+or prompt evaluation platform, deployment controller, registry, or serving
+system. It connects the release evidence those systems already produce.
+
+### Why not just use an evaluation script?
+
+Keep the evaluation script—it can remain the native quality oracle. Merriv adds
+the portable handoff that binds:
+
+```text
+exact baseline artifact
++ exact candidate artifact
++ evaluation evidence
++ statistical policy
++ evaluation decision
++ runtime and platform context
++ optional first-bad-build evidence
+= independently verifiable Model Change Report
+```
+
+The difference is not another metric calculation. It is a durable release record
+that a downstream team can verify without importing the producer's evaluation
+code. Merriv uses method-appropriate paired statistical tests and multiplicity
+correction; assumptions and methods live in
+[statistical gate semantics](docs/statistical-gating.md).
+
+## Where Merriv fits
+
+```text
+Model optimizer / compiler / runtime
+                 |
+       candidate artifact + native evidence
+                 v
+      MCR producer (Merriv or another implementation)
+                 |
+          Model Change Report
+                 v
+          CI / registry / audit
+                 |
+       organization release policy
+                 v
+              ALLOW / DENY
+```
+
+An MCR records whether its bound evaluation policy was satisfied. The consuming
+organization still owns deployment authorization and combines the report with
+producer identity, provenance, BOM, risk, and environment policy.
 
 ![Merriv release-evidence flow](docs/images/merriv-release-evidence-flow.svg)
 
@@ -29,14 +100,21 @@ dependencies or endorsements. Verification covers declared integrity and
 conformance; it does not establish producer identity. The diagram has an
 [editable draw.io source](docs/images/source/merriv-release-evidence-flow.drawio).
 
-> [!IMPORTANT]
-> **Replay of a real historical regression:** llama.cpp issue
-> [#22544](https://github.com/ggml-org/llama.cpp/issues/22544) identifies a
-> first-bad commit where `--tensor-type` was ignored during quantization; merged
-> PR [#22572](https://github.com/ggml-org/llama.cpp/pull/22572) fixed it. The
-> [source-anchored replay](examples/historical_llamacpp_22544) returns `BLOCK` on
-> the two tensor assignments published upstream. It is a replay, not a fresh 27B
-> model execution or a model-quality claim.
+## Looking for production workflows that break MCR 0.4
+
+The current goal is problem validation and integration evidence—not stars and
+not a declaration that MCR is a standard. Merriv is looking for:
+
+- maintainers willing to [attack MCR 0.4](https://github.com/niansia/Merriv/issues/18)
+  against a real release workflow;
+- teams willing to map one real baseline → candidate release into MCR;
+- independently maintained MCR producers or consumers; and
+- [independent hardware/runtime reproductions](https://github.com/niansia/Merriv/issues/new?template=external-reproduction.yml).
+
+Start with the [external validation guide](docs/external-validation.md). A useful
+review can conclude that the contract does not fit: missing data, excessive
+producer burden, ambiguous decisions, and rejected integrations are all valuable
+evidence.
 
 ## Quick start
 
@@ -72,12 +150,16 @@ merriv import polygraphy run-results.json \
 The importer uses Polygraphy's native comparator. `--format normalized` is a
 wiring/test interchange and is explicitly labeled as non-live evidence.
 
-## Why this exists
+> [!IMPORTANT]
+> **Replay of a real historical regression:** llama.cpp issue
+> [#22544](https://github.com/ggml-org/llama.cpp/issues/22544) identifies a
+> first-bad commit where `--tensor-type` was ignored during quantization; merged
+> PR [#22572](https://github.com/ggml-org/llama.cpp/pull/22572) fixed it. The
+> [source-anchored replay](examples/historical_llamacpp_22544) returns `BLOCK` on
+> the two tensor assignments published upstream. It is a replay, not a fresh 27B
+> model execution or a model-quality claim.
 
-Model builds cross optimizer, compiler, runtime, hardware, registry, and CI
-boundaries. Each tool may produce a correct local answer while the release still
-lacks one portable object that binds the exact artifacts, evidence, statistics,
-policy, decision, and regression onset.
+## How Merriv complements existing tools
 
 Merriv does not replace native tools:
 
@@ -87,12 +169,6 @@ Merriv does not replace native tools:
 | Backend debuggers such as Polygraphy | Layer/output comparison | A portable bundle for downstream verification and policy |
 | Evaluation and registry systems such as MLflow | Metrics, experiments, and lifecycle workflows | Cross-tool evidence and a producer-neutral Model Change Report boundary |
 | CI and promotion controllers | Workflow execution | Fail-closed PASS/WARN/INSUFFICIENT_POWER/BLOCK/ERROR decisions with auditable inputs |
-
-Those are **evaluation decisions**, not deployment authority. A Model Change
-Report says whether its bound evaluation policy was satisfied. The consuming
-organization combines the verified report, producer identity, provenance, BOM,
-risk, and environment policy
-to make its separate `ALLOW`/`DENY` decision.
 
 For prompts, RAG applications, or agent trajectories, use an application-evaluation
 tool first. For backend or layer debugging, use the native debugger first. Merriv
@@ -105,6 +181,13 @@ The CPU-only ONNX experiment exports one fixed model to FP16 and three real INT8
 QDQ builds and evaluates 629 paired holdout cases. It intentionally changes the
 calibration range, so it is a controlled regression test—not the headline proof:
 
+> [!CAUTION]
+> This is an engineering fixture. The input-declared high-ink cohort and the
+> 0.55/0.50 calibration scales are deliberate deterministic negative controls
+> chosen to exercise a stable cross-runner PASS/BLOCK/first-bad-build contract.
+> They are not prospectively registered scientific evidence or estimates of
+> real-world regression frequency or severity.
+
 | Build | Overall (n=629) | High-ink slice (n=386) | Gate |
 |---|---:|---:|---:|
 | FP16 baseline | 94.8% | 95.6% | REFERENCE (self-check PASS) |
@@ -116,13 +199,11 @@ The critical cohort is declared from inputs as normalized ink sum at least 19;
 it contains 386 independent holdout cases and is not selected from model
 outcomes. With that cohort, the balanced build clears both non-inferiority rules,
 both contracted-calibration builds violate the high-ink rule after Holm
-correction, and localization identifies build 02 as the first bad build. Merriv
-uses Tango's matched-proportion score test and inverted score interval for these
-non-zero matched-binary margins; it never applies the continuous
-sign-randomization assumption to binary outcomes. The generated report remains
-authoritative for its exact artifact and runtime. The example also records ONNX
-semantic diff, per-tensor numerical divergence, gate evidence, and executed
-bisect. Run it with:
+correction, and localization identifies build 02 as the first bad build. The
+generated report remains authoritative for its exact artifact and runtime. The
+example also records ONNX semantic diff, per-tensor numerical divergence, gate
+evidence, and executed bisect. The exact statistical profile is documented in
+[statistical gate semantics](docs/statistical-gating.md). Run it with:
 
 > [!NOTE]
 > The retained ONNX evidence toolchain currently requires Python 3.11–3.13.
@@ -181,6 +262,7 @@ Verification reports each trust dimension separately.
 | Area | Entry point |
 |---|---|
 | Quickstart and generated files | [docs/quickstart.md](docs/quickstart.md) |
+| Problem discovery and external review | [docs/external-validation.md](docs/external-validation.md) |
 | Architecture and extension boundaries | [docs/architecture.md](docs/architecture.md) |
 | Statistical gate semantics | [docs/statistical-gating.md](docs/statistical-gating.md) |
 | Model Change Report specification | [docs/mcr-specification.md](docs/mcr-specification.md) |
@@ -207,6 +289,12 @@ direction is therefore an
 [in-toto Statement](https://github.com/in-toto/attestation/blob/main/spec/v1/statement.md)
 predicate that can be signed with Sigstore/cosign and carried by existing artifact
 attestation systems. Merriv should not invent a competing signature envelope.
+
+> [!WARNING]
+> The repository-owned `predicateType` below is prototype-only. Resolve the
+> [stable namespace decision](https://github.com/niansia/Merriv/issues/17) before
+> an external producer persists long-lived signed attestations. This does not
+> block plain JSON MCR production, consumption, conformance, or design review.
 
 ```console
 merriv mcr predicate runs/release \
@@ -273,6 +361,10 @@ is not promised until v1.0. The project currently has no publicly verified
 external adopter; repository-owned integrations are not counted as adoption.
 The public name, Python distribution, import namespace, and CLI are all `merriv`.
 See the [naming decision](docs/brand.md).
+
+Merriv is created and currently maintained by
+[Niansia](https://github.com/niansia), a Computer Science graduate from Yuan Ze
+University in Taiwan.
 
 ## Contributing and security
 

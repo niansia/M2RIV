@@ -15,6 +15,13 @@ test. The critical slice is declared from inputs as normalized ink sum at least
 outcomes. The regression is caused by an under-scaled calibration input range,
 not by editing candidate predictions.
 
+> [!CAUTION]
+> **Engineering fixture disclosure:** the input-declared high-ink cohort and the
+> 0.55/0.50 calibration scales are deliberate deterministic negative controls.
+> They were chosen to exercise a stable cross-runner PASS/BLOCK/first-bad-build
+> release contract. They are not prospectively registered scientific evidence
+> or estimates of real-world regression frequency or severity.
+
 The retained evidence toolchain currently requires Python 3.11–3.13. Merriv's
 base package supports Python 3.14, but the `onnx-demo` extra intentionally omits
 these older retained dependencies on Python 3.14.
@@ -73,9 +80,8 @@ PASS, but the table presents it as reference context rather than a candidate
 release verdict. The balanced candidate is PASS, both contracted-calibration
 candidates are BLOCK, and localization returns build 02 as the first bad build.
 The generated report for the exact artifact and runtime remains authoritative.
-The 0.55 and 0.50 calibration scales are deliberate negative controls chosen to
-exercise a stable BLOCK contract across CI runners; their effect sizes are not
-presented as estimates of real-world regression frequency or severity.
+The fixture disclosure above defines the scope of claims for the selected cohort
+and calibration controls.
 
 The demo is fully local after dependency installation. It downloads neither a
 model nor a dataset, uses only `CPUExecutionProvider`, and writes the artifact
