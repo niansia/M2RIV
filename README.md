@@ -108,10 +108,10 @@ calibration range, so it is a controlled regression test—not the headline proo
 | INT8 scale 0.65 | 92.9–93.2% | 74.5–78.7% | WARN–BLOCK |
 | INT8 scale 0.60 | 92.4–92.9% | 70.2–76.6% | WARN–BLOCK |
 
-The pinned Ubuntu run returns `WARN` for both contracted-calibration builds; the
-pinned Windows run returns `BLOCK`. These are platform-bounded evaluations, not a
-single verdict copied across runtimes. Both retain the same artifact and metric
-regression; only evidence that clears the full platform-specific interval and
+Pinned CI runs return `WARN` or `BLOCK` for the contracted-calibration builds as
+runner-specific quantization numerics move borderline cases within the declared
+accuracy ranges. A generated Model Change Report is authoritative for its exact
+artifact and runtime; only evidence that clears the full retained interval and
 Holm requirements is promoted to `BLOCK`.
 
 For the retained NVIDIA scale-0.65 run, the critical-slice paired change is

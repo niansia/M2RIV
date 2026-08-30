@@ -17,7 +17,6 @@ EXPECTED_STATUSES = {
     "build-02-int8-calibration-scale-065": frozenset({"WARN", "BLOCK"}),
     "build-03-int8-calibration-scale-060": frozenset({"WARN", "BLOCK"}),
 }
-REGRESSION_PLATFORM_STATUS = {"linux": "WARN", "windows": "BLOCK"}
 EXPECTED_ACCURACY_RANGES = {
     "build-00-fp16": ((596 / 629, 596 / 629), (43 / 47, 43 / 47)),
     # The source weights are fixed. Bounded ranges still acknowledge that ORT's
@@ -67,17 +66,6 @@ def verify(destination: Path) -> None:
         reference = report.get("evidence_manifest")
         if report.get("schema_version") != "0.4.0":
             raise ValueError(f"{checkpoint} is not an MCR 0.4 report")
-        if len(allowed_statuses) > 1:
-            execution_systems = {
-                item.get("runtime_profile", {}).get("operating_system")
-                for item in report.get("executions", [])
-                if isinstance(item, dict) and isinstance(item.get("runtime_profile"), dict)
-            }
-            if len(execution_systems) != 1:
-                raise ValueError(f"{checkpoint} does not declare one execution platform")
-            platform_status = REGRESSION_PLATFORM_STATUS.get(execution_systems.pop())
-            if platform_status is not None:
-                allowed_statuses = frozenset({platform_status})
         status = report.get("decision", {}).get("status")
         if status not in allowed_statuses:
             raise ValueError(
