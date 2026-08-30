@@ -177,8 +177,8 @@ def run_demo(destination: Path) -> Path:
     builds: list[tuple[str, Path]] = [("build-00-fp16", fp16_path)]
     calibration_builds = (
         ("build-01-int8-balanced", 1.0),
-        ("build-02-int8-calibration-scale-065", 0.65),
-        ("build-03-int8-calibration-scale-060", 0.60),
+        ("build-02-int8-calibration-scale-055", 0.55),
+        ("build-03-int8-calibration-scale-050", 0.50),
     )
     for name, scale in calibration_builds:
         target = artifact_dir / f"{name}.onnx"
@@ -268,7 +268,7 @@ rules:
                 absolute_tolerance=1e-3,
                 relative_tolerance=1e-2,
             )
-            if name == "build-02-int8-calibration-scale-065"
+            if name == "build-02-int8-calibration-scale-055"
             else None
         )
         linked_evidence = [

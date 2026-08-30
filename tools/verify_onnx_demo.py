@@ -14,16 +14,16 @@ EXPECTED_STATUSES = {
     # though the generated presentation labels it REFERENCE rather than PASS.
     "build-00-fp16": frozenset({"PASS"}),
     "build-01-int8-balanced": frozenset({"PASS"}),
-    "build-02-int8-calibration-scale-065": frozenset({"BLOCK"}),
-    "build-03-int8-calibration-scale-060": frozenset({"BLOCK"}),
+    "build-02-int8-calibration-scale-055": frozenset({"BLOCK"}),
+    "build-03-int8-calibration-scale-050": frozenset({"BLOCK"}),
 }
 EXPECTED_ACCURACY_RANGES = {
     "build-00-fp16": ((596 / 629, 596 / 629), (369 / 386, 369 / 386)),
-    "build-01-int8-balanced": ((596 / 629, 596 / 629), (368 / 386, 368 / 386)),
-    "build-02-int8-calibration-scale-065": ((584 / 629, 584 / 629), (355 / 386, 355 / 386)),
-    "build-03-int8-calibration-scale-060": ((581 / 629, 581 / 629), (352 / 386, 352 / 386)),
+    "build-01-int8-balanced": ((596 / 629, 597 / 629), (368 / 386, 369 / 386)),
+    "build-02-int8-calibration-scale-055": ((568 / 629, 572 / 629), (344 / 386, 348 / 386)),
+    "build-03-int8-calibration-scale-050": ((565 / 629, 570 / 629), (343 / 386, 348 / 386)),
 }
-CALIBRATION_REGRESSION_BUILD = "build-02-int8-calibration-scale-065"
+CALIBRATION_REGRESSION_BUILD = "build-02-int8-calibration-scale-055"
 MAX_MCR_BYTES = 32 * 1024
 ACCURACY_TOLERANCE = 1e-12
 

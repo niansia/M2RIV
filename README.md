@@ -109,8 +109,8 @@ calibration range, so it is a controlled regression test—not the headline proo
 |---|---:|---:|---:|
 | FP16 baseline | 94.8% | 95.6% | REFERENCE (self-check PASS) |
 | INT8 balanced | 94.8% | 95.3% | PASS |
-| INT8 scale 0.65 | 92.8% | 92.0% | BLOCK |
-| INT8 scale 0.60 | 92.4% | 91.2% | BLOCK |
+| INT8 scale 0.55 | 90.3% | 89.1% | BLOCK |
+| INT8 scale 0.50 | 89.8% | 88.9% | BLOCK |
 
 The critical cohort is declared from inputs as normalized ink sum at least 19;
 it contains 386 independent holdout cases and is not selected from model

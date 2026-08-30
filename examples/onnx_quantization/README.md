@@ -29,11 +29,11 @@ Inspect the actual deployment artifacts:
 ```console
 merriv artifact diff \
   runs/onnx-quantization/artifacts/build-00-fp16.onnx \
-  runs/onnx-quantization/artifacts/build-02-int8-calibration-scale-065.onnx
+  runs/onnx-quantization/artifacts/build-02-int8-calibration-scale-055.onnx
 
 merriv artifact numerical-diff \
   runs/onnx-quantization/artifacts/build-00-fp16.onnx \
-  runs/onnx-quantization/artifacts/build-02-int8-calibration-scale-065.onnx \
+  runs/onnx-quantization/artifacts/build-02-int8-calibration-scale-055.onnx \
   --suite runs/onnx-quantization/suite.jsonl
 ```
 
@@ -61,8 +61,8 @@ Expected platform-bounded decisions:
 ```text
 REFERENCE build-00-fp16 (declared baseline; not a candidate gate)
 PASS      build-01-int8-balanced
-BLOCK     build-02-int8-calibration-scale-065
-BLOCK     build-03-int8-calibration-scale-060
+BLOCK     build-02-int8-calibration-scale-055
+BLOCK     build-03-int8-calibration-scale-050
 ```
 
 The accuracy rules are matched-binary risk differences with non-zero
@@ -73,6 +73,9 @@ PASS, but the table presents it as reference context rather than a candidate
 release verdict. The balanced candidate is PASS, both contracted-calibration
 candidates are BLOCK, and localization returns build 02 as the first bad build.
 The generated report for the exact artifact and runtime remains authoritative.
+The 0.55 and 0.50 calibration scales are deliberate negative controls chosen to
+exercise a stable BLOCK contract across CI runners; their effect sizes are not
+presented as estimates of real-world regression frequency or severity.
 
 The demo is fully local after dependency installation. It downloads neither a
 model nor a dataset, uses only `CPUExecutionProvider`, and writes the artifact
@@ -105,7 +108,7 @@ python tools/regenerate_onnx_demo_fixture.py
 Verify any generated report directory independently with:
 
 ```console
-merriv mcr verify runs/onnx-quantization/reports/build-02-int8-calibration-scale-065
+merriv mcr verify runs/onnx-quantization/reports/build-02-int8-calibration-scale-055
 ```
 
 Dataset provenance: [scikit-learn digits documentation](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html)

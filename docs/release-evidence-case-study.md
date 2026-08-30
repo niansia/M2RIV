@@ -102,9 +102,11 @@ unchanged between builds.
 
 The deployment failure is a calibration configuration regression. Model weights
 stay fixed while the first 128 training inputs used for INT8 calibration are
-multiplied by 1.0, 0.65, or 0.60. The contracted calibration range creates overly
-tight quantization scales. The current CPU policy evaluates overall accuracy with
-a 3% margin and the 386-case high-ink slice with a 1.5% margin over paired evidence.
+multiplied by 1.0, 0.55, or 0.50. The contracted calibration range creates overly
+tight quantization scales. These two contracted scales are deliberate negative
+controls for a stable cross-runner BLOCK contract, not estimates of real-world
+regression severity. The current CPU policy evaluates overall accuracy with a 3%
+margin and the 386-case high-ink slice with a 1.5% margin over paired evidence.
 
 ## 5. CPU ONNX case
 
