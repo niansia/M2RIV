@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="500" viewBox="0 0 1200 500" role="img" aria-labelledby="title description">
+  <title id="title">Where Merriv fits in a model release system</title>
+  <desc id="description">Build systems send a candidate artifact and native evidence into a Model Change Report. Release systems verify, retain, and route the report. An organization policy combines it with identity, provenance, bill of materials, and risk evidence before allowing or denying deployment.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" class="arrow-head"/>
+    </marker>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f7f9fc;
+        --ink: #14233d;
+        --muted: #596a83;
+        --line: #a9b7ca;
+        --line-strong: #657a98;
+        --accent: #2459a9;
+        --accent-ink: #f7f9fc;
+        --soft: #e9eef6;
+        --allow: #287a55;
+        --deny: #b4463c;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #11161f;
+          --ink: #eef3fb;
+          --muted: #aab8cd;
+          --line: #47566c;
+          --line-strong: #8192ab;
+          --accent: #5f8edb;
+          --accent-ink: #0d1522;
+          --soft: #1b2431;
+          --allow: #6fc59b;
+          --deny: #ef8a80;
+        }
+      }
+      text {
+        font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      .bg { fill: var(--bg); }
+      .ink { fill: var(--ink); }
+      .muted { fill: var(--muted); }
+      .label { font-size: 16px; font-weight: 650; letter-spacing: .02em; }
+      .node { font-size: 24px; font-weight: 680; }
+      .item { font-size: 19px; font-weight: 480; }
+      .caption { font-size: 15px; font-weight: 520; }
+      .flow { fill: none; stroke: var(--line-strong); stroke-width: 2; marker-end: url(#arrow); }
+      .feed { fill: none; stroke: var(--line); stroke-width: 1.5; marker-end: url(#arrow); }
+      .arrow-head { fill: var(--line-strong); }
+      .accent-panel { fill: var(--accent); }
+      .accent-ink { fill: var(--accent-ink); }
+      .policy-panel { fill: var(--soft); stroke: var(--line); stroke-width: 1.5; }
+      .divider { stroke: var(--line); stroke-width: 1; }
+      .allow { fill: var(--allow); }
+      .deny { fill: var(--deny); }
+    </style>
+  </defs>
+
+  <rect width="1200" height="500" rx="10" class="bg"/>
+
+  <g aria-label="Build systems">
+    <text x="64" y="92" class="label muted">Build systems</text>
+    <text x="64" y="138" class="node ink">Optimizer</text>
+    <text x="64" y="178" class="node ink">Compiler</text>
+    <text x="64" y="218" class="node ink">Runtime</text>
+  </g>
+
+  <path d="M 244 168 H 360" class="flow"/>
+  <text x="302" y="137" text-anchor="middle" class="caption muted">candidate artifact</text>
+  <text x="302" y="158" text-anchor="middle" class="caption muted">native evidence</text>
+
+  <g aria-label="Model Change Report">
+    <rect x="380" y="64" width="330" height="220" rx="6" class="accent-panel"/>
+    <text x="410" y="108" class="label accent-ink">Portable release evidence</text>
+    <text x="410" y="151" class="node accent-ink">Model Change Report</text>
+    <line x1="410" y1="174" x2="680" y2="174" stroke="var(--accent-ink)" stroke-opacity=".32"/>
+    <text x="410" y="207" class="item accent-ink">baseline and candidate identity</text>
+    <text x="410" y="237" class="item accent-ink">evidence, policy, and decision</text>
+    <text x="410" y="264" class="caption accent-ink">producer-neutral contract</text>
+  </g>
+
+  <path d="M 730 168 H 814" class="flow"/>
+  <text x="772" y="147" text-anchor="middle" class="caption muted">handoff</text>
+
+  <g aria-label="Release systems">
+    <text x="838" y="92" class="label muted">Release systems</text>
+    <text x="838" y="138" class="node ink">CI</text>
+    <text x="838" y="178" class="node ink">Registry</text>
+    <text x="838" y="218" class="node ink">Audit</text>
+  </g>
+
+  <path d="M 920 246 V 310 H 829 V 332" class="feed"/>
+  <text x="937" y="290" class="caption muted">verified report</text>
+
+  <g aria-label="Additional trust inputs">
+    <text x="64" y="354" class="label muted">Additional trust inputs</text>
+    <text x="64" y="398" class="item ink">Producer identity</text>
+    <text x="236" y="398" class="item ink">Provenance</text>
+    <text x="347" y="398" class="item ink">BOM</text>
+    <text x="411" y="398" class="item ink">Risk</text>
+  </g>
+
+  <path d="M 478 392 H 574" class="feed"/>
+
+  <g aria-label="Organization release policy">
+    <rect x="594" y="332" width="270" height="120" rx="6" class="policy-panel"/>
+    <text x="729" y="377" text-anchor="middle" class="label muted">Organization policy</text>
+    <text x="729" y="414" text-anchor="middle" class="node ink">Deployment authority</text>
+  </g>
+
+  <path d="M 884 392 H 971" class="flow"/>
+  <g aria-label="Deployment decision">
+    <text x="994" y="385" class="node allow">ALLOW</text>
+    <line x1="994" y1="402" x2="1128" y2="402" class="divider"/>
+    <text x="994" y="435" class="node deny">DENY</text>
+  </g>
+</svg>

@@ -4,6 +4,14 @@ Merriv separates the portable semantics of an evaluation decision from both the 
 that produced evidence and the system that consumes it. The core is intentionally
 smaller than any registry, comparator, evaluation platform, or execution fabric.
 
+![Detailed Merriv release-evidence architecture](images/merriv-release-evidence-flow.svg)
+
+Named products are interoperability examples, not bundled dependencies or
+endorsements. Verification covers declared integrity and conformance; it does
+not establish producer identity. An
+[editable draw.io source](images/source/merriv-release-evidence-flow.drawio) is
+retained with the diagram.
+
 ```text
 ModelOpt / Polygraphy / MLflow / evaluators / Merriv CLI / internal tools
                               |

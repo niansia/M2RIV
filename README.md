@@ -73,32 +73,14 @@ correction; assumptions and methods live in
 
 ## Where Merriv fits
 
-```text
-Model optimizer / compiler / runtime
-                 |
-       candidate artifact + native evidence
-                 v
-      MCR producer (Merriv or another implementation)
-                 |
-          Model Change Report
-                 v
-          CI / registry / audit
-                 |
-       organization release policy
-                 v
-              ALLOW / DENY
-```
+![Merriv system boundary](docs/images/merriv-system-boundary.svg)
 
 An MCR records whether its bound evaluation policy was satisfied. The consuming
 organization still owns deployment authorization and combines the report with
 producer identity, provenance, BOM, risk, and environment policy.
 
-![Merriv release-evidence flow](docs/images/merriv-release-evidence-flow.svg)
-
-Named products in the diagram are interoperability examples, not bundled
-dependencies or endorsements. Verification covers declared integrity and
-conformance; it does not establish producer identity. The diagram has an
-[editable draw.io source](docs/images/source/merriv-release-evidence-flow.drawio).
+See the [detailed architecture](docs/architecture.md) for the evidence kernel,
+producer/consumer boundaries, and implementation extension points.
 
 ## Looking for production workflows that break MCR 0.4
 
